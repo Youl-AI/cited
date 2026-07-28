@@ -1,5 +1,5 @@
 {
-  "id": "d66e5f1a-a117-4679-b683-ec8b8d05db85",
+  "id": "6bbe9c70-d6b9-4d4f-b536-ccf915d2cd4d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -262,7 +262,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "answers_engine_id_check": {
+          "name": "answers_engine_id_check",
+          "value": "\"answers\".\"engine_id\" in ('chatgpt', 'gemini', 'naver', 'google_aio')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.brands": {
@@ -511,7 +516,16 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "collection_runs_status_check": {
+          "name": "collection_runs_status_check",
+          "value": "\"collection_runs\".\"status\" in ('running', 'succeeded', 'partial', 'failed')"
+        },
+        "collection_runs_trigger_check": {
+          "name": "collection_runs_trigger_check",
+          "value": "\"collection_runs\".\"trigger\" in ('schedule', 'signup', 'manual', 'free_audit')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.detections": {
@@ -643,7 +657,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "detections_sentiment_check": {
+          "name": "detections_sentiment_check",
+          "value": "\"detections\".\"sentiment\" is null or \"detections\".\"sentiment\" in ('recommended', 'neutral', 'negative')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.free_audits": {
@@ -775,7 +794,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "free_audits_status_check": {
+          "name": "free_audits_status_check",
+          "value": "\"free_audits\".\"status\" in ('queued', 'running', 'succeeded', 'failed', 'waitlisted')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.payments": {
@@ -893,14 +917,19 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "payments_status_check": {
+          "name": "payments_status_check",
+          "value": "\"payments\".\"status\" in ('paid', 'failed', 'canceled')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.queries": {
@@ -988,7 +1017,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "queries_source_check": {
+          "name": "queries_source_check",
+          "value": "\"queries\".\"source\" in ('generated', 'custom')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.serpapi_usage": {
@@ -1268,14 +1302,23 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "subscriptions_status_check": {
+          "name": "subscriptions_status_check",
+          "value": "\"subscriptions\".\"status\" in ('active', 'past_due', 'suspended', 'canceled')"
+        },
+        "subscriptions_plan_check": {
+          "name": "subscriptions_plan_check",
+          "value": "\"subscriptions\".\"plan\" in ('free', 'starter', 'business')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.user": {
@@ -1348,7 +1391,12 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "user_role_check": {
+          "name": "user_role_check",
+          "value": "\"user\".\"role\" in ('user', 'admin')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.verification": {

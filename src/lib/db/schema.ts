@@ -1,6 +1,7 @@
 import { relations, sql } from 'drizzle-orm'
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -11,23 +12,55 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core'
+import type { AnyPgColumn } from 'drizzle-orm/pg-core'
+import { ENGINE_TIER, PLANS } from '@/lib/plans'
 import type { EngineId, PlanId } from '@/lib/plans'
+
+// ─────────────────────────────────────────────────────────────
+// CHECK 제약 헬퍼
+// ─────────────────────────────────────────────────────────────
+// pgEnum이 아니라 check()를 쓴다: 상태값을 추가/변경할 때 `ALTER TYPE ... ADD VALUE`
+// (트랜잭션 안에서 못 돌리는 버전이 있고, 값을 빼는 것도 사실상 불가능) 없이 평범한
+// 마이그레이션으로 처리할 수 있어 상태값이 자주 바뀌는 지금 단계에 더 유연하다.
+//
+// 허용 값 목록은 반드시 `as const` 배열 하나에서만 선언하고, TypeScript 유니온 타입과
+// SQL CHECK 목록을 둘 다 그 배열에서 파생시킨다. 유니온과 검증 목록을 손으로 두 번
+// 적으면 갈라진다 — Task 2·3에서 겪은 문제라 여기서는 그 경로 자체를 막는다.
+
+/** notNull 컬럼용: 값이 허용 목록 안에 있는지만 검사한다 */
+function enumCheck(name: string, column: AnyPgColumn, values: readonly string[]) {
+  const list = values.map((v) => `'${v}'`).join(', ')
+  return check(name, sql`${column} in (${sql.raw(list)})`)
+}
+
+/** nullable 컬럼용: NULL이거나 허용 목록 안에 있어야 한다 */
+function nullableEnumCheck(name: string, column: AnyPgColumn, values: readonly string[]) {
+  const list = values.map((v) => `'${v}'`).join(', ')
+  return check(name, sql`${column} is null or ${column} in (${sql.raw(list)})`)
+}
 
 // ─────────────────────────────────────────────────────────────
 // Better Auth 테이블 (auth.ts의 drizzleAdapter가 이 이름을 요구한다)
 // ─────────────────────────────────────────────────────────────
 
-export const user = pgTable('user', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  email: text('email').notNull().unique(),
-  emailVerified: boolean('email_verified').notNull().default(false),
-  image: text('image'),
-  /** 'user' | 'admin' — 관리자 콘솔 접근 판정 (6단계) */
-  role: text('role').notNull().default('user'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+export const USER_ROLES = ['user', 'admin'] as const
+export type UserRole = (typeof USER_ROLES)[number]
+
+export const user = pgTable(
+  'user',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    email: text('email').notNull().unique(),
+    emailVerified: boolean('email_verified').notNull().default(false),
+    image: text('image'),
+    /** 관리자 콘솔 접근 판정 (6단계) */
+    role: text('role').$type<UserRole>().notNull().default('user'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [enumCheck('user_role_check', t.role, USER_ROLES)],
+)
 
 export const session = pgTable(
   'session',
@@ -85,11 +118,19 @@ export const verification = pgTable(
 // 구독
 // ─────────────────────────────────────────────────────────────
 
-export type SubscriptionStatus =
-  | 'active'
-  | 'past_due' // 결제 실패, 유예 기간 중 — 수집은 계속
-  | 'suspended' // 유예 만료 — 수집 중단, 데이터는 유지
-  | 'canceled'
+/**
+ * 'past_due' = 결제 실패, 유예 기간 중 — 수집은 계속
+ * 'suspended' = 유예 만료 — 수집 중단, 데이터는 유지
+ */
+export const SUBSCRIPTION_STATUSES = ['active', 'past_due', 'suspended', 'canceled'] as const
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number]
+
+/**
+ * 플랜 id 허용 목록. `@/lib/plans`의 `PLANS`는 `satisfies Record<PlanId, PlanConfig>`로
+ * 선언돼 있어 키가 `PlanId`와 정확히 일치함을 컴파일러가 보장한다 — 여기서 다시
+ * 손으로 나열하면 유니온과 목록이 갈라질 수 있으므로 `Object.keys`로 파생시킨다.
+ */
+const PLAN_IDS = Object.keys(PLANS) as readonly PlanId[]
 
 export const subscriptions = pgTable(
   'subscriptions',
@@ -97,7 +138,12 @@ export const subscriptions = pgTable(
     id: text('id').primaryKey(),
     userId: text('user_id')
       .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
+      // RESTRICT(cascade 아님): 결제 이력이 있는 구독은 DB 레벨에서 하드 삭제가
+      // 막힌다. 전자상거래법상 대금결제·재화공급 기록은 5년 보존 대상이라 계정
+      // 상태와 무관하게 남아야 한다. 회원 탈퇴는 이 행을 지우는 게 아니라 user를
+      // 익명화(soft delete)하는 방식으로 처리해야 한다 — 탈퇴 플로우는 이후
+      // 단계에서 설계한다. "왜 cascade가 아니지?" 하고 되돌리지 말 것.
+      .references(() => user.id, { onDelete: 'restrict' }),
     plan: text('plan').$type<PlanId>().notNull(),
     status: text('status').$type<SubscriptionStatus>().notNull().default('active'),
     /** ★ 구매한 질의 팩 수. 한도 = PLANS[plan].maxQueries + queryPacks * 10 */
@@ -117,6 +163,8 @@ export const subscriptions = pgTable(
   (t) => [
     uniqueIndex('subscriptions_user_idx').on(t.userId),
     index('subscriptions_period_end_idx').on(t.currentPeriodEnd),
+    enumCheck('subscriptions_status_check', t.status, SUBSCRIPTION_STATUSES),
+    enumCheck('subscriptions_plan_check', t.plan, PLAN_IDS),
   ],
 )
 
@@ -155,6 +203,9 @@ export const brands = pgTable(
   ],
 )
 
+export const QUERY_SOURCES = ['generated', 'custom'] as const
+export type QuerySource = (typeof QUERY_SOURCES)[number]
+
 export const queries = pgTable(
   'queries',
   {
@@ -165,10 +216,13 @@ export const queries = pgTable(
     text: text('text').notNull(),
     isActive: boolean('is_active').notNull().default(true),
     /** 'generated' = 자동 생성, 'custom' = 고객이 직접 입력 */
-    source: text('source').$type<'generated' | 'custom'>().notNull().default('generated'),
+    source: text('source').$type<QuerySource>().notNull().default('generated'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('queries_brand_idx').on(t.brandId, t.isActive)],
+  (t) => [
+    index('queries_brand_idx').on(t.brandId, t.isActive),
+    enumCheck('queries_source_check', t.source, QUERY_SOURCES),
+  ],
 )
 
 // ─────────────────────────────────────────────────────────────
@@ -202,8 +256,11 @@ export interface RunMetrics {
   stage1PassRate: number | null
 }
 
-export type RunStatus = 'running' | 'succeeded' | 'partial' | 'failed'
-export type RunTrigger = 'schedule' | 'signup' | 'manual' | 'free_audit'
+export const RUN_STATUSES = ['running', 'succeeded', 'partial', 'failed'] as const
+export type RunStatus = (typeof RUN_STATUSES)[number]
+
+export const RUN_TRIGGERS = ['schedule', 'signup', 'manual', 'free_audit'] as const
+export type RunTrigger = (typeof RUN_TRIGGERS)[number]
 
 export const collectionRuns = pgTable(
   'collection_runs',
@@ -221,13 +278,24 @@ export const collectionRuns = pgTable(
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
     finishedAt: timestamp('finished_at', { withTimezone: true }),
   },
-  (t) => [index('runs_brand_started_idx').on(t.brandId, t.startedAt)],
+  (t) => [
+    index('runs_brand_started_idx').on(t.brandId, t.startedAt),
+    enumCheck('collection_runs_status_check', t.status, RUN_STATUSES),
+    enumCheck('collection_runs_trigger_check', t.trigger, RUN_TRIGGERS),
+  ],
 )
 
 export interface Citation {
   url: string
   title: string
 }
+
+/**
+ * 엔진 id 허용 목록. `@/lib/plans`의 `ENGINE_TIER`는 `Record<EngineId, EngineTier>`
+ * 타입의 객체 리터럴로 선언돼 있어 키가 `EngineId`와 정확히 일치함을 컴파일러가
+ * 보장한다 — 여기서 다시 손으로 나열하지 않고 `Object.keys`로 파생시킨다.
+ */
+const ENGINE_IDS = Object.keys(ENGINE_TIER) as readonly EngineId[]
 
 export const answers = pgTable(
   'answers',
@@ -250,10 +318,12 @@ export const answers = pgTable(
   (t) => [
     index('answers_run_idx').on(t.runId),
     uniqueIndex('answers_unique_idx').on(t.runId, t.queryId, t.engineId, t.sampleIndex),
+    enumCheck('answers_engine_id_check', t.engineId, ENGINE_IDS),
   ],
 )
 
-export type Sentiment = 'recommended' | 'neutral' | 'negative'
+export const SENTIMENTS = ['recommended', 'neutral', 'negative'] as const
+export type Sentiment = (typeof SENTIMENTS)[number]
 
 export const detections = pgTable(
   'detections',
@@ -279,6 +349,7 @@ export const detections = pgTable(
   (t) => [
     index('detections_answer_idx').on(t.answerId),
     uniqueIndex('detections_unique_idx').on(t.answerId, t.subject, t.detectorVersion),
+    nullableEnumCheck('detections_sentiment_check', t.sentiment, SENTIMENTS),
   ],
 )
 
@@ -286,7 +357,8 @@ export const detections = pgTable(
 // 무료 진단
 // ─────────────────────────────────────────────────────────────
 
-export type AuditStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'waitlisted'
+export const AUDIT_STATUSES = ['queued', 'running', 'succeeded', 'failed', 'waitlisted'] as const
+export type AuditStatus = (typeof AUDIT_STATUSES)[number]
 
 export const freeAudits = pgTable(
   'free_audits',
@@ -312,6 +384,7 @@ export const freeAudits = pgTable(
   (t) => [
     index('audits_iphash_created_idx').on(t.ipHash, t.createdAt),
     index('audits_brand_created_idx').on(t.brandName, t.createdAt),
+    enumCheck('free_audits_status_check', t.status, AUDIT_STATUSES),
   ],
 )
 
@@ -319,17 +392,23 @@ export const freeAudits = pgTable(
 // 결제 이력 / 외부 쿼터
 // ─────────────────────────────────────────────────────────────
 
+export const PAYMENT_STATUSES = ['paid', 'failed', 'canceled'] as const
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number]
+
 export const payments = pgTable(
   'payments',
   {
     id: text('id').primaryKey(),
     subscriptionId: text('subscription_id')
       .notNull()
-      .references(() => subscriptions.id, { onDelete: 'cascade' }),
+      // RESTRICT(cascade 아님): 결제 기록은 전자상거래법상 5년 보존 대상이다.
+      // 구독이 취소·삭제되어도 그 구독에 달린 결제 이력은 지워지면 안 된다.
+      // subscriptions.userId와 같은 이유 — 자세한 내용은 그쪽 주석 참고.
+      .references(() => subscriptions.id, { onDelete: 'restrict' }),
     /** 우리가 만든 멱등키. 같은 orderId로 두 번 청구되지 않는다 */
     orderId: text('order_id').notNull(),
     amountKrw: integer('amount_krw').notNull(),
-    status: text('status').$type<'paid' | 'failed' | 'canceled'>().notNull(),
+    status: text('status').$type<PaymentStatus>().notNull(),
     /** 토스 응답 원본 (카드번호 마스킹된 형태로만 들어온다) */
     raw: jsonb('raw').$type<unknown>(),
     failureCode: text('failure_code'),
@@ -340,6 +419,7 @@ export const payments = pgTable(
   (t) => [
     uniqueIndex('payments_order_idx').on(t.orderId),
     index('payments_subscription_idx').on(t.subscriptionId, t.createdAt),
+    enumCheck('payments_status_check', t.status, PAYMENT_STATUSES),
   ],
 )
 

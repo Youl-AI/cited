@@ -24,7 +24,8 @@ CREATE TABLE "answers" (
 	"text" text NOT NULL,
 	"citations" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"raw" jsonb,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "answers_engine_id_check" CHECK ("answers"."engine_id" in ('chatgpt', 'gemini', 'naver', 'google_aio'))
 );
 --> statement-breakpoint
 CREATE TABLE "brands" (
@@ -51,7 +52,9 @@ CREATE TABLE "collection_runs" (
 	"status" text DEFAULT 'running' NOT NULL,
 	"trigger" text NOT NULL,
 	"started_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"finished_at" timestamp with time zone
+	"finished_at" timestamp with time zone,
+	CONSTRAINT "collection_runs_status_check" CHECK ("collection_runs"."status" in ('running', 'succeeded', 'partial', 'failed')),
+	CONSTRAINT "collection_runs_trigger_check" CHECK ("collection_runs"."trigger" in ('schedule', 'signup', 'manual', 'free_audit'))
 );
 --> statement-breakpoint
 CREATE TABLE "detections" (
@@ -64,7 +67,8 @@ CREATE TABLE "detections" (
 	"context" text,
 	"detector_version" integer NOT NULL,
 	"unresolved" boolean DEFAULT false NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "detections_sentiment_check" CHECK ("detections"."sentiment" is null or "detections"."sentiment" in ('recommended', 'neutral', 'negative'))
 );
 --> statement-breakpoint
 CREATE TABLE "free_audits" (
@@ -79,7 +83,8 @@ CREATE TABLE "free_audits" (
 	"variant" text DEFAULT 'cba' NOT NULL,
 	"converted_email_at" timestamp with time zone,
 	"converted_signup_at" timestamp with time zone,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "free_audits_status_check" CHECK ("free_audits"."status" in ('queued', 'running', 'succeeded', 'failed', 'waitlisted'))
 );
 --> statement-breakpoint
 CREATE TABLE "payments" (
@@ -92,7 +97,8 @@ CREATE TABLE "payments" (
 	"failure_code" text,
 	"failure_message" text,
 	"paid_at" timestamp with time zone,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "payments_status_check" CHECK ("payments"."status" in ('paid', 'failed', 'canceled'))
 );
 --> statement-breakpoint
 CREATE TABLE "queries" (
@@ -101,7 +107,8 @@ CREATE TABLE "queries" (
 	"text" text NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"source" text DEFAULT 'generated' NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "queries_source_check" CHECK ("queries"."source" in ('generated', 'custom'))
 );
 --> statement-breakpoint
 CREATE TABLE "serpapi_usage" (
@@ -137,7 +144,9 @@ CREATE TABLE "subscriptions" (
 	"grace_until" timestamp with time zone,
 	"canceled_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "subscriptions_status_check" CHECK ("subscriptions"."status" in ('active', 'past_due', 'suspended', 'canceled')),
+	CONSTRAINT "subscriptions_plan_check" CHECK ("subscriptions"."plan" in ('free', 'starter', 'business'))
 );
 --> statement-breakpoint
 CREATE TABLE "user" (
@@ -149,7 +158,8 @@ CREATE TABLE "user" (
 	"role" text DEFAULT 'user' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "user_email_unique" UNIQUE("email")
+	CONSTRAINT "user_email_unique" UNIQUE("email"),
+	CONSTRAINT "user_role_check" CHECK ("user"."role" in ('user', 'admin'))
 );
 --> statement-breakpoint
 CREATE TABLE "verification" (
@@ -166,10 +176,10 @@ ALTER TABLE "answers" ADD CONSTRAINT "answers_run_id_collection_runs_id_fk" FORE
 ALTER TABLE "brands" ADD CONSTRAINT "brands_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "collection_runs" ADD CONSTRAINT "collection_runs_brand_id_brands_id_fk" FOREIGN KEY ("brand_id") REFERENCES "public"."brands"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "detections" ADD CONSTRAINT "detections_answer_id_answers_id_fk" FOREIGN KEY ("answer_id") REFERENCES "public"."answers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "payments" ADD CONSTRAINT "payments_subscription_id_subscriptions_id_fk" FOREIGN KEY ("subscription_id") REFERENCES "public"."subscriptions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "payments" ADD CONSTRAINT "payments_subscription_id_subscriptions_id_fk" FOREIGN KEY ("subscription_id") REFERENCES "public"."subscriptions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "queries" ADD CONSTRAINT "queries_brand_id_brands_id_fk" FOREIGN KEY ("brand_id") REFERENCES "public"."brands"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "account_user_idx" ON "account" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "answers_run_idx" ON "answers" USING btree ("run_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "answers_unique_idx" ON "answers" USING btree ("run_id","query_id","engine_id","sample_index");--> statement-breakpoint
