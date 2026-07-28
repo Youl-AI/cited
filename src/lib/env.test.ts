@@ -33,4 +33,23 @@ describe('parseEnv', () => {
   it('선택 키는 없어도 통과하고 undefined가 된다', () => {
     expect(parseEnv(valid).SENTRY_DSN).toBeUndefined()
   })
+
+  it('시크릿이 유효하지 않아도 에러 메시지에 값 자체는 노출되지 않는다', () => {
+    // 32자 미만이지만 실제 시크릿처럼 보이는 값. 결제를 다루는
+    // 서비스이므로 이런 값이 에러 메시지나 로그로 새면 안 된다.
+    const plausibleButInvalidSecret = 'sk_live_51Hh2M9K3jF8n2Qz'
+    expect(plausibleButInvalidSecret.length).toBeLessThan(32)
+
+    let thrown: unknown
+    try {
+      parseEnv({ ...valid, BETTER_AUTH_SECRET: plausibleButInvalidSecret })
+    } catch (error) {
+      thrown = error
+    }
+
+    expect(thrown).toBeInstanceOf(Error)
+    const message = (thrown as Error).message
+    expect(message).not.toContain(plausibleButInvalidSecret)
+    expect(message).toContain('BETTER_AUTH_SECRET')
+  })
 })
