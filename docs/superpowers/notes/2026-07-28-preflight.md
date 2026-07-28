@@ -1,0 +1,60 @@
+# 착수 전 확인 결과 (2026-07-28)
+
+## 확인 방법 메모
+
+- `pnpm`이 환경에 설치되어 있지 않아(`which pnpm` → not found) 브리프 대안 지시에 따라
+  **`npm view <pkg> version`** (npm 11.8.0)을 사용했다. `next`는 16.2.x 계열 존재 여부와
+  최신 패치를 확인하기 위해 `npm view next@16 versions --json`과 `npm view next dist-tags --json`을
+  추가로 실행했다.
+- `whois` 명령이 Git Bash 환경에 없어(`which whois` → not found) 브리프 대안 지시에 따라
+  `nslookup`으로 DNS 응답 여부만 확인했다. **DNS 응답이 있으면 "등록됨"으로만 결론짓고,
+  응답이 없으면(NXDOMAIN) "구매 가능"이라 단정하지 않았다** — 미등록일 수도, 네임서버
+  미설정일 수도 있어 레지스트라 UI 확인이 필요하다.
+
+## 확정 버전
+
+| 패키지 | 확정 버전 | 확인 명령 출력 |
+| --- | --- | --- |
+| next | **16.2.12** | `npm view next dist-tags --json` → `"latest": "16.2.12"`. `npm view next@16 versions --json`로 16.2.x 계열 전체 나열 확인 결과 16.2.0~16.2.12까지 존재, 16.2.12가 최고 패치. (16.3.0은 `canary`/`preview` 태그로만 존재, 정식 릴리스 아님 — `dist-tags`: `"canary": "16.3.0-canary.97"`, `"preview": "16.3.0-preview.9"`) |
+| react | **19.2.8** | `npm view react version` → `19.2.8` |
+| drizzle-orm | **0.45.2** | `npm view drizzle-orm version` → `0.45.2` |
+| better-auth | **1.6.25** | `npm view better-auth version` → `1.6.25` |
+| @trigger.dev/sdk | **4.5.8** | `npm view @trigger.dev/sdk version` → `4.5.8` |
+| tailwindcss | **4.3.3** | `npm view tailwindcss version` → `4.3.3` |
+
+계획이 전제한 `next@16.2.x` 고정은 유효하다. 16.2.x 계열이 실제로 존재하며(16.2.0~16.2.12),
+그중 최고 패치인 16.2.12를 다음 태스크(프로젝트 스캐폴드)의 `package.json`에 고정한다.
+
+## 도메인
+
+DNS 조회(`nslookup`) 결과:
+
+| 도메인 | nslookup 결과 | 해석 |
+| --- | --- | --- |
+| cited.co.kr | `kns.kornet.net 에서... 찾을 수 없습니다. Non-existent domain` (NXDOMAIN) | 응답 없음 — 등록 여부 불확실. **레지스트라 UI(가비아/후이즈 등)에서 사용자 직접 확인 필요.** |
+| cited.kr | `kns.kornet.net 에서... 찾을 수 없습니다. Non-existent domain` (NXDOMAIN) | 응답 없음 — 등록 여부 불확실. **레지스트라 UI에서 사용자 직접 확인 필요.** |
+| getcited.com | `getcited.com Address: 207.34.60.134` | DNS 응답 있음 → **등록됨(사용 중).** 확보 불가로 간주. |
+| cited.com (참고, 브리프 목록 외 추가 확인) | `cited.com Addresses: 15.197.148.33, 3.33.130.190` | DNS 응답 있음 → **등록됨(사용 중, 파킹 페이지 가능성 있는 IP 대역).** 확보 불가로 간주. |
+
+- 1순위: `cited.co.kr` / 상태: **미확인(레지스트라 UI 확인 필요)** — NXDOMAIN이지만 이것만으로
+  구매 가능 여부를 단정할 수 없음.
+- 2순위: `cited.kr` / 상태: **미확인(레지스트라 UI 확인 필요)** — 위와 동일한 이유.
+- 결정: **보류.** `cited.com`과 `getcited.com`은 DNS 응답이 있어 확보 불가로 확인됐다.
+  `.co.kr`/`.kr`은 NXDOMAIN만으로는 판단할 수 없어 담당자가 가비아·후이즈 등 국내
+  레지스트라 검색 UI에서 실제 등록 여부를 확인해야 한다. `cited` 계열 전체가 막힌 것으로
+  최종 확인될 경우를 대비한 대안 후보 3개(브랜드명 재검토용, 등록 여부는 미확인):
+  1. `citehq.co.kr` / `citehq.com`
+  2. `citedly.com`
+  3. `aicited.co.kr`
+  담당 태스크: **6단계 런치 체크리스트** 착수 전 사용자가 레지스트라 UI에서 `cited.co.kr`,
+  `cited.kr` 등록 여부를 확인하고 최종 도메인을 확정한다.
+
+## 미확정 항목과 해소 지점
+
+| 항목 | 해소 태스크 |
+| --- | --- |
+| Trigger.dev $5 크레딧 소진 속도 | 3단계 Task 1 |
+| 토스페이먼츠 수수료율 | 4단계 착수 전 계약 확인 |
+| OpenAI 웹검색 툴 단가 | 2단계 Task 2 |
+| SerpApi 네이버 AI 브리핑 커버리지 | 2단계 Task 4 |
+| `cited.co.kr` / `cited.kr` 실제 등록 여부(레지스트라 UI 확인) | 6단계 런치 체크리스트 착수 전 |
