@@ -176,9 +176,10 @@ describe('Better Auth ↔ 기존 Drizzle 스키마', () => {
     expect(attributes.get('max-age')).toBe(String(60 * 60 * 24 * 30)) // session.expiresIn과 동일
 
     // Secure는 실행 환경이 정한다(auth.ts의 secureCookiePolicy). 스모크는
-    // NODE_ENV=test로 도니까 여기서는 꺼져 있는 것이 정답이고, 프로덕션에서
-    // 켜진다는 사실은 auth.test.ts가 getCookies로 고정한다. 중요한 건
-    // 이 값이 baseURL 문자열이 아니라 NODE_ENV를 따른다는 것이다.
+    // NODE_ENV=test·배포 신호 없음으로 도니까 여기서는 꺼져 있는 것이 정답이고,
+    // 프로덕션·배포에서 켜진다는 사실은 auth.test.ts가 auth.ts를 그 환경으로
+    // 재적재해서 고정한다. 중요한 건 이 값이 baseURL 문자열이 아니라
+    // NODE_ENV·배포 신호를 따른다는 것이다.
     expect(auth.options.advanced?.useSecureCookies).toBe(false)
     expect(attributes.has('secure')).toBe(false)
     expect(sessionCookie?.startsWith('__Secure-')).toBe(false)

@@ -4,7 +4,7 @@ import { MIN_PASSWORD_LENGTH } from '@/lib/auth-errors'
 import { db, schema } from '@/lib/db'
 import { sendEmail } from '@/lib/email/send'
 import { verificationEmail } from '@/lib/email/templates'
-import { type Env, env } from '@/lib/env'
+import { type Env, env, isDeployedEnv } from '@/lib/env'
 import { logger } from '@/lib/logger'
 
 /** 인증 링크 유효 기간. `verificationEmail` 본문의 "24시간" 문구와 반드시 같아야 한다. */
@@ -23,11 +23,17 @@ const SESSION_EXPIRES_IN = 60 * 60 * 24 * 30 // 30일
  * 프로덕션에 http:// 값이 들어가도 아무것도 실패하지 않고 쿠키만 조용히
  * 평문으로 나간다. 명시해서 그 결합을 끊는다.
  *
- * env.ts가 프로덕션의 http:// BETTER_AUTH_URL을 따로 막지만, 그건 인증 링크
- * URL을 위한 방어이고 쿠키는 이쪽이 책임진다 — 방어선을 둘로 나눠 둔다.
+ * 신호를 둘 받는 이유: NODE_ENV 하나에 걸면 그것을 덮어썼거나 빠뜨린 배포
+ * (Vercel의 NODE_ENV 재정의, 커스텀 `node server.js` 진입점, 컨테이너 누락)
+ * 에서 Secure가 조용히 꺼진다. `isDeployed`는 env.ts의 `isDeployedEnv`가
+ * 주는 값이고, env.ts의 https 강제도 **똑같은 조건**을 쓴다 — 두 방어선이
+ * "배포됨"에 대해 어긋나면 한쪽만 켜진 채로 세션이 평문으로 흐른다.
  */
-export function secureCookiePolicy(nodeEnv: Env['NODE_ENV']): { useSecureCookies: boolean } {
-  return { useSecureCookies: nodeEnv === 'production' }
+export function secureCookiePolicy(
+  nodeEnv: Env['NODE_ENV'],
+  isDeployed: boolean,
+): { useSecureCookies: boolean } {
+  return { useSecureCookies: nodeEnv === 'production' || isDeployed }
 }
 
 export const auth = betterAuth({
@@ -89,12 +95,18 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24, // 하루에 한 번 갱신
   },
   advanced: {
-    ...secureCookiePolicy(env.NODE_ENV),
+    ...secureCookiePolicy(env.NODE_ENV, isDeployedEnv(env)),
     // defaultCookieAttributes는 일부러 두지 않는다. better-auth의 기본값
     // (httpOnly: true, sameSite: 'lax', path: '/')이 우리가 원하는 값이고,
-    // 여기에 객체를 하나 얹는 순간 그 기본값을 조용히 덮어쓸 수 있다.
-    // 실제 Set-Cookie 헤더는 auth.smoke.test.ts가, 프로덕션의 Secure는
-    // auth.test.ts가 고정한다.
+    // 여기에 객체를 하나 얹는 순간 그 기본값을 조용히 덮어쓸 수 있다 —
+    // cookies/index.mjs:37에서 `secure` 기본값 **뒤에** spread되므로
+    // `defaultCookieAttributes: { secure: false }`는 위의 useSecureCookies도
+    // 이긴다.
+    //
+    // 이 파일의 실제 설정은 auth.test.ts가 고정한다. 프로덕션 Secure는
+    // NODE_ENV=production으로 이 모듈을 **재적재**해서 확인하므로(합성 옵션이
+    // 아니다) 위 두 줄 중 어느 쪽을 망가뜨려도 거기서 걸린다. 실제 Set-Cookie
+    // 헤더는 auth.smoke.test.ts가 본다.
   },
 })
 

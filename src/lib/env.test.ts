@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseEnv } from '@/lib/env'
+import { isDeployedEnv, parseEnv } from '@/lib/env'
 
 const valid = {
   NODE_ENV: 'test' as const,
@@ -54,10 +54,13 @@ describe('parseEnv', () => {
   })
 })
 
-// 세션 쿠키의 Secure 플래그는 실행 환경(NODE_ENV)이 결정하지만(auth.ts의
-// advanced.useSecureCookies), BETTER_AUTH_URL이 http로 새면 인증 링크·콜백
-// URL이 전부 평문으로 나간다. 그리고 이 값이 NEXT_PUBLIC_APP_URL과 다르면
-// better-auth의 origin 검사가 모든 요청을 거부한다. 둘 다 부팅 시점에 막는다.
+// 세션 쿠키의 Secure 플래그는 auth.ts의 advanced.useSecureCookies가
+// 결정하지만, BETTER_AUTH_URL이 http로 새면 인증 링크·콜백 URL이 전부 평문으로
+// 나간다. 그리고 이 값이 NEXT_PUBLIC_APP_URL과 다르면 better-auth의 origin
+// 검사가 모든 요청을 거부한다. 둘 다 부팅 시점에 막는다.
+//
+// 발동 조건은 auth.ts의 쿠키 정책과 **같은 판정**(NODE_ENV=production 또는
+// isDeployedEnv)을 쓴다. 어긋나면 한쪽만 켜진 채로 세션이 평문으로 흐른다.
 describe('BETTER_AUTH_URL 위생', () => {
   it('프로덕션에서 http:// BETTER_AUTH_URL을 거부한다', () => {
     expect(() =>
@@ -127,12 +130,111 @@ describe('BETTER_AUTH_URL 위생', () => {
     expect(env.BETTER_AUTH_URL).toBe('http://localhost:3000')
   })
 
+  // 여기가 이번 수정의 요점이다. NODE_ENV 하나에만 걸어 두면, Vercel에서
+  // NODE_ENV를 덮어썼거나 커스텀 진입점(`node server.js`)·컨테이너가 빠뜨린
+  // 배포에서 https 강제가 조용히 꺼진다. NODE_ENV는 .default('development')라
+  // 값이 없으면 fail-open이다.
+  it('NODE_ENV가 production이 아니어도 배포 신호가 있으면 http를 거부한다', () => {
+    for (const nodeEnv of ['development', 'test'] as const) {
+      expect(() =>
+        parseEnv({
+          ...valid,
+          NODE_ENV: nodeEnv,
+          VERCEL: '1',
+          BETTER_AUTH_URL: 'http://cited.co.kr',
+          NEXT_PUBLIC_APP_URL: 'http://cited.co.kr',
+        }),
+      ).toThrowError(/BETTER_AUTH_URL/)
+    }
+  })
+
+  // 배포에는 루프백 예외가 없다 — NODE_ENV와 무관하게.
+  it('NODE_ENV가 production이 아니어도 배포 신호가 있으면 루프백 http도 거부한다', () => {
+    expect(() =>
+      parseEnv({
+        ...valid,
+        NODE_ENV: 'development',
+        VERCEL: '1',
+        BETTER_AUTH_URL: 'http://localhost:3000',
+        NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+      }),
+    ).toThrowError(/BETTER_AUTH_URL/)
+  })
+
+  it('배포 신호가 있어도 https면 통과한다', () => {
+    const env = parseEnv({
+      ...valid,
+      NODE_ENV: 'development',
+      VERCEL: '1',
+      BETTER_AUTH_URL: 'https://cited.co.kr',
+      NEXT_PUBLIC_APP_URL: 'https://cited.co.kr',
+    })
+    expect(env.VERCEL).toBe('1')
+  })
+
+  // 호스트명은 대소문자를 구분하지 않는다(RFC 3986 §3.2.2). 예전 정규식은
+  // 소문자만 받아서 이 값이 로컬 프로덕션 빌드를 막았다.
+  it('루프백 판정이 대소문자를 가리지 않는다', () => {
+    const env = parseEnv({
+      ...valid,
+      NODE_ENV: 'production',
+      BETTER_AUTH_URL: 'http://LOCALHOST:3000',
+      NEXT_PUBLIC_APP_URL: 'http://LOCALHOST:3000',
+    })
+    expect(env.BETTER_AUTH_URL).toBe('http://LOCALHOST:3000')
+  })
+
+  // 반대로 앵커·종결자는 그대로여야 한다. 이게 없으면 아래 위조 호스트가
+  // 루프백으로 통과해 https 강제를 우회한다.
+  it('localhost를 흉내 낸 위조 호스트는 루프백으로 봐주지 않는다', () => {
+    for (const forged of [
+      'http://localhost.evil.com',
+      'http://localhost@evil.com',
+      'http://LocalHost.evil.com',
+      'http://evil.com/localhost',
+      'http://notlocalhost:3000',
+    ]) {
+      expect(() =>
+        parseEnv({
+          ...valid,
+          NODE_ENV: 'production',
+          BETTER_AUTH_URL: forged,
+          NEXT_PUBLIC_APP_URL: forged,
+        }),
+      ).toThrowError(/BETTER_AUTH_URL/)
+    }
+  })
+
   it('BETTER_AUTH_URL과 NEXT_PUBLIC_APP_URL이 다르면 거부한다', () => {
     expect(() =>
       parseEnv({
         ...valid,
         BETTER_AUTH_URL: 'http://localhost:3000',
         NEXT_PUBLIC_APP_URL: 'http://localhost:3001',
+      }),
+    ).toThrowError(/NEXT_PUBLIC_APP_URL/)
+  })
+
+  // 끝 슬래시는 표기 차이일 뿐 같은 오리진이다. 여기서 거부하면 실제로는
+  // 잘 도는 설정이 부팅만 막는다.
+  it('끝 슬래시만 다른 같은 오리진은 일치로 본다', () => {
+    const env = parseEnv({
+      ...valid,
+      NODE_ENV: 'production',
+      BETTER_AUTH_URL: 'https://cited.co.kr/',
+      NEXT_PUBLIC_APP_URL: 'https://cited.co.kr',
+    })
+    // 정규화는 비교에만 쓴다 — 값은 입력 그대로 남는다.
+    expect(env.BETTER_AUTH_URL).toBe('https://cited.co.kr/')
+    expect(env.NEXT_PUBLIC_APP_URL).toBe('https://cited.co.kr')
+  })
+
+  it('호스트가 다르면 여전히 거부한다', () => {
+    expect(() =>
+      parseEnv({
+        ...valid,
+        BETTER_AUTH_URL: 'https://cited.co.kr/',
+        NEXT_PUBLIC_APP_URL: 'https://app.cited.co.kr/',
       }),
     ).toThrowError(/NEXT_PUBLIC_APP_URL/)
   })
@@ -150,6 +252,21 @@ describe('BETTER_AUTH_URL 위생', () => {
     }
     expect(thrown).toBeInstanceOf(Error)
     expect((thrown as Error).message).toContain('BETTER_AUTH_URL')
+  })
+})
+
+// env.ts의 https 강제와 auth.ts의 쿠키 Secure가 "배포됨"을 서로 다르게
+// 판정하면, 한쪽만 켜진 채로 세션 토큰이 평문으로 흐른다. 그래서 판정은
+// 이 함수 하나에만 있고 auth.ts가 이걸 import해서 쓴다.
+describe('isDeployedEnv', () => {
+  it('VERCEL이 있으면 배포로 본다 (빈 문자열도 포함)', () => {
+    expect(isDeployedEnv({ VERCEL: '1' })).toBe(true)
+    expect(isDeployedEnv({ VERCEL: '' })).toBe(true)
+  })
+
+  it('VERCEL이 없으면 배포가 아니다 — 로컬 프로덕션 빌드가 여기 해당한다', () => {
+    expect(isDeployedEnv({ VERCEL: undefined })).toBe(false)
+    expect(isDeployedEnv(parseEnv(valid))).toBe(false)
   })
 })
 
