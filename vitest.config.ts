@@ -24,7 +24,12 @@ export default defineConfig({
     // env.ts의 부팅 검증 단계에서 원인을 알기 힘든 zod 에러로 깨진다.
     env: {
       NODE_ENV: 'test',
-      DATABASE_URL: 'postgres://test',
+      // 형식이 유효해야 한다. @neondatabase/serverless의 neon()은 모듈 평가
+      // 시점에 문자열을 파싱하고 형식이 어긋나면 그 자리에서 던진다. 그래서
+      // 아무 더미 문자열이나 넣으면 '@/lib/db'를 (그리고 그걸 import하는
+      // '@/lib/auth'를) 단위 테스트에서 아예 적재할 수 없다. 접속은 하지
+      // 않는다 — neon HTTP 드라이버는 첫 쿼리 때 비로소 네트워크를 탄다.
+      DATABASE_URL: 'postgresql://user:password@host.tld/dbname',
       BETTER_AUTH_SECRET: 'x'.repeat(32),
       BETTER_AUTH_URL: 'http://localhost:3000',
       NEXT_PUBLIC_APP_URL: 'http://localhost:3000',

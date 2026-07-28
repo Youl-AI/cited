@@ -1,13 +1,34 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { MIN_PASSWORD_LENGTH } from '@/lib/auth-errors'
 import { db, schema } from '@/lib/db'
 import { sendEmail } from '@/lib/email/send'
 import { verificationEmail } from '@/lib/email/templates'
-import { env } from '@/lib/env'
+import { type Env, env } from '@/lib/env'
 import { logger } from '@/lib/logger'
 
 /** 인증 링크 유효 기간. `verificationEmail` 본문의 "24시간" 문구와 반드시 같아야 한다. */
 const VERIFICATION_EXPIRES_IN = 60 * 60 * 24
+
+/** 세션 유효 기간. 쿠키의 Max-Age와 세션 행의 expiresAt이 이 값을 공유한다. */
+const SESSION_EXPIRES_IN = 60 * 60 * 24 * 30 // 30일
+
+/**
+ * 세션 쿠키의 `Secure` 여부를 **실행 환경**으로 결정한다.
+ *
+ * better-auth 1.6.25는 `advanced.useSecureCookies`가 없으면
+ * `baseURL.startsWith("https://")`로 secure를 정한다
+ * (node_modules/better-auth/dist/cookies/index.mjs:21). 즉 이 옵션이 없으면
+ * 세션 토큰의 유일한 전송 보호가 환경변수 문자열 하나의 오타 거리에 놓인다 —
+ * 프로덕션에 http:// 값이 들어가도 아무것도 실패하지 않고 쿠키만 조용히
+ * 평문으로 나간다. 명시해서 그 결합을 끊는다.
+ *
+ * env.ts가 프로덕션의 http:// BETTER_AUTH_URL을 따로 막지만, 그건 인증 링크
+ * URL을 위한 방어이고 쿠키는 이쪽이 책임진다 — 방어선을 둘로 나눠 둔다.
+ */
+export function secureCookiePolicy(nodeEnv: Env['NODE_ENV']): { useSecureCookies: boolean } {
+  return { useSecureCookies: nodeEnv === 'production' }
+}
 
 export const auth = betterAuth({
   // 기존 마이그레이션으로 이미 만들어진 테이블에 그대로 붙인다. 스키마는 손대지 않는다.
@@ -33,7 +54,8 @@ export const auth = betterAuth({
     enabled: true,
     // 무료 진단 남용 방지의 한 축. 이메일 인증 없이는 계정이 활성화되지 않는다.
     requireEmailVerification: true,
-    minPasswordLength: 10,
+    // 가입 폼의 minLength와 PASSWORD_TOO_SHORT 한국어 문구가 같은 상수를 쓴다.
+    minPasswordLength: MIN_PASSWORD_LENGTH,
   },
   emailVerification: {
     sendOnSignUp: true,
@@ -63,8 +85,16 @@ export const auth = betterAuth({
     },
   },
   session: {
-    expiresIn: 60 * 60 * 24 * 30, // 30일
+    expiresIn: SESSION_EXPIRES_IN,
     updateAge: 60 * 60 * 24, // 하루에 한 번 갱신
+  },
+  advanced: {
+    ...secureCookiePolicy(env.NODE_ENV),
+    // defaultCookieAttributes는 일부러 두지 않는다. better-auth의 기본값
+    // (httpOnly: true, sameSite: 'lax', path: '/')이 우리가 원하는 값이고,
+    // 여기에 객체를 하나 얹는 순간 그 기본값을 조용히 덮어쓸 수 있다.
+    // 실제 Set-Cookie 헤더는 auth.smoke.test.ts가, 프로덕션의 Secure는
+    // auth.test.ts가 고정한다.
   },
 })
 

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { signIn } from '@/lib/auth-client'
+import { authErrorMessage } from '@/lib/auth-errors'
 
 export default function SignInPage() {
   const router = useRouter()
@@ -24,7 +25,9 @@ export default function SignInPage() {
         router.push('/verify-email')
         return
       }
-      setError(error.message ?? '로그인에 실패했습니다.')
+      // error.message는 영어라 쓰지 않는다. 코드만 보고 한국어 문구를 고른다.
+      // (매핑은 auth-errors.ts — 로그인 실패는 이메일/비밀번호를 구분하지 않는다.)
+      setError(authErrorMessage(error, '로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.'))
       return
     }
     router.push('/dashboard')

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { signUp } from '@/lib/auth-client'
+import { MIN_PASSWORD_LENGTH, authErrorMessage } from '@/lib/auth-errors'
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -20,7 +21,8 @@ export default function SignUpPage() {
     })
     setPending(false)
     if (error) {
-      setError(error.message ?? '가입에 실패했습니다.')
+      // error.message는 영어라 쓰지 않는다. 코드만 보고 한국어 문구를 고른다.
+      setError(authErrorMessage(error, '가입에 실패했습니다. 잠시 후 다시 시도해 주세요.'))
       return
     }
     router.push('/verify-email')
@@ -42,8 +44,8 @@ export default function SignUpPage() {
           name="password"
           type="password"
           required
-          minLength={10}
-          placeholder="비밀번호 (10자 이상)"
+          minLength={MIN_PASSWORD_LENGTH}
+          placeholder={`비밀번호 (${String(MIN_PASSWORD_LENGTH)}자 이상)`}
           className="rounded-lg border px-3 py-2"
         />
         {error ? <p className="text-sm text-red-600">{error}</p> : null}

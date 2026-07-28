@@ -15,12 +15,13 @@ import type { EmailContent } from '@/lib/email/templates'
 // 링크 URL 생성까지 같이 검증된다.
 const sentEmails: { to: string; content: EmailContent }[] = []
 
+// auth.ts는 이 모듈에서 `sendEmail`만 가져온다. 대역도 딱 그것만 둔다 —
+// 쓰지 않는 export를 흉내 내면 모킹이 실제 의존관계를 감춘다.
 vi.mock('@/lib/email/send', () => ({
   sendEmail: async (params: { to: string; content: EmailContent }) => {
     sentEmails.push(params)
     return { ok: true, id: 'smoke-stub' }
   },
-  maskEmail: (email: string) => email,
 }))
 
 const { auth } = await import('@/lib/auth')
@@ -139,6 +140,48 @@ describe('Better Auth ↔ 기존 Drizzle 스키마', () => {
     expect(sessions).toHaveLength(1)
     expect(sessions[0]?.token).toBeTruthy()
     expect(sessions[0]?.expiresAt.getTime()).toBeGreaterThan(Date.now())
+  })
+
+  // 세션 쿠키의 속성은 세션 토큰을 지키는 마지막 방어선이다. 여기서는
+  // auth.api가 아니라 실제 HTTP 핸들러를 태워서 브라우저가 받게 될 진짜
+  // Set-Cookie 헤더를 본다 — 누가 advanced.defaultCookieAttributes를
+  // 얹거나 useSecureCookies를 지우면 이 단언이 먼저 깨진다.
+  it('로그인 응답의 Set-Cookie가 httpOnly·sameSite·path·maxAge를 고정한다', async () => {
+    const baseURL = String(auth.options.baseURL ?? '')
+    expect(baseURL).not.toBe('')
+
+    const response = await auth.handler(
+      new Request(`${baseURL}/api/auth/sign-in/email`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: baseURL },
+        body: JSON.stringify({ email: TEST_EMAIL, password: TEST_PASSWORD }),
+      }),
+    )
+    expect(response.status).toBe(200)
+
+    const setCookies = response.headers.getSetCookie()
+    const sessionCookie = setCookies.find((c) => c.includes('better-auth.session_token='))
+    expect(sessionCookie).toBeDefined()
+
+    // `key=value; HttpOnly; SameSite=Lax; ...` → 소문자 키의 맵으로 정규화한다.
+    const attributes = new Map<string, string>()
+    for (const part of (sessionCookie ?? '').split(';').slice(1)) {
+      const [rawKey, ...rest] = part.trim().split('=')
+      attributes.set((rawKey ?? '').toLowerCase(), rest.join('='))
+    }
+
+    expect(attributes.has('httponly')).toBe(true)
+    expect(attributes.get('samesite')).toBe('Lax')
+    expect(attributes.get('path')).toBe('/')
+    expect(attributes.get('max-age')).toBe(String(60 * 60 * 24 * 30)) // session.expiresIn과 동일
+
+    // Secure는 실행 환경이 정한다(auth.ts의 secureCookiePolicy). 스모크는
+    // NODE_ENV=test로 도니까 여기서는 꺼져 있는 것이 정답이고, 프로덕션에서
+    // 켜진다는 사실은 auth.test.ts가 getCookies로 고정한다. 중요한 건
+    // 이 값이 baseURL 문자열이 아니라 NODE_ENV를 따른다는 것이다.
+    expect(auth.options.advanced?.useSecureCookies).toBe(false)
+    expect(attributes.has('secure')).toBe(false)
+    expect(sessionCookie?.startsWith('__Secure-')).toBe(false)
   })
 
   it('정리 후 13개 테이블이 전부 0행으로 돌아온다', async () => {

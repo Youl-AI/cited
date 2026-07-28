@@ -54,6 +54,105 @@ describe('parseEnv', () => {
   })
 })
 
+// 세션 쿠키의 Secure 플래그는 실행 환경(NODE_ENV)이 결정하지만(auth.ts의
+// advanced.useSecureCookies), BETTER_AUTH_URL이 http로 새면 인증 링크·콜백
+// URL이 전부 평문으로 나간다. 그리고 이 값이 NEXT_PUBLIC_APP_URL과 다르면
+// better-auth의 origin 검사가 모든 요청을 거부한다. 둘 다 부팅 시점에 막는다.
+describe('BETTER_AUTH_URL 위생', () => {
+  it('프로덕션에서 http:// BETTER_AUTH_URL을 거부한다', () => {
+    expect(() =>
+      parseEnv({
+        ...valid,
+        NODE_ENV: 'production',
+        BETTER_AUTH_URL: 'http://cited.co.kr',
+        NEXT_PUBLIC_APP_URL: 'http://cited.co.kr',
+      }),
+    ).toThrowError(/BETTER_AUTH_URL/)
+  })
+
+  // 이 태스크가 막으려던 바로 그 사고: 로컬 값이 Vercel 환경변수로 복사되는 것.
+  it('Vercel에 로컬 http 값이 복사되면 거부한다', () => {
+    expect(() =>
+      parseEnv({
+        ...valid,
+        NODE_ENV: 'production',
+        VERCEL: '1',
+        BETTER_AUTH_URL: 'http://localhost:3000',
+        NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+      }),
+    ).toThrowError(/BETTER_AUTH_URL/)
+  })
+
+  // `next build`·`next start`는 로컬에서도 NODE_ENV=production이다. 여기서
+  // 막으면 로컬 프로덕션 빌드가 통째로 죽는다 — 실제로 죽였다가 되돌렸다.
+  it('배포가 아닌 로컬 프로덕션 빌드의 루프백 http는 통과한다', () => {
+    const env = parseEnv({
+      ...valid,
+      NODE_ENV: 'production',
+      BETTER_AUTH_URL: 'http://localhost:3000',
+      NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+    })
+    expect(env.BETTER_AUTH_URL).toBe('http://localhost:3000')
+  })
+
+  it('루프백이 아닌 실호스트는 배포 신호가 없어도 http를 거부한다', () => {
+    expect(() =>
+      parseEnv({
+        ...valid,
+        NODE_ENV: 'production',
+        BETTER_AUTH_URL: 'http://cited.co.kr',
+        NEXT_PUBLIC_APP_URL: 'http://cited.co.kr',
+      }),
+    ).toThrowError(/BETTER_AUTH_URL/)
+  })
+
+  it('프로덕션의 https://는 통과한다', () => {
+    const env = parseEnv({
+      ...valid,
+      NODE_ENV: 'production',
+      BETTER_AUTH_URL: 'https://cited.co.kr',
+      NEXT_PUBLIC_APP_URL: 'https://cited.co.kr',
+    })
+    expect(env.BETTER_AUTH_URL).toBe('https://cited.co.kr')
+  })
+
+  // 이 테스트가 깨지면 로컬 개발이 통째로 막힌다. 규칙을 조일 때 반드시 지킬 것.
+  it('개발 환경의 http://localhost:3000은 그대로 통과한다', () => {
+    const env = parseEnv({
+      ...valid,
+      NODE_ENV: 'development',
+      BETTER_AUTH_URL: 'http://localhost:3000',
+      NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+    })
+    expect(env.BETTER_AUTH_URL).toBe('http://localhost:3000')
+  })
+
+  it('BETTER_AUTH_URL과 NEXT_PUBLIC_APP_URL이 다르면 거부한다', () => {
+    expect(() =>
+      parseEnv({
+        ...valid,
+        BETTER_AUTH_URL: 'http://localhost:3000',
+        NEXT_PUBLIC_APP_URL: 'http://localhost:3001',
+      }),
+    ).toThrowError(/NEXT_PUBLIC_APP_URL/)
+  })
+
+  it('불일치 에러 메시지에도 두 키 이름이 모두 드러난다', () => {
+    let thrown: unknown
+    try {
+      parseEnv({
+        ...valid,
+        BETTER_AUTH_URL: 'http://localhost:3000',
+        NEXT_PUBLIC_APP_URL: 'https://cited.co.kr',
+      })
+    } catch (error) {
+      thrown = error
+    }
+    expect(thrown).toBeInstanceOf(Error)
+    expect((thrown as Error).message).toContain('BETTER_AUTH_URL')
+  })
+})
+
 describe('공유 검증자 드리프트 방지', () => {
   // env.ts와 env.client.ts가 NEXT_PUBLIC_APP_URL과 NEXT_PUBLIC_SENTRY_DSN의
   // 검증자를 env.shared.ts에서 import해 사용하므로, 같은 입력값은 양쪽에서
