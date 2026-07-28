@@ -72,12 +72,20 @@ export interface PlanLimits {
 }
 
 /**
+ * 질의 팩 개수를 정제한다. NaN, Infinity, 음수는 0으로 취급하고, 소수는 버린다.
+ * resolveLimits와 monthlyPriceKrw에서 공용으로 사용하여 일관성을 보장한다.
+ */
+function sanitizePacks(queryPacks: number): number {
+  return Number.isFinite(queryPacks) ? Math.max(0, Math.floor(queryPacks)) : 0
+}
+
+/**
  * 구매한 질의 팩을 반영한 실제 한도.
  * 설계 ②: `PLANS[plan].maxQueries + queryPacks * QUERY_PACK_SIZE`
  */
 export function resolveLimits(plan: PlanId, queryPacks: number): PlanLimits {
   const base = PLANS[plan]
-  const packs = Number.isFinite(queryPacks) ? Math.max(0, Math.floor(queryPacks)) : 0
+  const packs = sanitizePacks(queryPacks)
   return {
     maxBrands: base.maxBrands,
     maxQueries: base.maxQueries + packs * QUERY_PACK_SIZE,
@@ -89,9 +97,9 @@ export function resolveLimits(plan: PlanId, queryPacks: number): PlanLimits {
   }
 }
 
-/** 월 구독 금액(원) — 기본 플랜 + 질의 팩 */
+/** 월 구독 금액(원) — 기본 플랜 + 질의 팩. 항상 정수 KRW를 반환한다. */
 export function monthlyPriceKrw(plan: PlanId, queryPacks: number): number {
-  const packs = Math.max(0, Math.floor(queryPacks))
+  const packs = sanitizePacks(queryPacks)
   return PLANS[plan].priceKrw + packs * QUERY_PACK_PRICE_KRW
 }
 

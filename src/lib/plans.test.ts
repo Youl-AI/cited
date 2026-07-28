@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   PLANS,
+  QUERY_PACK_PRICE_KRW,
   QUERY_PACK_SIZE,
   expectedCallsPerRun,
   expectedSerpCallsPerMonth,
+  monthlyPriceKrw,
   resolveLimits,
 } from '@/lib/plans'
 
@@ -11,30 +13,124 @@ describe('constants', () => {
   it('QUERY_PACK_SIZE는 10이다', () => {
     expect(QUERY_PACK_SIZE).toBe(10)
   })
+
+  it('QUERY_PACK_PRICE_KRW는 90,000원이다', () => {
+    expect(QUERY_PACK_PRICE_KRW).toBe(90_000)
+  })
 })
 
 describe('PLANS', () => {
-  it('무료 진단은 LLM 2종만 쓰고 SERP 샘플이 0이다', () => {
-    expect(PLANS.free.engines).toEqual(['chatgpt', 'gemini'])
-    expect(PLANS.free.samples.serp).toBe(0)
-    expect(PLANS.free.maxQueries).toBe(3)
+  describe('가격', () => {
+    it('무료 진단은 0원이다', () => {
+      expect(PLANS.free.priceKrw).toBe(0)
+    })
+
+    it('Starter는 99,000원이다', () => {
+      expect(PLANS.starter.priceKrw).toBe(99_000)
+    })
+
+    it('Business는 290,000원이다', () => {
+      expect(PLANS.business.priceKrw).toBe(290_000)
+    })
   })
 
-  it('Starter에 네이버가 포함된다 (요금 구조의 핵심 결정)', () => {
-    expect(PLANS.starter.engines).toContain('naver')
-    expect(PLANS.starter.engines).toContain('google_aio')
+  describe('Free 플랜 필드', () => {
+    it('maxBrands는 1이다', () => {
+      expect(PLANS.free.maxBrands).toBe(1)
+    })
+
+    it('maxCompetitors는 3이다', () => {
+      expect(PLANS.free.maxCompetitors).toBe(3)
+    })
+
+    it('samples.llm은 1이다', () => {
+      expect(PLANS.free.samples.llm).toBe(1)
+    })
+
+    it('samples.serp은 0이다', () => {
+      expect(PLANS.free.samples.serp).toBe(0)
+    })
+
+    it('historyMonths는 0이다', () => {
+      expect(PLANS.free.historyMonths).toBe(0)
+    })
+
+    it('csvExport는 false다', () => {
+      expect(PLANS.free.csvExport).toBe(false)
+    })
   })
 
-  it('Starter와 Business의 차이는 규모뿐이다', () => {
-    expect(PLANS.starter.engines).toEqual(PLANS.business.engines)
-    expect(PLANS.starter.samples).toEqual(PLANS.business.samples)
-    expect(PLANS.business.maxBrands).toBeGreaterThan(PLANS.starter.maxBrands)
+  describe('Starter 플랜 필드', () => {
+    it('maxBrands는 1이다', () => {
+      expect(PLANS.starter.maxBrands).toBe(1)
+    })
+
+    it('maxCompetitors는 3이다', () => {
+      expect(PLANS.starter.maxCompetitors).toBe(3)
+    })
+
+    it('samples.llm은 3이다', () => {
+      expect(PLANS.starter.samples.llm).toBe(3)
+    })
+
+    it('samples.serp은 2다', () => {
+      expect(PLANS.starter.samples.serp).toBe(2)
+    })
+
+    it('historyMonths는 3이다', () => {
+      expect(PLANS.starter.historyMonths).toBe(3)
+    })
   })
 
-  it('Business만 무제한 히스토리와 CSV를 가진다', () => {
-    expect(PLANS.business.historyMonths).toBeNull()
-    expect(PLANS.business.csvExport).toBe(true)
-    expect(PLANS.starter.csvExport).toBe(false)
+  describe('Business 플랜 필드', () => {
+    it('maxBrands는 3이다', () => {
+      expect(PLANS.business.maxBrands).toBe(3)
+    })
+
+    it('maxCompetitors는 10이다', () => {
+      expect(PLANS.business.maxCompetitors).toBe(10)
+    })
+
+    it('samples.llm은 3이다', () => {
+      expect(PLANS.business.samples.llm).toBe(3)
+    })
+
+    it('samples.serp은 2다', () => {
+      expect(PLANS.business.samples.serp).toBe(2)
+    })
+
+    it('historyMonths는 null이다', () => {
+      expect(PLANS.business.historyMonths).toBeNull()
+    })
+
+    it('csvExport는 true다', () => {
+      expect(PLANS.business.csvExport).toBe(true)
+    })
+  })
+
+  describe('플랜 간 관계 (기존 테스트)', () => {
+    it('무료 진단은 LLM 2종만 쓰고 SERP 샘플이 0이다', () => {
+      expect(PLANS.free.engines).toEqual(['chatgpt', 'gemini'])
+      expect(PLANS.free.samples.serp).toBe(0)
+      expect(PLANS.free.maxQueries).toBe(3)
+    })
+
+    it('Starter에 네이버가 포함된다 (요금 구조의 핵심 결정)', () => {
+      expect(PLANS.starter.engines).toContain('naver')
+      expect(PLANS.starter.engines).toContain('google_aio')
+    })
+
+    it('Starter와 Business의 차이는 규모뿐이다', () => {
+      expect(PLANS.starter.engines).toEqual(PLANS.business.engines)
+      expect(PLANS.starter.samples).toEqual(PLANS.business.samples)
+      expect(PLANS.business.maxBrands).toBeGreaterThan(PLANS.starter.maxBrands)
+    })
+
+    it('Business만 무제한 히스토리와 CSV를 가진다', () => {
+      expect(PLANS.business.historyMonths).toBeNull()
+      expect(PLANS.business.csvExport).toBe(true)
+      expect(PLANS.starter.csvExport).toBe(false)
+    })
   })
 })
 
@@ -84,5 +180,34 @@ describe('expectedSerpCallsPerMonth', () => {
 
   it('무료 진단은 SERP를 쓰지 않으므로 0', () => {
     expect(expectedSerpCallsPerMonth('free', 3)).toBe(0)
+  })
+
+  it('소수 queryCount는 반올림된다', () => {
+    // 11 x 2엔진 x 2샘플 x 4.3주 = 189.2 → 189
+    expect(expectedSerpCallsPerMonth('starter', 11)).toBe(189)
+  })
+})
+
+describe('monthlyPriceKrw', () => {
+  it('팩 0개일 때는 기본 플랜 가격만 청구된다', () => {
+    expect(monthlyPriceKrw('starter', 0)).toBe(99_000)
+    expect(monthlyPriceKrw('business', 0)).toBe(290_000)
+  })
+
+  it('팩이 추가되면 개수만큼 가격이 더해진다', () => {
+    expect(monthlyPriceKrw('starter', 1)).toBe(99_000 + 90_000)
+    expect(monthlyPriceKrw('business', 2)).toBe(290_000 + 180_000)
+  })
+
+  it('음수 팩은 0으로 취급한다', () => {
+    expect(monthlyPriceKrw('starter', -5)).toBe(99_000)
+  })
+
+  it('NaN 팩은 0으로 취급한다', () => {
+    expect(monthlyPriceKrw('starter', NaN)).toBe(99_000)
+  })
+
+  it('Infinity 팩은 0으로 취급한다', () => {
+    expect(monthlyPriceKrw('business', Infinity)).toBe(290_000)
   })
 })
