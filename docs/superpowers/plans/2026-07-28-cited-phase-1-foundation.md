@@ -414,6 +414,29 @@ git commit -m "chore: Next.js 16 스캐폴드 · 버전 고정 · Vitest · CI �
 
 키가 빠진 채 배포되면 런타임 한복판에서 터진다. 부팅 시점에 전부 검증한다.
 
+> **실행 중 변경 (2026-07-29, 리뷰 지적 반영 · 사용자 승인)**
+>
+> 아래 Step들은 서버 시크릿과 `NEXT_PUBLIC_*`를 **한 스키마**에 담은 평면 구조로
+> 쓰였다. 이 구조는 클라이언트 번들을 깨뜨린다 — Next.js는 클라이언트 코드에서
+> `process.env.NEXT_PUBLIC_X` **리터럴 표현식만** 정적 치환하고 `process.env`
+> 객체 참조는 채워주지 않는다. 따라서 4단계 토스 결제 위젯처럼 브라우저에서
+> `NEXT_PUBLIC_TOSS_CLIENT_KEY`를 읽어야 하는 클라이언트 컴포넌트가 `env.ts`를
+> import하는 순간 서버 전용 필수 변수가 없어 검증이 throw한다.
+>
+> 실제 구현은 세 파일로 나뉘었다:
+> - `src/lib/env.ts` — 서버 전용. 최상단 `import 'server-only'`로 클라이언트
+>   번들 유입을 **빌드 타임에** 차단한다
+> - `src/lib/env.client.ts` — 공개 변수 전용. 각 키를 **개별 리터럴**
+>   `process.env.NEXT_PUBLIC_X`로 읽는다. `process.env`를 객체로 넘기면 이
+>   수정 전체가 무효가 되므로 절대 바꾸지 말 것
+> - `src/lib/env.shared.ts` — 양쪽이 공유하는 순수 zod 검증자.
+>   `server-only`를 import하지 않고 `process.env`도 읽지 않는다
+>
+> 클라이언트에서 공개 변수를 읽을 때는 `import { clientEnv } from '@/lib/env.client'`.
+> `server-only`는 vitest에서 동작하지 않아 `tests/mocks/server-only.ts` 스텁을
+> alias로 물려 놓았다 — **이 경계는 `pnpm test`가 아니라 `pnpm build`가 지킨다.**
+> CI에서 `pnpm build`를 빼면 안 되는 이유다.
+
 - [ ] **Step 1: 실패하는 테스트 작성**
 
 `src/lib/env.test.ts`:
