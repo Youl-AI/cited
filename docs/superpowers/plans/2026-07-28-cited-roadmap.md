@@ -53,7 +53,9 @@ Automatic Early Renewal을 켠 상태로 배포한다.
 
 아래는 6개 계획 전부에 적용된다. 각 계획의 태스크 요구사항에 암묵적으로 포함된다.
 
-- **런타임**: Node.js 22 LTS, pnpm 10
+- **런타임**: Node.js 24 LTS, pnpm 10 (corepack으로 활성화)
+  — 계획 초안은 22 LTS였으나 착수 시점(2026-07)에 24가 Active LTS, 22는 유지보수
+  LTS(2027-04 EOL)라 24로 확정한다. `.nvmrc`·CI·Vercel 세 곳을 같은 값으로 고정
 - **버전 고정**: `next@16.2.x` (`latest` 금지), `react@19.2.x`, `typescript@5.x`
   — `package.json`에 캐럿(`^`) 대신 틸드(`~`) 또는 정확한 버전을 쓴다
 - **TypeScript**: `strict: true`, `noUncheckedIndexedAccess: true`. `any` 금지
