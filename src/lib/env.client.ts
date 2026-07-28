@@ -13,10 +13,11 @@
 // 새로 만든다 — `parseClientEnv(process.env)`처럼 통째로 넘기지 말 것.
 
 import { z } from 'zod'
+import { appUrlSchema, sentryDsnSchema } from '@/lib/env.shared'
 
 const clientSchema = z.object({
-  NEXT_PUBLIC_APP_URL: z.url(),
-  NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
+  NEXT_PUBLIC_APP_URL: appUrlSchema,
+  NEXT_PUBLIC_SENTRY_DSN: sentryDsnSchema,
   NEXT_PUBLIC_TOSS_CLIENT_KEY: z.string().optional(),
 })
 

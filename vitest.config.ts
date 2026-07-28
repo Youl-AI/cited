@@ -18,10 +18,10 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
     exclude: ['**/*.smoke.test.ts', '**/node_modules/**', 'tests/e2e/**'],
-    // 아래 필수 키 목록은 src/lib/env.ts 스키마의 필수 필드와 동기화되어야
-    // 한다. env.ts에서 선택 필드를 필수로 승격하면 여기도 같이 고쳐야
-    // 하며, 안 그러면 이 목록과 무관한 테스트 파일들까지 env.ts의 부팅
-    // 검증 단계에서 원인을 알기 힘든 zod 에러로 깨진다.
+    // 아래 필수 키 목록은 src/lib/env.ts와 src/lib/env.client.ts의 필수
+    // 필드와 동기화되어야 한다. 이 두 파일에서 선택 필드를 필수로 승격하면
+    // 여기도 같이 고쳐야 하며, 안 그러면 이 목록과 무관한 테스트 파일들까지
+    // env.ts의 부팅 검증 단계에서 원인을 알기 힘든 zod 에러로 깨진다.
     env: {
       NODE_ENV: 'test',
       DATABASE_URL: 'postgres://test',
@@ -34,7 +34,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/lib/**'],
-      exclude: ['src/lib/db/**', 'src/lib/env.ts'],
+      exclude: ['src/lib/db/**', 'src/lib/env.ts', 'src/lib/env.client.ts'],
     },
   },
 })

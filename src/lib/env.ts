@@ -7,6 +7,7 @@
 import 'server-only'
 
 import { z } from 'zod'
+import { appUrlSchema, sentryDsnSchema } from '@/lib/env.shared'
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -20,7 +21,7 @@ const schema = z.object({
   // 절대 URL 생성 등). 공개 변수라 서버 프로세스의 process.env에서
   // 그대로 읽을 수 있으므로(클라이언트 번들 리터럴 치환 문제가 없다)
   // 서버 스키마에도 남긴다. 클라이언트에서 쓰려면 '@/lib/env.client'를 쓴다.
-  NEXT_PUBLIC_APP_URL: z.url(),
+  NEXT_PUBLIC_APP_URL: appUrlSchema,
   RESEND_API_KEY: z.string().min(1),
   EMAIL_FROM: z.string().min(1),
 
@@ -28,7 +29,7 @@ const schema = z.object({
   SENTRY_DSN: z.string().optional(),
   // Sentry 서버 설정(sentry.server.config)도 관례상 동일한 DSN을 읽는다.
   // 시크릿이 아니므로 서버 스키마에도 남긴다.
-  NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
+  NEXT_PUBLIC_SENTRY_DSN: sentryDsnSchema,
 
   // 2단계 이후. 없으면 해당 기능만 비활성화된다.
   OPENAI_API_KEY: z.string().optional(),

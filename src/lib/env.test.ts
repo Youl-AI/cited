@@ -53,3 +53,54 @@ describe('parseEnv', () => {
     expect(message).toContain('BETTER_AUTH_SECRET')
   })
 })
+
+describe('공유 검증자 드리프트 방지', () => {
+  // env.ts와 env.client.ts가 NEXT_PUBLIC_APP_URL과 NEXT_PUBLIC_SENTRY_DSN의
+  // 검증자를 env.shared.ts에서 import해 사용하므로, 같은 입력값은 양쪽에서
+  // 같은 검증 결과를 낸다. 만약 한쪽이 공유 모듈을 깨뜨리고 독립적으로
+  // 정의하기 시작하면 이 테스트가 실패해 알려준다.
+  it('서버와 클라이언트가 NEXT_PUBLIC_APP_URL의 같은 잘못된 값을 모두 거부한다', async () => {
+    const invalidUrl = 'not-a-valid-url'
+
+    // 서버 스키마 검증 실패
+    expect(() => parseEnv({ ...valid, NEXT_PUBLIC_APP_URL: invalidUrl })).toThrowError(
+      /NEXT_PUBLIC_APP_URL/,
+    )
+
+    // 클라이언트 스키마도 같은 값에 대해 거부해야 한다
+    const { parseClientEnv } = await import('@/lib/env.client')
+    expect(() =>
+      parseClientEnv({
+        NEXT_PUBLIC_APP_URL: invalidUrl,
+        NEXT_PUBLIC_SENTRY_DSN: undefined,
+        NEXT_PUBLIC_TOSS_CLIENT_KEY: undefined,
+      }),
+    ).toThrowError(/NEXT_PUBLIC_APP_URL/)
+  })
+
+  it('서버와 클라이언트가 NEXT_PUBLIC_SENTRY_DSN의 같은 값을 같게 처리한다', async () => {
+    // 선택 필드이므로 undefined는 통과한다
+    const serverResult = parseEnv({ ...valid, NEXT_PUBLIC_SENTRY_DSN: undefined })
+    expect(serverResult.NEXT_PUBLIC_SENTRY_DSN).toBeUndefined()
+
+    const { parseClientEnv } = await import('@/lib/env.client')
+    const clientResult = parseClientEnv({
+      NEXT_PUBLIC_APP_URL: valid.NEXT_PUBLIC_APP_URL,
+      NEXT_PUBLIC_SENTRY_DSN: undefined,
+      NEXT_PUBLIC_TOSS_CLIENT_KEY: undefined,
+    })
+    expect(clientResult.NEXT_PUBLIC_SENTRY_DSN).toBeUndefined()
+
+    // 값이 있을 때도 같게 처리된다
+    const validDsn = 'https://key@sentry.io/123456'
+    const serverWithDsn = parseEnv({ ...valid, NEXT_PUBLIC_SENTRY_DSN: validDsn })
+    expect(serverWithDsn.NEXT_PUBLIC_SENTRY_DSN).toBe(validDsn)
+
+    const clientWithDsn = parseClientEnv({
+      NEXT_PUBLIC_APP_URL: valid.NEXT_PUBLIC_APP_URL,
+      NEXT_PUBLIC_SENTRY_DSN: validDsn,
+      NEXT_PUBLIC_TOSS_CLIENT_KEY: undefined,
+    })
+    expect(clientWithDsn.NEXT_PUBLIC_SENTRY_DSN).toBe(validDsn)
+  })
+})
