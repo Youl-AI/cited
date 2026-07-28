@@ -21,6 +21,21 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+      # 스키마 테스트는 getTableConfig로 메모리상의 drizzle 설정만 읽고 drizzle/*.sql은
+      # 절대 읽지 않는다. 그래서 schema.ts를 고치고 `pnpm db:generate`를 잊으면 테스트는
+      # 전부 초록인데 DB에 적용되는 마이그레이션만 낡은 채로 남는다. generate를 다시 돌려
+      # drizzle/ 트리가 더러워지면(= 커밋된 마이그레이션이 최신이 아니면) 여기서 막는다.
+      # drizzle-kit generate는 DB에 접속하지 않으므로 DATABASE_URL 없이 동작한다(확인함).
+      - name: drizzle 마이그레이션이 schema.ts와 동기화돼 있는지 확인
+        timeout-minutes: 5
+        run: |
+          pnpm db:generate < /dev/null
+          if [ -n "$(git status --porcelain -- drizzle)" ]; then
+            echo "::error::schema.ts가 바뀌었는데 drizzle/ 마이그레이션이 갱신되지 않았다. 로컬에서 'pnpm db:generate'를 돌리고 결과를 커밋할 것."
+            git status --porcelain -- drizzle
+            git --no-pager diff -- drizzle
+            exit 1
+          fi
       - run: pnpm build
         env:
           # 빌드만 통과시키기 위한 더미. 실제 값이 아니어야 한다.

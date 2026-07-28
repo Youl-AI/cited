@@ -27,16 +27,27 @@ import type { EngineId, PlanId } from '@/lib/plans'
 // SQL CHECK 목록을 둘 다 그 배열에서 파생시킨다. 유니온과 검증 목록을 손으로 두 번
 // 적으면 갈라진다 — Task 2·3에서 겪은 문제라 여기서는 그 경로 자체를 막는다.
 
+/**
+ * 값 목록을 SQL 리터럴 목록으로 만든다.
+ *
+ * `sql.raw`로 DDL에 그대로 박히는 문자열이므로 작은따옴표를 SQL 표준대로 두 번
+ * 반복(`''`)해 이스케이프한다. 지금 값들은 전부 평범한 식별자라 이스케이프가
+ * 동작하지 않아도 티가 안 나지만, 아포스트로피가 든 상태값이 하나라도 들어오면
+ * 조용히 깨진 DDL이 생성된다. (값은 코드 안 `as const` 배열에서만 오므로 사용자
+ * 입력 경로는 없다 — 이건 주입 방어가 아니라 정확성 보장이다.)
+ */
+function sqlLiteralList(values: readonly string[]): string {
+  return values.map((v) => `'${v.replaceAll("'", "''")}'`).join(', ')
+}
+
 /** notNull 컬럼용: 값이 허용 목록 안에 있는지만 검사한다 */
-function enumCheck(name: string, column: AnyPgColumn, values: readonly string[]) {
-  const list = values.map((v) => `'${v}'`).join(', ')
-  return check(name, sql`${column} in (${sql.raw(list)})`)
+export function enumCheck(name: string, column: AnyPgColumn, values: readonly string[]) {
+  return check(name, sql`${column} in (${sql.raw(sqlLiteralList(values))})`)
 }
 
 /** nullable 컬럼용: NULL이거나 허용 목록 안에 있어야 한다 */
-function nullableEnumCheck(name: string, column: AnyPgColumn, values: readonly string[]) {
-  const list = values.map((v) => `'${v}'`).join(', ')
-  return check(name, sql`${column} is null or ${column} in (${sql.raw(list)})`)
+export function nullableEnumCheck(name: string, column: AnyPgColumn, values: readonly string[]) {
+  return check(name, sql`${column} is null or ${column} in (${sql.raw(sqlLiteralList(values))})`)
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -46,6 +57,20 @@ function nullableEnumCheck(name: string, column: AnyPgColumn, values: readonly s
 export const USER_ROLES = ['user', 'admin'] as const
 export type UserRole = (typeof USER_ROLES)[number]
 
+/**
+ * ★ 이 테이블의 행은 hard delete 하지 않는다 — 회원 탈퇴는 익명화로 처리한다.
+ *
+ * `subscriptions.userId`가 `onDelete: 'restrict'`이고 `payments.subscriptionId`도
+ * `restrict`라, 결제 이력이 있는 사용자는 DB가 `DELETE FROM "user"`를 아예 거부한다.
+ * 전자상거래법상 대금결제·재화공급 기록은 5년 보존 대상이므로 이건 버그가 아니라
+ * 의도된 제약이다. (`subscriptions.userId` 주석 참고.)
+ *
+ * 아직 익명화 플로우도 `deletedAt` 컬럼도 없다 — 소비자가 생길 때 만든다. 다만 그때
+ * 반드시 필요한 것: **익명화된 사용자를 살아있는 사용자와 구별할 방법**. 세션 무효화,
+ * 로그인 차단, 재가입 시 이메일 충돌, 관리자 화면 집계, 마케팅 발송 대상에서 제외 —
+ * 전부 이 구분에 의존한다. 이름·이메일만 덮어쓰고 표식을 안 남기면 익명화된 계정이
+ * 살아있는 고객으로 계속 집계된다.
+ */
 export const user = pgTable(
   'user',
   {

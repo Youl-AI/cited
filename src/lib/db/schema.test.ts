@@ -1,5 +1,5 @@
 import { getTableColumns } from 'drizzle-orm'
-import { getTableConfig, PgDialect } from 'drizzle-orm/pg-core'
+import { getTableConfig, PgDialect, pgTable, text } from 'drizzle-orm/pg-core'
 import { describe, expect, it } from 'vitest'
 import { ENGINE_TIER, PLANS } from '@/lib/plans'
 import {
@@ -8,7 +8,9 @@ import {
   brands,
   collectionRuns,
   detections,
+  enumCheck,
   freeAudits,
+  nullableEnumCheck,
   payments,
   PAYMENT_STATUSES,
   queries,
@@ -93,30 +95,109 @@ function checkSqlText(table: AnyPgTable, checkName: string): string {
   return dialect.sqlToQuery(found.value).sql
 }
 
-describe('CHECK 제약 값 목록이 TypeScript 유니온과 정확히 일치한다', () => {
+describe('CHECK 제약이 의도한 컬럼에 의도한 값 목록으로 걸려 있다', () => {
+  // 값 목록만 대조하면 제약이 "엉뚱한 컬럼"에 걸려도 통과한다 —
+  // enumCheck('payments_status_check', t.failureCode, PAYMENT_STATUSES)처럼.
+  // 그래서 렌더된 SQL이 참조하는 컬럼까지 같이 단언한다.
   it.each([
-    ['user', user, 'user_role_check', USER_ROLES],
-    ['subscriptions.status', subscriptions, 'subscriptions_status_check', SUBSCRIPTION_STATUSES],
-    ['subscriptions.plan', subscriptions, 'subscriptions_plan_check', Object.keys(PLANS)],
-    ['queries.source', queries, 'queries_source_check', QUERY_SOURCES],
-    ['collection_runs.status', collectionRuns, 'collection_runs_status_check', RUN_STATUSES],
-    ['collection_runs.trigger', collectionRuns, 'collection_runs_trigger_check', RUN_TRIGGERS],
-    ['answers.engine_id', answers, 'answers_engine_id_check', Object.keys(ENGINE_TIER)],
-    ['free_audits.status', freeAudits, 'free_audits_status_check', AUDIT_STATUSES],
-    ['payments.status', payments, 'payments_status_check', PAYMENT_STATUSES],
-  ] as const)('%s: CHECK 값 목록 == 유니온 값 목록', (_label, table, checkName, values) => {
-    const sqlText = checkSqlText(table, checkName)
-    expect(extractQuotedValues(sqlText).sort()).toEqual([...values].sort())
-  })
+    ['user.role', user, 'user_role_check', '"user"."role"', USER_ROLES],
+    [
+      'subscriptions.status',
+      subscriptions,
+      'subscriptions_status_check',
+      '"subscriptions"."status"',
+      SUBSCRIPTION_STATUSES,
+    ],
+    [
+      'subscriptions.plan',
+      subscriptions,
+      'subscriptions_plan_check',
+      '"subscriptions"."plan"',
+      Object.keys(PLANS),
+    ],
+    ['queries.source', queries, 'queries_source_check', '"queries"."source"', QUERY_SOURCES],
+    [
+      'collection_runs.status',
+      collectionRuns,
+      'collection_runs_status_check',
+      '"collection_runs"."status"',
+      RUN_STATUSES,
+    ],
+    [
+      'collection_runs.trigger',
+      collectionRuns,
+      'collection_runs_trigger_check',
+      '"collection_runs"."trigger"',
+      RUN_TRIGGERS,
+    ],
+    [
+      'answers.engine_id',
+      answers,
+      'answers_engine_id_check',
+      '"answers"."engine_id"',
+      Object.keys(ENGINE_TIER),
+    ],
+    [
+      'free_audits.status',
+      freeAudits,
+      'free_audits_status_check',
+      '"free_audits"."status"',
+      AUDIT_STATUSES,
+    ],
+    ['payments.status', payments, 'payments_status_check', '"payments"."status"', PAYMENT_STATUSES],
+  ] as const)(
+    '%s: 의도한 컬럼을 참조하고 CHECK 값 목록 == 유니온 값 목록',
+    (_label, table, checkName, columnRef, values) => {
+      const sqlText = checkSqlText(table, checkName)
+      expect(sqlText).toContain(columnRef)
+      expect(extractQuotedValues(sqlText).sort()).toEqual([...values].sort())
+    },
+  )
 
   it('detections.sentiment는 nullable이라 NULL이거나 목록 안에 있어야 한다', () => {
     const sqlText = checkSqlText(detections, 'detections_sentiment_check')
+    expect(sqlText).toContain('"detections"."sentiment"')
     expect(sqlText.toLowerCase()).toContain('is null')
     expect(extractQuotedValues(sqlText).sort()).toEqual([...SENTIMENTS].sort())
   })
+})
 
-  it('허용되지 않는 값은 어느 CHECK 목록에도 나타나지 않는다', () => {
-    const sqlText = checkSqlText(subscriptions, 'subscriptions_status_check')
-    expect(extractQuotedValues(sqlText)).not.toContain('bogus')
+// ─────────────────────────────────────────────────────────────
+// enumCheck 헬퍼가 값의 작은따옴표를 이스케이프한다
+// ─────────────────────────────────────────────────────────────
+// 지금 스키마의 상태값은 전부 평범한 식별자라 이스케이프 버그가 있어도 티가 안 난다.
+// 아포스트로피가 든 값이 처음 들어오는 날 조용히 깨진 DDL이 나오는 걸 막기 위해,
+// 스키마와 무관한 픽스처 테이블로 헬퍼 자체를 검증한다.
+// (이 테이블은 schema.ts에 없으므로 drizzle-kit이 마이그레이션으로 만들지 않는다.)
+
+const quoteFixture = pgTable(
+  'quote_fixture',
+  {
+    id: text('id').primaryKey(),
+    label: text('label').notNull(),
+    note: text('note'),
+  },
+  (t) => [
+    enumCheck('quote_fixture_label_check', t.label, ["it's", 'plain']),
+    nullableEnumCheck('quote_fixture_note_check', t.note, ["o'clock"]),
+  ],
+)
+
+describe('enumCheck는 값의 작은따옴표를 SQL 표준대로 이스케이프한다', () => {
+  it('notNull용 enumCheck: 작은따옴표가 두 번 반복된다', () => {
+    const sqlText = checkSqlText(quoteFixture, 'quote_fixture_label_check')
+    expect(sqlText).toContain(`in ('it''s', 'plain')`)
+    // 이스케이프가 없으면 리터럴이 'it'에서 끊기고 s'가 식별자로 새어 나간다
+    expect(sqlText).not.toContain(`'it's'`)
+  })
+
+  it('nullable용 nullableEnumCheck도 같은 이스케이프를 적용한다', () => {
+    const sqlText = checkSqlText(quoteFixture, 'quote_fixture_note_check')
+    expect(sqlText).toContain(`in ('o''clock')`)
+  })
+
+  it('이스케이프 후 SQL의 작은따옴표 개수가 짝수다 (리터럴이 닫힌다)', () => {
+    const sqlText = checkSqlText(quoteFixture, 'quote_fixture_label_check')
+    expect((sqlText.match(/'/g) ?? []).length % 2).toBe(0)
   })
 })
