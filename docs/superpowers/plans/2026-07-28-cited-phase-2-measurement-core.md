@@ -882,19 +882,48 @@ export const USD_TO_KRW = 1400
 /**
  * 엔진별 단가.
  *
- * `// 추정` 주석이 붙은 값은 실측 전이다. 실측 후 주석을 지운다.
+ * `perCallUsd`는 **검색 툴 호출 요금**이다. 토큰과 별도로 청구되며 모델을
+ * 바꿔도 줄지 않는다. 2026-07-29 공식 가격표에서 확인했다.
+ *   - OpenAI 웹검색: $10 / 1,000회
+ *   - Gemini 3 grounding: 월 5,000건 무료, 이후 $14 / 1,000회
+ *
+ * ★ `perMTokenIn`이 지배 변수다. 웹검색이 붙으면 **긁어온 본문이 통째로 입력
+ *   토큰**으로 들어와 호출당 5,000~20,000 토큰이 될 수 있다. 이 폭이 현재
+ *   원가 추정의 가장 큰 불확실성이며, Task 4 스모크 테스트에서 실측한다.
+ *
  * 설계 문서: "이 설계 과정에서 원가 계산이 두 번 틀렸다. 계산은 틀리고 실측만 맞는다."
  */
 export const PRICING: Record<
   EngineId,
   { perCallUsd: number; perMTokenInUsd: number; perMTokenOutUsd: number }
 > = {
-  // OpenAI 웹검색 툴 단가는 확정하지 못했다 — 2단계 Task 4 스모크 테스트에서 실측한다.
-  chatgpt: { perCallUsd: 0.01, perMTokenInUsd: 2.5, perMTokenOutUsd: 10 }, // 추정
-  gemini: { perCallUsd: 0.005, perMTokenInUsd: 0.3, perMTokenOutUsd: 2.5 }, // 추정
+  // 검색 툴 요금은 확정값. 토큰 단가는 실제로 고를 모델에 맞춰 채운다.
+  chatgpt: { perCallUsd: 0.01, perMTokenInUsd: 1.25, perMTokenOutUsd: 10 },
+  gemini: { perCallUsd: 0.014, perMTokenInUsd: 1.5, perMTokenOutUsd: 9 },
   // SerpApi Starter $25 / 1,000건 = 건당 $0.025
   naver: { perCallUsd: 0.025, perMTokenInUsd: 0, perMTokenOutUsd: 0 },
   google_aio: { perCallUsd: 0.025, perMTokenInUsd: 0, perMTokenOutUsd: 0 },
+}
+
+/**
+ * ★ 무료 진단은 **저가 모델**로 돈다 (설계 문서 "무료 진단 플로우").
+ *
+ * 검색 툴 요금($0.01)은 그대로 붙지만 토큰 단가가 한 자릿수 배로 떨어져
+ * 호출당 60% 이상 절감된다. 무료 진단은 리드 수집용이라 유료 측정만큼의
+ * 정확도가 필요 없다.
+ *
+ * 3단계의 무료 진단 잡은 위 PRICING이 아니라 **이 표**로 원가를 계산해야 한다.
+ * 하나로 합치면 무료 진단 예산 킬스위치가 실제보다 비싸게 계산해 조기에 막는다.
+ */
+export const FREE_AUDIT_PRICING: Record<
+  'chatgpt' | 'gemini',
+  { perCallUsd: number; perMTokenInUsd: number; perMTokenOutUsd: number }
+> = {
+  chatgpt: { perCallUsd: 0.01, perMTokenInUsd: 0.15, perMTokenOutUsd: 0.6 }, // 실제 고를 mini급 모델 단가로 교체
+  // grounding은 월 5,000건까지 무료다. 무료 진단을 이 티어에 우선 배정하면
+  // perCallUsd가 0이 된다 — 다만 유료 측정과 **같은 티어를 나눠 쓰므로**
+  // 고객이 늘면 잠식된다. 6단계 관측 대상.
+  gemini: { perCallUsd: 0, perMTokenInUsd: 0.1, perMTokenOutUsd: 0.4 }, // 실제 고를 Flash-Lite급 단가로 교체
 }
 
 /** Claude Haiku 4.5 판정기 단가 ($1 / $5 per MTok) */
@@ -1347,6 +1376,17 @@ describe.skipIf(!process.env.OPENAI_API_KEY)('chatgpt 스모크', () => {
     expect(answer.usage.calls).toBe(1)
     expect(answer.usage.tokensIn).toBeGreaterThan(0)
     expect(answer.raw).toBeTruthy()
+
+    // ★ 원가 실측. 이 숫자가 3단계의 무료 진단 일일 상한을 결정한다.
+    //   웹검색이 붙으면 긁어온 본문이 통째로 입력 토큰이 되므로 tokensIn이
+    //   설계 문서의 가정(8,000)과 크게 다를 수 있다 — 그게 현재 원가 추정의
+    //   가장 큰 불확실성이다. 단언하지 말고 **출력**해서 기록한다.
+    console.log(JSON.stringify({
+      engine: 'chatgpt',
+      tokensIn: answer.usage.tokensIn,
+      tokensOut: answer.usage.tokensOut,
+      estimatedKrw: estimateCostKrw(answer.usage, PRICING.chatgpt),
+    }))
   }, 60_000)
 })
 ```
@@ -1356,6 +1396,10 @@ pnpm test:smoke
 ```
 
 Expected: PASS (실제 API 호출 1회)
+
+**출력된 `tokensIn`을 `docs/superpowers/notes/2026-07-28-cost-actuals.md`에 기록한다.**
+설계 문서의 8,000 토큰 가정과 얼마나 다른지가 핵심이다. 2배 이상 차이 나면
+설계 문서의 "비용 구조" 절과 3단계의 일일 상한을 **같은 커밋에서** 갱신한다.
 
 - [ ] **Step 8: 커밋**
 
@@ -3927,7 +3971,8 @@ pnpm measure "아식스" \
 ```
 
 Expected: 지표가 나오고 원가가 출력된다. **출력된 "측정 1회당 N원"을 설계
-문서의 추정치(50~110원)와 비교한다.**
+문서의 추정치와 비교한다** — 유료 측정은 호출당 39~60원(고급 모델),
+무료 진단은 호출당 약 17원(저가 모델) 기준이다.
 
 - 추정 범위 안이면 → `pricing.ts`의 `// 추정` 주석을 지우고 실측값으로 확정
 - 크게 벗어나면 → 원가 구조 재검토가 필요하다. `docs/superpowers/notes/`에
@@ -3957,9 +4002,12 @@ Expected: 지표가 나오고 원가가 출력된다. **출력된 "측정 1회�
 | 1차 통과율 | __% |
 
 ## 설계 추정치와 비교
-- 설계 추정: 건당 50~110원
+- 설계 추정(무료 진단 1건 = 6호출, 저가 모델): 80~125원
 - 실측: __원
-- 판단: (범위 내 / 초과 — 요금제 재검토 필요)
+- **웹검색 호출의 입력 토큰(`tokensIn`) 실측: __ 토큰** ← 설계 가정은 8,000.
+  이것이 원가 추정의 가장 큰 불확실성이다
+- 판단: (범위 내 / 초과 — 설계 문서 "비용 구조" 절과 3단계
+  `DAILY_GLOBAL_LIMIT`을 같은 커밋에서 갱신할 것)
 
 ## SERP 엔진 원가 (별도)
 SerpApi Starter $25 / 1,000건 = 건당 35원. 이것은 계약상 확정값이라
@@ -3992,6 +4040,12 @@ git tag phase-2-complete
 - [ ] CI에 골드 라벨 게이트가 붙어 있고, 임계값을 올리면 실제로 실패한다
 - [ ] `pnpm measure "<브랜드>" "<질의>"`가 지표와 원가를 출력한다
 - [ ] `docs/superpowers/notes/2026-07-28-cost-actuals.md`에 실측 원가가 기록됨
+- [ ] **위 기록에 엔진별 실측 `tokensIn`이 포함돼 있다** — 웹검색이 붙은 호출의
+      입력 토큰 수. 설계 문서 "비용 구조" 절이 8,000으로 가정하고 있고, 이것이
+      현재 원가 추정의 가장 큰 불확실성이다. **2배 이상 벗어나면 설계 문서와
+      3단계의 무료 진단 일일 상한을 같은 커밋에서 갱신한다**
+- [ ] **무료 진단용 저가 모델이 선정되고 `FREE_AUDIT_PRICING`의 자리표시자
+      단가가 실제 값으로 교체됨** (Task 3의 `pricing.ts` 주석 참고)
 - [ ] `docs/superpowers/notes/2026-07-28-naver-coverage.md`에 브리핑 미노출 처리 결정이 기록됨
 - [ ] `src/lib/detection/`이나 `src/lib/stats/`에서 `@/lib/db`를 import하면 lint 에러
 
