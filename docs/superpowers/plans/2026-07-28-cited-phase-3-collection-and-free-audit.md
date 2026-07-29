@@ -3911,6 +3911,14 @@ git tag phase-3-complete
 - [ ] `collect-brand` 수동 실행 시 `answers.raw`가 채워지고 `detections`가 생긴다
 - [ ] `docs/superpowers/notes/2026-07-28-trigger-credits.md`에 크레딧 소진 실측이 기록됨
 - [ ] `docs/superpowers/notes/2026-07-28-launch-1.md`에 실제 고정비가 기록됨
+- [ ] `src/app/legal/privacy/page.tsx`의 **§7(개인정보 처리 위탁)**과 **§8(국외 이전)**
+      표가 갱신됨 — 이 단계에서 `collect-brand`/`judge-run` 잡이 프로덕션에서 처음으로
+      실제 이용자의 브랜드명·질의문을 OpenAI·Gemini·SerpApi·Anthropic에 전송하기
+      시작한다(2단계는 `*.smoke.test.ts`로만 호출해 CI 기본 실행에서 제외되므로 실제
+      위탁이 아니다 — 실제 위탁은 이 단계의 1차 배포부터다). §8 말미의 "측정 기능이
+      도입되면... 회사는 해당 기능 도입 시 이 항을 갱신"이라는 기존 문장이 가리키는
+      시점이 바로 이 커밋이다. 위탁 표 갱신을 **1차 배포 태그(`phase-3-complete`)와
+      같은 커밋 또는 그 이전 커밋**에서 끝낸다
 
 ## 다음 단계
 
