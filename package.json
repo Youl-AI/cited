@@ -20,7 +20,10 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
-    "probe:engine": "tsx --conditions=react-server --env-file=.env.local scripts/probe-engine.mts"
+    "probe:engine": "tsx --conditions=react-server --env-file=.env.local scripts/probe-engine.mts",
+    "label:collect": "tsx --conditions=react-server --env-file=.env.local scripts/label-collect.mts",
+    "label": "tsx --conditions=react-server scripts/label.mts",
+    "test:golden": "vitest run --config vitest.golden.config.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.115.0",

@@ -17,7 +17,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
-    exclude: ['**/*.smoke.test.ts', '**/node_modules/**', 'tests/e2e/**'],
+    // tests/golden/**은 실제 판정 API를 부른다(돈이 든다). 별도 설정으로
+    // 분리해 `pnpm test:golden`과 CI에서만 돌린다 — vitest.golden.config.ts 참고.
+    exclude: ['**/*.smoke.test.ts', '**/node_modules/**', 'tests/e2e/**', 'tests/golden/**'],
     // 아래 필수 키 목록은 src/lib/env.ts와 src/lib/env.client.ts의 필수
     // 필드와 동기화되어야 한다. 이 두 파일에서 선택 필드를 필수로 승격하면
     // 여기도 같이 고쳐야 하며, 안 그러면 이 목록과 무관한 테스트 파일들까지
