@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { EngineError, isRetryable } from '@/lib/engines/types'
 import {
   FREE_AUDIT_PRICING,
-  GEMINI_FREE_GROUNDING_PER_MONTH,
+  GEMINI_SEARCH_USD,
   estimateCostKrw,
   estimateCostMilliKrw,
   estimateFreeAuditCostMilliKrw,
@@ -59,6 +59,20 @@ describe('EngineError', () => {
 })
 
 describe('estimateCostKrw', () => {
+  it('검색 질의 수로 청구한다 — 호출 수가 아니다', () => {
+    // ★ Gemini 3는 "each search query that the model decides to execute" 기준.
+    //   실측에서 한 호출이 검색을 2건 돌렸다. 호출 수로 계산하면 절반이 된다.
+    const oneSearch = estimateCostMilliKrw('gemini', { calls: 1, searches: 1 })
+    const twoSearches = estimateCostMilliKrw('gemini', { calls: 1, searches: 2 })
+    expect(twoSearches).toBe(oneSearch * 2)
+  })
+
+  it('searches가 없으면 호출 수로 물러선다', () => {
+    expect(estimateCostMilliKrw('gemini', { calls: 3 })).toBe(
+      estimateCostMilliKrw('gemini', { calls: 3, searches: 3 }),
+    )
+  })
+
   it('SERP 엔진은 호출 건당 정액', () => {
     const cost = estimateCostKrw('naver', { calls: 1 })
     expect(cost).toBeGreaterThan(0)
@@ -137,33 +151,48 @@ describe('estimateFreeAuditCostMilliKrw — 무료 진단은 별도 단가표', 
     )
   })
 
-  it('grounding 무료 티어 안에서는 호출 요금이 0이다', () => {
-    expect(FREE_AUDIT_PRICING.gemini.perCallUsd).toBe(0)
-    const tokensOnly = estimateFreeAuditCostMilliKrw('gemini', { calls: 1, tokensIn: 0, tokensOut: 0 })
-    expect(tokensOnly).toBe(0)
+  it('검색 요금은 무료 진단이라고 깎이지 않는다 (무료 티어에 그라운딩이 없다)', () => {
+    // 한때 perCallUsd를 0으로 두고 "월 5,000건 무료"라고 적어뒀는데 틀렸다.
+    // 무료 티어는 그라운딩 자체가 "Not available"이다.
+    expect(FREE_AUDIT_PRICING.gemini.perCallUsd).toBe(GEMINI_SEARCH_USD)
   })
 
-  it('무료 티어를 넘겼다고 표시하면 호출 요금이 붙는다', () => {
-    const usage = { calls: 1, tokensIn: 12, tokensOut: 920 }
-    const free = estimateFreeAuditCostMilliKrw('gemini', usage)
-    const over = estimateFreeAuditCostMilliKrw('gemini', usage, { groundingOverage: true })
-    expect(over).toBeGreaterThan(free)
+  it('토큰이 0이어도 검색 요금은 남는다', () => {
+    const searchOnly = estimateFreeAuditCostMilliKrw('gemini', {
+      calls: 1,
+      searches: 1,
+      tokensIn: 0,
+      tokensOut: 0,
+    })
+    expect(searchOnly).toBe(Math.round(GEMINI_SEARCH_USD * 1400 * 1000))
   })
 
-  it('무료 grounding 한도는 월 5,000건이다', () => {
-    expect(GEMINI_FREE_GROUNDING_PER_MONTH).toBe(5000)
+  it('검색을 안 한 답변에는 검색 요금이 붙지 않는다', () => {
+    const noSearch = estimateFreeAuditCostMilliKrw('gemini', {
+      calls: 1,
+      searches: 0,
+      tokensIn: 10,
+      tokensOut: 100,
+    })
+    const withSearch = estimateFreeAuditCostMilliKrw('gemini', {
+      calls: 1,
+      searches: 1,
+      tokensIn: 10,
+      tokensOut: 100,
+    })
+    expect(withSearch - noSearch).toBe(Math.round(GEMINI_SEARCH_USD * 1400 * 1000))
   })
 
-  it('실측한 Gemini 무료 진단 1건(3질의)이 20원을 넘지 않는다', () => {
-    // 2026-07-29 실측: gemini-3.5-flash-lite, 입력 7~12 · 출력 ~920 토큰.
-    // 이 상한이 깨지면 무료 진단 원가 가정이 무너진 것이다 — 3단계 예산
-    // 킬스위치를 다시 계산해야 한다.
+  it('실측 사용량으로 계산한 무료 진단 1건(3질의)이 150원 안쪽이다', () => {
+    // 2026-07-29 실측: 입력 ~10 · 출력 ~920 토큰 · **검색 질의 2건/호출**.
+    // 이 상한이 깨지면 3단계 예산 킬스위치를 다시 계산해야 한다.
     const perCall = estimateFreeAuditCostMilliKrw('gemini', {
       calls: 1,
+      searches: 2,
       tokensIn: 12,
       tokensOut: 920,
     })
-    expect((perCall * 3) / 1000).toBeLessThanOrEqual(20)
+    expect((perCall * 3) / 1000).toBeLessThanOrEqual(150)
   })
 })
 

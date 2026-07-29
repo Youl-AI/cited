@@ -12,10 +12,21 @@ export interface EnginePrice {
 /**
  * 엔진별 단가.
  *
- * `perCallUsd`는 **검색 툴 호출 요금**이다. 토큰과 별도로 청구되며 모델을
- * 바꿔도 줄지 않는다. 2026-07-29 공식 가격표에서 확인했다.
+ * `perCallUsd`는 **검색 요금**이다. 토큰과 별도로 청구되며 모델을 바꿔도
+ * 줄지 않는다. 2026-07-29 공식 가격표에서 확인했다.
  *   - OpenAI 웹검색: $10 / 1,000회
- *   - Gemini 3 grounding: 월 5,000건 무료, 이후 $14 / 1,000회
+ *   - Gemini 3 grounding: $14 / 1,000 **검색 질의**
+ *
+ * ★ **청구 단위가 호출이 아니라 검색 질의다.** Gemini 3 문서: "your project is
+ *   billed for each search query that the model decides to execute." 실측에서
+ *   한 호출이 검색을 2건 돌렸으므로 호출 수로 계산하면 **원가가 절반이 된다.**
+ *   그래서 아래 계산은 `usage.searches`를 먼저 쓰고, 없을 때만 `usage.calls`로
+ *   물러선다. 엔진은 응답에서 실제 검색 수를 읽어 채워야 한다.
+ *
+ * ★ **무료 티어에는 검색 그라운딩이 없다.** 공식 가격표의 Grounding with
+ *   Google Search 항목이 무료 티어에서 "Not available"이고, 실제로 호출하면
+ *   429 RESOURCE_EXHAUSTED가 온다(모델 자체는 200 OK). 결제를 켜지 않으면
+ *   이 제품의 측정 자체가 불가능하다.
  *
  * ★ **검색 본문의 토큰 청구는 제공자마다 다르다. 같은 공식으로 계산하지 마라.**
  *   - **Gemini: 청구하지 않는다.** 2026-07-29 실측 확인 — grounding on/off와
@@ -57,27 +68,30 @@ export const PRICING: Record<EngineId, EnginePrice> = {
 export const FREE_AUDIT_PRICING: Record<'chatgpt' | 'gemini', EnginePrice> = {
   chatgpt: { perCallUsd: 0.01, perMTokenInUsd: 0.15, perMTokenOutUsd: 0.6 }, // 실제 고를 mini급 모델 단가로 교체
   // gemini-3.5-flash-lite 실측 단가 (2026-07-29 공식 가격표 확인).
-  // perCallUsd가 0인 이유: grounding이 **월 5,000건까지 무료**다.
   //
-  // ★ 이 0은 조건부다. 티어를 넘으면 $0.014가 되어 호출당 원가가
-  //   3.2원 → 22.8원(7배)이 된다. 그리고 **유료 측정 경로가 같은 티어를
-  //   나눠 쓴다** — 고객이 늘면 무료 진단 몫이 줄어든다.
-  //   6단계는 SerpApi 잔여 건수와 **같은 방식으로 grounding 잔량을 추적**해야
-  //   한다. 안 하면 어느 날 갑자기 무료 진단 원가가 7배가 되는데 원인을 모른다.
-  //   추적이 붙기 전까지는 `estimateFreeAuditCostMilliKrw`의
-  //   `groundingOverage` 인자로 넘겨 초과분을 계산한다.
-  gemini: { perCallUsd: 0, perMTokenInUsd: 0.3, perMTokenOutUsd: 2.5 },
+  // ★ perCallUsd가 0이 아니다. 한때 0으로 적어뒀는데 **틀렸다** —
+  //   "월 5,000건 무료"는 근거 없는 값이었고, 실제로는 무료 티어에 검색
+  //   그라운딩이 아예 없다. 무료 진단이라고 검색이 공짜가 되지 않는다.
+  //   토큰 단가만 저가 모델 몫으로 낮아진다.
+  gemini: { perCallUsd: 0.014, perMTokenInUsd: 0.3, perMTokenOutUsd: 2.5 },
 }
 
-/** grounding 무료 한도. 초과분은 $0.014/호출. 유료 측정과 공유한다. */
-export const GEMINI_FREE_GROUNDING_PER_MONTH = 5000
-export const GEMINI_GROUNDING_OVERAGE_USD = 0.014
+/**
+ * Gemini 검색 그라운딩 단가. **무료 한도는 없다.**
+ *
+ * 이전에 `GEMINI_FREE_GROUNDING_PER_MONTH = 5000`을 두고 있었으나 근거가 없는
+ * 값이었다. 공식 가격표는 무료 티어에서 "Not available", 유료 티어에서
+ * $14 / 1,000 검색 질의다. 결제를 켜야만 측정이 가능하다.
+ */
+export const GEMINI_SEARCH_USD = 0.014
 
 /** Claude Haiku 4.5 판정기 단가 ($1 / $5 per MTok) */
 export const JUDGE_PRICING = { perMTokenInUsd: 1, perMTokenOutUsd: 5 }
 
 export interface CostUsage {
   calls: number
+  /** 모델이 실제로 실행한 검색 질의 수. 없으면 calls로 물러선다. */
+  searches?: number
   tokensIn?: number
   tokensOut?: number
   /** 사고 토큰. 출력 단가로 청구된다. */
@@ -96,8 +110,12 @@ function costUsd(price: EnginePrice, usage: CostUsage): number {
   assertNonNegative(usage)
   // 사고 토큰은 출력 토큰과 같은 단가다. 나눠서 받되 계산은 합쳐서 한다.
   const outTokens = (usage.tokensOut ?? 0) + (usage.tokensThinking ?? 0)
+  // ★ 검색 요금은 호출 수가 아니라 **실제 검색 질의 수**로 매긴다.
+  //   엔진이 실측값을 못 채웠을 때만 호출 수로 물러선다 — 그 경우는
+  //   과소 계상이므로, 새 엔진을 붙일 때 searches를 반드시 채워라.
+  const billableSearches = usage.searches ?? usage.calls
   return (
-    usage.calls * price.perCallUsd +
+    billableSearches * price.perCallUsd +
     ((usage.tokensIn ?? 0) / 1_000_000) * price.perMTokenInUsd +
     (outTokens / 1_000_000) * price.perMTokenOutUsd
   )
@@ -123,20 +141,13 @@ export function estimateCostKrw(engineId: EngineId, usage: CostUsage): number {
 /**
  * 무료 진단 전용 원가. 저가 모델 단가표를 쓴다.
  *
- * @param opts.groundingOverage Gemini 무료 grounding 한도를 넘긴 상태면 true.
- *   호출당 $0.014가 붙는다. 잔량 추적이 붙기 전까진 호출부가 판단해 넘긴다.
+ * 검색 요금은 유료 측정과 **같다**. 싸지는 건 토큰 단가뿐이다.
  */
 export function estimateFreeAuditCostMilliKrw(
   engineId: 'chatgpt' | 'gemini',
   usage: CostUsage,
-  opts: { groundingOverage?: boolean } = {},
 ): number {
-  const base = FREE_AUDIT_PRICING[engineId]
-  const price =
-    engineId === 'gemini' && opts.groundingOverage
-      ? { ...base, perCallUsd: GEMINI_GROUNDING_OVERAGE_USD }
-      : base
-  return Math.round(costUsd(price, usage) * USD_TO_KRW * 1000)
+  return Math.round(costUsd(FREE_AUDIT_PRICING[engineId], usage) * USD_TO_KRW * 1000)
 }
 
 export function estimateJudgeCostKrw(tokensIn: number, tokensOut: number): number {

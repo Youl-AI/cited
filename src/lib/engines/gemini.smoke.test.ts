@@ -35,9 +35,13 @@ describeIfKey('Gemini 실제 호출', () => {
     }
     expect(answer.raw).toBeDefined()
 
+    // 검색 질의 수는 청구 단위다. 0이면 그라운딩이 실제로 안 돈 것이다.
+    expect(answer.usage.searches).toBeGreaterThan(0)
+
     console.log(
       `[${GEMINI_MODEL}] 입력 ${answer.usage.tokensIn} · 사고 ${answer.usage.tokensThinking} · ` +
-        `출력 ${answer.usage.tokensOut} · 인용 ${answer.citations.length}건`,
+        `출력 ${answer.usage.tokensOut} · 검색 ${answer.usage.searches}건 · ` +
+        `인용 ${answer.citations.length}건`,
     )
   })
 
@@ -45,7 +49,7 @@ describeIfKey('Gemini 실제 호출', () => {
     const answer = await geminiEngine.run('가성비 좋은 무선 이어폰 뭐가 있어?', {
       sampleIndex: 0,
     })
-    const { tokensIn = 0, tokensOut = 0, tokensThinking = 0 } = answer.usage
+    const { tokensIn = 0, tokensOut = 0, tokensThinking = 0, searches = 0 } = answer.usage
 
     // ★ 발견 1: grounding으로 가져온 본문은 입력 토큰으로 청구되지 않는다.
     //   입력이 질의문 길이(실측 7~12)를 크게 넘으면 그 가정이 깨진 것이고,
@@ -63,11 +67,15 @@ describeIfKey('Gemini 실제 호출', () => {
     // 출력 실측 평균 920. 두 배를 넘으면 원가 추정이 흔들린다.
     expect(tokensOut).toBeLessThan(2000)
 
+    // ★ 청구 단위. 실측은 호출당 2건이었다. 크게 늘면 원가가 그만큼 는다.
+    expect(searches).toBeLessThanOrEqual(5)
+
     const paid = estimateCostMilliKrw('gemini', answer.usage)
     const free = estimateFreeAuditCostMilliKrw('gemini', answer.usage)
     console.log(`호출당 원가: 유료 ${paid / 1000}원 · 무료진단 ${free / 1000}원`)
 
-    // 무료 진단 1건 = 3질의. 20원을 넘으면 3단계 예산 킬스위치를 다시 잡아야 한다.
-    expect((free * 3) / 1000).toBeLessThanOrEqual(20)
+    // 무료 진단 1건 = 3질의. 150원을 넘으면 3단계 예산 킬스위치를 다시 잡아야 한다.
+    // (무료 티어에 그라운딩이 없어 검색 요금이 그대로 붙는다 — 실측 기준 약 127원)
+    expect((free * 3) / 1000).toBeLessThanOrEqual(150)
   })
 })

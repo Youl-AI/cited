@@ -16,7 +16,7 @@ const raw = {
       },
       finishReason: 'STOP',
       groundingMetadata: {
-        webSearchQueries: ['30대 남자 러닝화 추천'],
+        webSearchQueries: ['30대 남자 러닝화 추천', '러닝화 브랜드 비교'],
         groundingChunks: [
           { web: { uri: 'https://c.example/1', title: '러닝화 가이드' } },
           { web: { uri: 'https://d.example/2', title: '리뷰 모음' } },
@@ -146,9 +146,30 @@ describe('extractUsage — 원가 계산의 입력', () => {
     expect(extractUsage(withTool).tokensIn).toBe(900 + 150)
   })
 
+  it('실제 검색 질의 수를 담는다 (청구 단위)', () => {
+    // ★ 호출 1건 = 검색 1건이 아니다. 실측에서 한 호출이 2건을 돌렸고,
+    //   호출 수로 계산하면 원가가 정확히 절반으로 과소 계상된다.
+    expect(extractUsage(raw).searches).toBe(2)
+  })
+
+  it('그라운딩을 안 쓴 답변은 검색 0건이다', () => {
+    const noGround = structuredClone(raw) as Record<string, unknown>
+    delete (
+      (noGround.candidates as Record<string, unknown>[])[0] as Record<string, unknown>
+    ).groundingMetadata
+    expect(extractUsage(noGround).searches).toBe(0)
+  })
+
+  it('검색 수가 원가에 실제로 반영된다', () => {
+    const one = { ...extractUsage(raw), searches: 1 }
+    const two = { ...extractUsage(raw), searches: 2 }
+    expect(estimateCostMilliKrw('gemini', two)).toBeGreaterThan(estimateCostMilliKrw('gemini', one))
+  })
+
   it('usageMetadata가 없어도 던지지 않고 calls는 센다', () => {
     const usage = extractUsage({ candidates: [] })
     expect(usage.calls).toBe(1)
+    expect(usage.searches).toBe(0)
     expect(usage.tokensIn).toBe(0)
     expect(usage.tokensOut).toBe(0)
     expect(usage.tokensThinking).toBe(0)

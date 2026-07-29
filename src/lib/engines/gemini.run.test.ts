@@ -34,6 +34,7 @@ const okResponse = {
       content: { parts: [{ text: '무신사를 추천합니다.' }] },
       finishReason: 'STOP',
       groundingMetadata: {
+        webSearchQueries: ['러닝화 추천', '러닝화 브랜드'],
         groundingChunks: [{ web: { uri: 'https://a.example', title: 'A' } }],
       },
     },
@@ -48,7 +49,13 @@ describe('geminiEngine.run — 정상 경로', () => {
 
     expect(answer.text).toBe('무신사를 추천합니다.')
     expect(answer.citations).toEqual([{ url: 'https://a.example', title: 'A' }])
-    expect(answer.usage).toEqual({ calls: 1, tokensIn: 10, tokensOut: 920, tokensThinking: 0 })
+    expect(answer.usage).toEqual({
+      calls: 1,
+      searches: 2,
+      tokensIn: 10,
+      tokensOut: 920,
+      tokensThinking: 0,
+    })
     // raw는 절대 버리지 않는다 — 판정 로직을 고친 뒤 재판정에 쓴다.
     expect(answer.raw).toBe(okResponse)
   })

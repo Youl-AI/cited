@@ -19,6 +19,18 @@ export interface EngineUsage {
    * 호출당 원가가 13배 벌어졌다. 원가가 튀었을 때 원인을 짚으려면 나뉘어 있어야 한다.
    */
   tokensThinking?: number
+  /**
+   * 모델이 실제로 실행한 **검색 질의 수**.
+   *
+   * ★ 청구 단위가 호출이 아니라 검색 질의다. Gemini 3 문서:
+   *   "your project is billed for each search query that the model decides
+   *   to execute." 실측에서 한 호출이 검색을 2건 돌렸다 — 호출 수로 계산하면
+   *   원가가 절반으로 과소 계상된다.
+   *
+   *   추정하지 말고 응답에서 읽어라(Gemini는 groundingMetadata.webSearchQueries).
+   *   모르면 undefined로 두고, 그때는 호출 수를 대신 쓴다.
+   */
+  searches?: number
   /** SerpApi 응답 헤더가 알려주는 잔여 건수 */
   quotaRemaining?: number
 }

@@ -83,10 +83,26 @@ export function extractUsage(raw: unknown): EngineUsage {
   const meta = isRecord(raw) && isRecord(raw.usageMetadata) ? raw.usageMetadata : {}
   return {
     calls: 1,
+    searches: countSearchQueries(raw),
     tokensIn: num(meta.promptTokenCount) + num(meta.toolUsePromptTokenCount),
     tokensOut: num(meta.candidatesTokenCount),
     tokensThinking: num(meta.thoughtsTokenCount),
   }
+}
+
+/**
+ * 모델이 실제로 실행한 검색 질의 수.
+ *
+ * ★ 이게 청구 단위다. "호출 1건 = 검색 1건"으로 계산하면 안 된다 — 실측에서
+ *   한 호출이 검색을 2건 돌렸고, 그러면 원가가 정확히 절반으로 과소 계상된다.
+ *   그라운딩을 쓰지 않은 답변은 0이며, 그때는 검색 요금이 붙지 않는 게 맞다.
+ */
+function countSearchQueries(raw: unknown): number {
+  if (!isRecord(raw) || !Array.isArray(raw.candidates)) return 0
+  const first = raw.candidates[0]
+  if (!isRecord(first) || !isRecord(first.groundingMetadata)) return 0
+  const queries = first.groundingMetadata.webSearchQueries
+  return Array.isArray(queries) ? queries.length : 0
 }
 
 function num(v: unknown): number {
