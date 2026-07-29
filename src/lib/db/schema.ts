@@ -267,6 +267,18 @@ export interface PlanSnapshot {
   samples: { llm: number; serp: number }
   queryIds: string[]
   detectorVersion: number
+  /**
+   * ★ 이 수집 시점의 경쟁사 집합. **Share of Voice 비교 가능성을 지키는 필드다.**
+   *
+   * SoV는 분모가 "등록된 경쟁사"에 의존하는 유일한 지표라, 고객이 경쟁사를
+   * 추가·삭제하면 실제 점유율이 그대로여도 숫자가 움직인다. 이 집합이 다른
+   * 기간끼리 SoV를 비교하면 설정 변경을 실제 변화로 보고하게 된다 —
+   * `engines`가 다른 주끼리 비교하지 않는 것과 **정확히 같은 이유**다.
+   *
+   * 5단계 대시보드는 이 집합이 바뀐 구간의 SoV에 ▲▼를 붙이지 않는다.
+   * 설계 문서 "Share of Voice는 고객 설정에 의해 왜곡된다" 절 참고.
+   */
+  competitors: string[]
 }
 
 /** 엔진별 시도/성공 수. 90% 미만이면 대시보드에 배지를 붙인다. */

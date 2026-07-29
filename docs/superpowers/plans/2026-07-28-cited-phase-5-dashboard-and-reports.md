@@ -1347,14 +1347,38 @@ export default async function DashboardPage({
               AI가 가장 먼저 꺼낸 이름이 우리 브랜드였던 비율
             </p>
           </div>
+          {/* ★ SoV는 다른 지표와 달리 **고객 설정에 의해 왜곡된다.**
+              분모가 "등록된" 경쟁사에만 의존하므로 경쟁사를 적게 등록할수록
+              숫자가 올라간다. 설계 문서 "Share of Voice는 고객 설정에 의해
+              왜곡된다" 절 참고. 그래서 두 가지를 지킨다.
+                1) n=0(경쟁사 미등록)이면 퍼센트를 아예 띄우지 않는다.
+                   `point`가 0이라 순진하게 그리면 "0%"가 나오는데, 그건
+                   측정 결과가 아니라 설정 누락이다.
+                2) 퍼센트 옆에 **경쟁사 수를 항상 병기**한다. "62%(2곳 기준)"과
+                   "62%(8곳 기준)"은 전혀 다른 주장이다. */}
           <div>
             <dt className="text-sm text-muted-foreground">Share of Voice</dt>
-            <dd className="mt-0.5 text-xl font-semibold tabular-nums">
-              {Math.round(data.metrics.shareOfVoice.point * 100)}%
-            </dd>
-            <p className="mt-1 text-xs text-muted-foreground">
-              우리 + 경쟁사 언급 중 우리가 차지한 비율
-            </p>
+            {data.metrics.shareOfVoice.n === 0 ? (
+              <>
+                <dd className="mt-0.5 text-xl font-semibold text-muted-foreground">—</dd>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  경쟁사를 등록하면 점유율을 계산합니다.{' '}
+                  <Link href="/settings" className="underline underline-offset-4">
+                    경쟁사 등록
+                  </Link>
+                </p>
+              </>
+            ) : (
+              <>
+                <dd className="mt-0.5 text-xl font-semibold tabular-nums">
+                  {Math.round(data.metrics.shareOfVoice.point * 100)}%
+                </dd>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  우리 + 경쟁사 언급 중 우리가 차지한 비율 (경쟁사{' '}
+                  {data.competitorCount}곳 기준)
+                </p>
+              </>
+            )}
           </div>
         </dl>
       </Card>
@@ -2138,6 +2162,15 @@ git tag phase-5-complete
 - [ ] 첫 수집 직후 대시보드에서 **5개 카드 중 4개가 완전**하다
 - [ ] 첫 수집에는 ▲▼가 없고 "다음 주부터 변화를 추적합니다"가 보인다
 - [ ] 신뢰구간이 겹치면 회색 `— 변화 없음`이 나온다 (화살표 아님)
+- [ ] **경쟁사를 등록하지 않은 브랜드의 Share of Voice가 `0%`도 `100%`도 아닌
+      `—`(측정 없음)으로 표시된다.** SoV는 분모가 고객 설정에 의존하는 유일한
+      지표다 — 경쟁사 0곳이면 계산 자체가 성립하지 않는다
+      (`shareOfVoice.n === 0`으로 판별. `point`나 `lower/upper`로 판별하면 안 된다)
+- [ ] **SoV 옆에 경쟁사 수가 항상 병기된다.** "62%(2곳 기준)"과 "62%(8곳 기준)"은
+      전혀 다른 주장이고, 병기하지 않으면 우리가 오해를 만든 것이 된다
+- [ ] **경쟁사 집합이 바뀐 구간의 SoV에는 ▲▼를 붙이지 않는다.** 엔진 구성이
+      다른 주끼리 비교하지 않는 것과 같은 이유다 (설계 문서 "Share of Voice는
+      고객 설정에 의해 왜곡된다" 절)
 - [ ] 추이 차트에 신뢰구간이 띠로 함께 그려진다
 - [ ] 완전성 90% 미만이면 배지가 붙고 실패 엔진 이름이 표시된다
 - [ ] Starter는 3개월 이전 수집이 추이에 나타나지 않는다 (SQL 레벨 검증)
