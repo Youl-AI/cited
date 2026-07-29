@@ -41,6 +41,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Provider는 클라이언트 컴포넌트지만 children은 props로 들어오므로
           서버 렌더링 경계는 유지된다. */}
       <body className="min-h-dvh bg-background text-foreground antialiased">
+        {/* 본문 건너뛰기. 앱 영역은 sticky 머리글에 내비 링크가 셋이고 마케팅
+            영역도 워드마크·로그인·시작하기를 지나야 본문에 닿는다. 키보드·
+            스크린리더 사용자가 페이지마다 그걸 반복해서 통과할 이유는 없다.
+            평소에는 sr-only로 숨고 포커스를 받을 때만 좌상단에 나타난다.
+            대상 <main>에는 각 레이아웃이 id="main" tabindex="-1"을 단다
+            (tabindex가 없으면 일부 브라우저가 포커스를 옮기지 않는다). */}
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:border focus:border-border focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-md focus:outline-2 focus:outline-offset-2 focus:outline-ring"
+        >
+          본문으로 건너뛰기
+        </a>
         <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>

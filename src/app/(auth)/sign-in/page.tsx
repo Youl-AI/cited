@@ -37,7 +37,7 @@ export default function SignInPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-8 px-6 py-16">
+    <main id="main" tabIndex={-1} className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-8 px-6 py-16 outline-none">
       <div className="space-y-3">
         <Link
           href="/"
@@ -74,7 +74,7 @@ export default function SignInPage() {
             {error}
           </p>
         ) : null}
-        <Button type="submit" size="lg" className="h-10 w-full" disabled={pending}>
+        <Button type="submit" size="lg" className="w-full" disabled={pending}>
           {pending ? '처리 중…' : '로그인'}
         </Button>
       </form>

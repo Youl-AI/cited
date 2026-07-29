@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { signOut } from '@/lib/auth-client'
+import { authErrorMessage } from '@/lib/auth-errors'
 
 /** 로그인 영역의 상단 내비게이션. 순서는 쓰는 빈도 순이다. */
 const APP_NAV = [
@@ -23,10 +24,36 @@ export function SiteHeader({ user }: { user?: HeaderUser }) {
   const router = useRouter()
   const pathname = usePathname()
   const [signingOut, setSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState<string | null>(null)
+
+  const SIGN_OUT_FAILED = '로그아웃하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'
 
   async function onSignOut() {
     setSigningOut(true)
-    await signOut()
+    setSignOutError(null)
+
+    // ★ 결과를 버리고 무조건 이동하면 안 된다. 요청이 실패해도 화면만
+    //   /sign-in으로 넘어가고 **세션 쿠키는 살아 있다** — 공용 PC에서
+    //   "로그아웃했다"고 믿은 사용자의 세션이 그대로 남는다.
+    //   실패는 두 모양으로 온다: 서버가 4xx·5xx를 돌려주면 { error }가 오고,
+    //   연결 자체가 끊기면(오프라인·DNS 실패) fetch가 **던진다**. 둘 다 잡지
+    //   않으면 예외 경로에서 버튼이 "나가는 중…"으로 영구히 잠긴다
+    //   (실제로 요청을 끊어서 확인했다).
+    let failed: string | null = null
+    try {
+      const { error } = await signOut()
+      if (error) failed = authErrorMessage(error, SIGN_OUT_FAILED)
+    } catch {
+      failed = SIGN_OUT_FAILED
+    }
+
+    if (failed !== null) {
+      setSignOutError(failed)
+      setSigningOut(false)
+      return
+    }
+
+    // 여기부터는 서버가 세션을 지웠다는 뜻이다.
     // 세션 쿠키가 사라져도 서버 컴포넌트는 캐시된 트리를 다시 쓴다.
     // refresh()로 버려야 (app) 레이아웃의 requireUser()가 다시 돈다.
     router.refresh()
@@ -55,6 +82,10 @@ export function SiteHeader({ user }: { user?: HeaderUser }) {
           <nav className="flex items-center gap-1 text-sm">
             {APP_NAV.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+              // 워드마크와 같은 포커스 링을 쓴다. 링크마다 초점 표시가 다르면
+              // 키보드로 훑을 때 어디에 있는지 놓친다.
+              const focus =
+                'rounded-md px-3 py-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
               return (
                 <Link
                   key={item.href}
@@ -62,8 +93,8 @@ export function SiteHeader({ user }: { user?: HeaderUser }) {
                   aria-current={active ? 'page' : undefined}
                   className={
                     active
-                      ? 'rounded-md px-3 py-1.5 font-medium text-foreground'
-                      : 'rounded-md px-3 py-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground'
+                      ? `${focus} font-medium text-foreground`
+                      : `${focus} text-muted-foreground transition-colors hover:bg-accent hover:text-foreground`
                   }
                 >
                   {item.label}
@@ -88,6 +119,17 @@ export function SiteHeader({ user }: { user?: HeaderUser }) {
           </nav>
         )}
       </div>
+
+      {/* 로그아웃 실패는 조용히 넘어가면 안 되는 종류의 실패다. 머리글 안쪽
+          한 줄로 띄워서, 여전히 로그인 상태라는 사실을 분명히 알린다. */}
+      {signOutError ? (
+        <p
+          role="alert"
+          className="border-t border-border bg-destructive/10 px-6 py-2 text-center text-sm text-destructive"
+        >
+          {signOutError}
+        </p>
+      ) : null}
     </header>
   )
 }

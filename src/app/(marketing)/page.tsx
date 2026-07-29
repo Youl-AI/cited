@@ -17,10 +17,10 @@ export default function HomePage() {
         추적합니다.
       </p>
       <div className="mt-10 flex flex-wrap items-center gap-3">
-        <Button size="lg" className="h-10 px-5" asChild>
+        <Button size="lg" className="px-5" asChild>
           <Link href="/sign-up">시작하기</Link>
         </Button>
-        <Button size="lg" variant="outline" className="h-10 px-5" asChild>
+        <Button size="lg" variant="outline" className="px-5" asChild>
           <Link href="/sign-in">로그인</Link>
         </Button>
       </div>

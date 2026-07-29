@@ -1,5 +1,16 @@
 import Link from 'next/link'
 
+/**
+ * 저작권 표시 연도.
+ *
+ * `new Date().getFullYear()`를 쓰면 안 된다 — 이 바닥글은 정적으로 프리렌더되므로
+ * 빌드 시각의 연도가 HTML에 그대로 굳는다. 배포가 없는 채로 해가 바뀌면 사이트가
+ * 지난해를 계속 보여준다. 저작권 표시는 "이 저작물이 처음 공개된 해"로 충분하다
+ * (범위 표기가 필요해지면 `2026–{올해}`로 바꾸되, 그때도 서버 시각이 아니라
+ * 명시적인 상수로 둔다).
+ */
+const COPYRIGHT_YEAR = 2026
+
 /** 공개 영역의 바닥글. 서버 컴포넌트라 클라이언트 번들에 실리지 않는다. */
 export function SiteFooter() {
   return (
@@ -24,7 +35,7 @@ export function SiteFooter() {
           </p>
         </div>
         <p className="font-mono text-xs tracking-wide text-muted-foreground">
-          © {new Date().getFullYear()} Cited
+          © {COPYRIGHT_YEAR} Cited
         </p>
       </div>
     </footer>

@@ -7,7 +7,7 @@ import Link from 'next/link'
 // 복구 경로(재로그인 → 확인 메일 재발송)를 함께 안내한다.
 export default function VerifyEmailPage() {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-6 px-6 py-16">
+    <main id="main" tabIndex={-1} className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-6 px-6 py-16 outline-none">
       <div className="space-y-3">
         <Link
           href="/"
