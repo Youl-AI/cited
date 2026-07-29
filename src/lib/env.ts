@@ -14,7 +14,12 @@ const baseSchema = z.object({
 
   // 필수 — 1단계
   DATABASE_URL: z.string().min(1),
-  DATABASE_URL_UNPOOLED: z.string().min(1).optional(),
+  // 마이그레이션 전용 direct 연결. `.min(1)`을 붙이지 않는다 — `.optional()`은
+  // undefined만 봐주고 **빈 문자열은 거부**하는데, `.env.example`을 복사하면
+  // 정확히 빈 문자열이 된다. 그러면 "예제를 그대로 복사했는데 부팅이 안 된다"가
+  // 된다(실제로 그 상태였다). 빈 값은 아래 drizzle.config.ts가 `||`로 걸러낸다.
+  // CRON_SECRET·SENTRY_DSN도 같은 이유로 `.min(1)`이 없다.
+  DATABASE_URL_UNPOOLED: z.string().optional(),
   BETTER_AUTH_SECRET: z.string().min(32, 'BETTER_AUTH_SECRET은 32자 이상이어야 합니다'),
   BETTER_AUTH_URL: z.url(),
   // NEXT_PUBLIC_* 이지만 서버에서도 필요하다 (이메일 링크, 인증 콜백 URL,

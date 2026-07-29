@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { isDeployedEnv, parseEnv } from '@/lib/env'
 
@@ -37,6 +38,33 @@ describe('parseEnv', () => {
 
   it('선택 키는 없어도 통과하고 undefined가 된다', () => {
     expect(parseEnv(valid).SENTRY_DSN).toBeUndefined()
+  })
+
+  it('.env.example을 복사하고 필수값만 채운 상태로 부팅된다', () => {
+    // ★ `.env.example`을 복사하면 선택 항목은 **빈 문자열**로 존재한다.
+    //   `z.string().min(1).optional()`은 키가 **없을 때만** 통과하고 빈
+    //   문자열은 거부한다 — `.optional()`은 undefined만 봐준다. 그래서 선택
+    //   변수에 `.min(1)`을 붙이면 "예제를 그대로 복사했는데 부팅이 안 된다"가
+    //   된다. DATABASE_URL_UNPOOLED가 실제로 그 상태였다.
+    //   실제 파일을 읽는 이유는, 나중에 추가되는 선택 변수가 같은 실수를
+    //   반복해도 여기서 잡히게 하기 위해서다. 픽스처를 손으로 적으면
+    //   `.env.example`이 앞서 나갈 때 이 테스트가 조용히 무의미해진다.
+    const text = readFileSync(new URL('../../.env.example', import.meta.url), 'utf8')
+    const copied: Record<string, string> = {}
+    for (const line of text.split('\n')) {
+      const matched = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim())
+      if (matched) copied[matched[1]!] = matched[2]!.split('#')[0]!.trim()
+    }
+    // 사용자가 채우는 것은 시크릿 3개뿐이다. 나머지는 예제 그대로 둔다.
+    expect(() =>
+      parseEnv({
+        ...copied,
+        NODE_ENV: 'test',
+        DATABASE_URL: valid.DATABASE_URL,
+        BETTER_AUTH_SECRET: valid.BETTER_AUTH_SECRET,
+        RESEND_API_KEY: valid.RESEND_API_KEY,
+      }),
+    ).not.toThrow()
   })
 
   it('시크릿이 유효하지 않아도 에러 메시지에 값 자체는 노출되지 않는다', () => {
