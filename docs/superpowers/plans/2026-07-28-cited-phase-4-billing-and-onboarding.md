@@ -29,8 +29,11 @@ Trigger.dev 잡이 `currentPeriodEnd`가 지난 구독을 찾아 실행한다. `
 
 이 단계를 시작하기 전에 아래를 **실제로** 끝낸다. 코드로 해결할 수 없다.
 
-- [ ] 사업자 등록 완료 → `src/lib/business-info.ts` 값 채우기
-- [ ] `src/lib/business-info.test.ts`의 `describe.skip`을 `describe`로 되돌리고 통과 확인
+- [ ] 사업자 등록 완료 → `src/lib/business-info.ts` 값 채우기 (파일 상단 `TODO(phase-4)`
+      마커 참고)
+- [ ] `src/lib/business-info.test.ts`의 `describe.skip('BUSINESS_INFO', ...)`을
+      `describe('BUSINESS_INFO', ...)`로 되돌리고 `pnpm test src/lib/business-info.test.ts`
+      통과 확인 (같은 파일에 `TODO(phase-4)` 마커 있음)
 - [ ] 통신판매업 신고 완료
 - [ ] 토스페이먼츠 계약 → **수수료율 확인** (설계 문서가 3%로 가정한 항목)
 - [ ] SerpApi Starter 가입 + **Automatic Early Renewal 켜기**

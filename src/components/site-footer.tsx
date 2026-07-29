@@ -24,6 +24,7 @@ const BUSINESS_ROWS: [string, string][] = (
     ['사업자등록번호', B.businessNumber],
     ['통신판매업 신고', B.mailOrderNumber],
     ['주소', B.address],
+    ['전화', B.phone],
     ['개인정보 보호책임자', B.privacyOfficer],
     ['문의', B.email],
   ] as [string, string][]

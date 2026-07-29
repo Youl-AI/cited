@@ -27,7 +27,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
             [&_li]:leading-relaxed
             [&_strong]:font-semibold [&_strong]:text-foreground
             [&_table]:mt-4 [&_table]:w-full
-            first:[&>*]:mt-0"
+            [&>*:first-child]:mt-0"
         >
           {children}
         </article>
