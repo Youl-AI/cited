@@ -43,7 +43,12 @@ jobs:
           FROM_INPUT: ${{ inputs.url }}
           FROM_VARS: ${{ vars.PRODUCTION_URL }}
         run: |
-          url="${FROM_EVENT:-${FROM_INPUT:-$FROM_VARS}}"
+          # 우선순위: 수동 입력 > 저장소 변수 > 이벤트 URL.
+          # 이벤트의 target_url은 배포별 *.vercel.app 주소인데, Vercel의
+          # Deployment Protection(신규 프로젝트 기본값 Standard)이 켜져 있으면
+          # 프로덕션이어도 그 주소는 401을 돌려준다 — 공개인 것은 연결된
+          # 도메인뿐이다. 그래서 PRODUCTION_URL 변수가 있으면 그쪽을 먼저 쓴다.
+          url="${FROM_INPUT:-${FROM_VARS:-$FROM_EVENT}}"
           # 수동 실행인데 URL도 저장소 변수도 없으면 실패시키지 않고 건너뛴다.
           # 여기서 빨갛게 만들면 "설정이 없다"와 "서비스가 죽었다"가 뒤섞인다.
           if [ -z "$url" ]; then

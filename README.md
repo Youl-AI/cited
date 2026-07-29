@@ -36,15 +36,18 @@ pnpm dev
 ### `.env.local`에서 반드시 채워야 하는 값
 
 `.env.example`을 복사한 직후 `pnpm dev`를 돌리면 `src/lib/env.ts`의 부팅 검증이
-**빈 값 4개를 이유로 실패한다**(검증함). 채워야 하는 것은 이 4개뿐이고, 나머지는
-비워 둬도 로컬이 돈다.
+**빈 값 3개를 이유로 실패한다**(`env.test.ts`의 `.env.example` 테스트가 이 목록을
+고정한다). 채워야 하는 것은 이 3개뿐이고, 나머지는 비워 둬도 로컬이 돈다.
 
 | 변수 | 어디서 얻나 |
 | --- | --- |
 | `DATABASE_URL` | Neon 대시보드 > Connection string (**pooled**) |
-| `DATABASE_URL_UNPOOLED` | Neon 대시보드 > Connection string (**direct**). 마이그레이션 전용이다. 스키마상 optional이지만 `.env.example`이 빈 문자열로 키를 만들어 두기 때문에, 비워 두면 검증이 거부한다 — Neon이 두 문자열을 다 주므로 그냥 채운다 |
 | `BETTER_AUTH_SECRET` | `openssl rand -base64 32` (32자 이상이어야 통과) |
 | `RESEND_API_KEY` | resend.com > API Keys |
+
+`DATABASE_URL_UNPOOLED`(Neon의 **direct** 연결 문자열)는 비워 둬도 부팅은 되지만
+채우는 것을 권장한다 — `pnpm db:migrate`가 이 값을 쓰고, 없으면 pooled 연결로
+DDL을 돌리게 되어 문제를 일으킬 수 있다. Neon이 두 문자열을 다 준다.
 
 `BETTER_AUTH_URL`과 `NEXT_PUBLIC_APP_URL`은 `.env.example`에 이미
 `http://localhost:3000`으로 들어 있다. **두 값은 정확히 같아야 한다** — 다르면

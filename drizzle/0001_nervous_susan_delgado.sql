@@ -1,0 +1,1 @@
+CREATE INDEX "session_expires_idx" ON "session" USING btree ("expires_at");

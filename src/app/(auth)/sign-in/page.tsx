@@ -17,10 +17,21 @@ export default function SignInPage() {
   async function onSubmit(formData: FormData) {
     setPending(true)
     setError(null)
-    const { error } = await signIn.email({
-      email: String(formData.get('email')),
-      password: String(formData.get('password')),
-    })
+    // 연결이 끊기면(오프라인·DNS 실패) signIn.email은 { error }가 아니라
+    // **던진다** — better-fetch가 fetch 예외를 잡지 않는다. 잡지 않으면
+    // (auth) 그룹에는 error.tsx가 없어 global-error가 페이지를 통째로 갈아치우고,
+    // 입력하던 값까지 사라진다. site-header.tsx의 onSignOut과 같은 방어다.
+    let error: { code?: string | undefined } | null
+    try {
+      ;({ error } = await signIn.email({
+        email: String(formData.get('email')),
+        password: String(formData.get('password')),
+      }))
+    } catch {
+      setError('요청을 보내지 못했습니다. 연결을 확인하고 다시 시도해 주세요.')
+      setPending(false)
+      return
+    }
     setPending(false)
     if (error) {
       // 미인증 계정이면 서버가 확인 메일을 다시 보낸다 (auth.ts의 sendOnSignIn).

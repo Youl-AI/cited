@@ -17,11 +17,20 @@ export default function SignUpPage() {
   async function onSubmit(formData: FormData) {
     setPending(true)
     setError(null)
-    const { error } = await signUp.email({
-      email: String(formData.get('email')),
-      password: String(formData.get('password')),
-      name: String(formData.get('name')),
-    })
+    // 연결이 끊기면 signUp.email은 { error }가 아니라 **던진다** — 잡지 않으면
+    // global-error가 폼을 통째로 갈아치운다. 근거는 sign-in/page.tsx 참고.
+    let error: { code?: string | undefined } | null
+    try {
+      ;({ error } = await signUp.email({
+        email: String(formData.get('email')),
+        password: String(formData.get('password')),
+        name: String(formData.get('name')),
+      }))
+    } catch {
+      setError('요청을 보내지 못했습니다. 연결을 확인하고 다시 시도해 주세요.')
+      setPending(false)
+      return
+    }
     setPending(false)
     if (error) {
       // error.message는 영어라 쓰지 않는다. 코드만 보고 한국어 문구를 고른다.

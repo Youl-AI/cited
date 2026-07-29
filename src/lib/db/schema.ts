@@ -101,7 +101,12 @@ export const session = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('session_user_idx').on(t.userId)],
+  (t) => [
+    index('session_user_idx').on(t.userId),
+    // 만료 세션 정리 크론(/api/cron/cleanup-sessions)의 `expires_at < now`
+    // 삭제가 매일 도는데, 이 인덱스가 없으면 전량 스캔이다.
+    index('session_expires_idx').on(t.expiresAt),
+  ],
 )
 
 export const account = pgTable(

@@ -237,7 +237,11 @@ export default function PrivacyPage() {
           </TableRow>
           <TableRow>
             <TableCell className="whitespace-normal">Neon Inc.</TableCell>
-            <TableCell className="whitespace-normal">미국</TableCell>
+            {/* Neon은 미국 법인이지만 법 제28조의8 제2항이 요구하는 것은
+                "이전되는 국가" = 데이터가 실제로 저장되는 곳이다. 이 서비스의
+                DB는 AWS ap-southeast-1(싱가포르) 리전에 있다 — DATABASE_URL의
+                호스트로 확인함. 리전을 옮기면 이 칸도 같이 고칠 것. */}
+            <TableCell className="whitespace-normal">싱가포르</TableCell>
             <TableCell className="whitespace-normal">
               회원·브랜드·구독 정보 등 서비스 데이터베이스 전체
             </TableCell>
