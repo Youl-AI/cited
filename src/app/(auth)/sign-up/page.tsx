@@ -3,8 +3,11 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { signUp } from '@/lib/auth-client'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { MIN_PASSWORD_LENGTH, authErrorMessage } from '@/lib/auth-errors'
+import { signUp } from '@/lib/auth-client'
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -29,37 +32,60 @@ export default function SignUpPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Cited 시작하기</h1>
-      <form action={onSubmit} className="flex flex-col gap-3">
-        <input name="name" required placeholder="이름" className="rounded-lg border px-3 py-2" />
-        <input
-          name="email"
-          type="email"
-          required
-          placeholder="이메일"
-          className="rounded-lg border px-3 py-2"
-        />
-        <input
-          name="password"
-          type="password"
-          required
-          minLength={MIN_PASSWORD_LENGTH}
-          placeholder={`비밀번호 (${String(MIN_PASSWORD_LENGTH)}자 이상)`}
-          className="rounded-lg border px-3 py-2"
-        />
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-lg bg-neutral-900 px-3 py-2 font-medium text-white disabled:opacity-50"
+    <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center gap-8 px-6 py-16">
+      <div className="space-y-3">
+        <Link
+          href="/"
+          className="group inline-flex items-baseline gap-px rounded-sm text-base font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
         >
+          Cited
+          <span
+            aria-hidden="true"
+            className="font-mono text-[0.6em] leading-none text-muted-foreground transition-colors group-hover:text-primary"
+          >
+            [1]
+          </span>
+        </Link>
+        <h1 className="text-2xl font-semibold tracking-tight">시작하기</h1>
+      </div>
+
+      <form action={onSubmit} className="flex flex-col gap-5">
+        <div className="space-y-1.5">
+          <Label htmlFor="name">이름</Label>
+          <Input id="name" name="name" required autoComplete="name" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="email">이메일</Label>
+          <Input id="email" name="email" type="email" required autoComplete="email" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="password">비밀번호</Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            required
+            minLength={MIN_PASSWORD_LENGTH}
+            autoComplete="new-password"
+            aria-describedby="password-hint"
+          />
+          <p id="password-hint" className="text-xs text-muted-foreground">
+            {String(MIN_PASSWORD_LENGTH)}자 이상
+          </p>
+        </div>
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+        <Button type="submit" size="lg" className="h-10 w-full" disabled={pending}>
           {pending ? '처리 중…' : '가입하기'}
-        </button>
+        </Button>
       </form>
-      <p className="text-sm text-neutral-500">
+
+      <p className="text-sm text-muted-foreground">
         이미 계정이 있으신가요?{' '}
-        <Link href="/sign-in" className="underline">
+        <Link href="/sign-in" className="text-foreground underline underline-offset-4">
           로그인
         </Link>
       </p>

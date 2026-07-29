@@ -1,26 +1,229 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+   제품 고유 토큰
+   Cited가 파는 것은 숫자가 아니라 "그 숫자를 얼마나 믿어도 되는가"다.
+   그래서 지표의 방향과 수집 품질은 아래 다섯 색으로만 말한다. 화면마다
+   초록·빨강을 새로 고르기 시작하면 같은 색이 다른 뜻을 갖게 되고, 그 순간
+   대시보드는 신뢰를 잃는다.
+   값 자체는 계약이다 — tests/design-tokens.test.ts가 지킨다.
+--------------------------------------------------------------------------- */
+@theme {
+  /* 지표 상태색 — 대시보드 전역에서 이것만 쓴다 */
+  --color-metric-up: oklch(0.55 0.12 155);
+  --color-metric-down: oklch(0.55 0.18 25);
+  /* 회색인 것이 핵심이다. 설계 ③의 "신뢰구간이 겹치면 변화 없음" 규칙을
+     색 자체가 강제한다. 여기를 초록·빨강으로 바꾸면 제품이 거짓말을 한다. */
+  --color-metric-flat: oklch(0.62 0.01 90);
+  /* 신뢰구간 띠 */
+  --color-ci-band: oklch(0.92 0.02 250);
+  /* 불완전 수집 표시 */
+  --color-incomplete: oklch(0.75 0.12 70);
+
+  /* ---- 한글 조판 스케일 -------------------------------------------------
+     Tailwind 기본 행간은 라틴 문자 기준이다. 한글은 같은 크기에서 글자
+     상자가 꽉 차 보여 같은 행간이면 답답하게 읽힌다. 본문은 넉넉하게,
+     제목은 커질수록 조여서 덩어리로 읽히게 한다. */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.6;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.65;
+  --text-base: 1rem;
+  --text-base--line-height: 1.75;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.7;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.55;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.4;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 1.3;
+  --text-4xl: 2.25rem;
+  --text-4xl--line-height: 1.2;
+  --text-5xl: 3rem;
+  --text-5xl--line-height: 1.12;
+
+  /* 자간도 라틴 기준값을 그대로 쓰면 안 된다. Tailwind의 tracking-tight
+     (-0.025em)는 한글에서 받침이 붙어 보일 만큼 좁다. 호출부를 하나씩
+     고치는 대신 토큰을 한글에 맞게 다시 잡는다. */
+  --tracking-tighter: -0.02em;
+  --tracking-tight: -0.012em;
+  --tracking-wide: 0.02em;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* 서체 — 라틴·숫자는 IBM Plex(next/font로 self-host), 한글은 시스템 서체.
+     한글 웹폰트는 서브셋을 해도 수 MB다. "부풀리지 않는다"고 말하는 제품이
+     본문 서체로 수 MB를 태우는 것은 앞뒤가 안 맞는다. Plex에는 한글 글리프가
+     없으므로 브라우저가 글자 단위로 뒤쪽 한글 서체까지 내려간다. */
+  --font-sans:
+    var(--font-plex-sans), "Pretendard Variable", Pretendard, "Apple SD Gothic Neo",
+    "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+  --font-mono:
+    var(--font-plex-mono), ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas,
+    "D2Coding", monospace;
+
+  /* 중립색에 아주 옅은 푸른 기를 넣는다. 종이는 크림색이 아니라 계측 장비의
+     흰색에 가깝고, 초록·빨강·호박색 지표가 그 위에서 더 또렷하게 읽힌다. */
+  --background: oklch(0.994 0.002 255);
+  --foreground: oklch(0.205 0.015 258);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.205 0.015 258);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.205 0.015 258);
+
+  /* 브랜드색은 신뢰구간 띠(--color-ci-band, oklch 0.92 0.02 250)의 진한
+     쪽이다. 이 제품의 정체성 색은 "불확실성의 색"이다. 지표 의미색
+     (초록·빨강·호박)과 색상환에서 멀리 떨어져 있어 UI 크롬과 데이터를
+     혼동할 일이 없다. */
+  --primary: oklch(0.42 0.115 258);
+  --primary-foreground: oklch(0.985 0.002 255);
+  --secondary: oklch(0.965 0.004 258);
+  --secondary-foreground: oklch(0.28 0.02 258);
+  --muted: oklch(0.968 0.004 258);
+  /* 명도 0.48 — 종이색 대비 약 4.9:1로 WCAG AA를 넘는다. shadcn 기본값
+     (0.556)은 본문 보조 텍스트로 쓰기엔 대비가 모자란다. */
+  --muted-foreground: oklch(0.48 0.014 258);
+  --accent: oklch(0.955 0.008 258);
+  --accent-foreground: oklch(0.28 0.02 258);
+  /* 시스템 안의 빨강은 하나뿐이다 — 지표 하락과 파괴적 동작이 같은 빨강을 쓴다. */
+  --destructive: oklch(0.55 0.18 25);
+  --border: oklch(0.905 0.006 258);
+  --input: oklch(0.895 0.006 258);
+  --ring: oklch(0.42 0.115 258);
+  --chart-1: oklch(0.87 0.004 258);
+  --chart-2: oklch(0.7 0.006 258);
+  --chart-3: oklch(0.56 0.008 258);
+  --chart-4: oklch(0.42 0.01 258);
+  --chart-5: oklch(0.3 0.012 258);
+  /* 계측 장비의 인상 — 둥근 모서리를 줄인다. */
+  --radius: 0.375rem;
+  --sidebar: oklch(0.985 0.003 258);
+  --sidebar-foreground: oklch(0.205 0.015 258);
+  --sidebar-primary: oklch(0.42 0.115 258);
+  --sidebar-primary-foreground: oklch(0.985 0.002 255);
+  --sidebar-accent: oklch(0.955 0.008 258);
+  --sidebar-accent-foreground: oklch(0.28 0.02 258);
+  --sidebar-border: oklch(0.905 0.006 258);
+  --sidebar-ring: oklch(0.42 0.115 258);
+}
+
+/* 다크 테마는 아직 전환 수단이 없다(.dark 클래스를 붙이는 곳이 없다).
+   shadcn 컴포넌트의 dark: 변형이 참조하므로 정의는 남겨 두지만, 위의 지표
+   토큰은 밝은 배경 기준으로 잡혀 있다. 다크를 실제로 켜려면 지표 토큰의
+   다크 대응값을 함께 정해야 한다. */
+.dark {
+  --background: oklch(0.16 0.012 258);
+  --foreground: oklch(0.985 0.002 255);
+  --card: oklch(0.215 0.014 258);
+  --card-foreground: oklch(0.985 0.002 255);
+  --popover: oklch(0.215 0.014 258);
+  --popover-foreground: oklch(0.985 0.002 255);
+  --primary: oklch(0.72 0.1 258);
+  --primary-foreground: oklch(0.18 0.02 258);
+  --secondary: oklch(0.275 0.014 258);
+  --secondary-foreground: oklch(0.985 0.002 255);
+  --muted: oklch(0.275 0.014 258);
+  --muted-foreground: oklch(0.72 0.012 258);
+  --accent: oklch(0.275 0.014 258);
+  --accent-foreground: oklch(0.985 0.002 255);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.72 0.1 258);
+  --chart-1: oklch(0.87 0.004 258);
+  --chart-2: oklch(0.7 0.006 258);
+  --chart-3: oklch(0.56 0.008 258);
+  --chart-4: oklch(0.42 0.01 258);
+  --chart-5: oklch(0.3 0.012 258);
+  --sidebar: oklch(0.215 0.014 258);
+  --sidebar-foreground: oklch(0.985 0.002 255);
+  --sidebar-primary: oklch(0.72 0.1 258);
+  --sidebar-primary-foreground: oklch(0.18 0.02 258);
+  --sidebar-accent: oklch(0.275 0.014 258);
+  --sidebar-accent-foreground: oklch(0.985 0.002 255);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.72 0.1 258);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  html {
+    @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    /* 한글은 어절 단위로 끊어야 한다. keep-all이 없으면 브라우저가 음절
+       아무 데서나 줄을 바꿔 "브랜드가"가 "브랜"/"드가"로 찢어진다. */
+    word-break: keep-all;
+    /* 예외 — 끊지 않으면 넘치는 긴 URL·영문 토큰만 강제로 끊는다. */
+    overflow-wrap: break-word;
+    text-wrap: pretty;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+
+  /* 숫자는 값이 바뀌어도 자리가 흔들리면 안 된다. 표에서 자릿수가 어긋나면
+     읽는 사람이 수치를 비교할 수 없다. */
+  table {
+    font-variant-numeric: tabular-nums;
+  }
 }
