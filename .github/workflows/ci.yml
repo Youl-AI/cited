@@ -10,9 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # 버전을 여기 적지 않는다. package.json의 `packageManager` 필드가 진실의
+      # 원천이고, 여기에도 적으면 action이 "Multiple versions of pnpm specified"로
+      # 실패한다. 두 곳에 적으면 드리프트도 생긴다.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 24
