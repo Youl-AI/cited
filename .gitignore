@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude Code 로컬 도구 설정 (플러그인 활성화 등) — 개인 환경 설정이라 공유하지 않는다
+.claude/
