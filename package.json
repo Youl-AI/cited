@@ -23,6 +23,7 @@
     "probe:engine": "tsx --conditions=react-server --env-file=.env.local scripts/probe-engine.mts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.115.0",
     "@google/genai": "2.13.0",
     "@neondatabase/serverless": "1.1.0",
     "@sentry/nextjs": "10.68.0",
