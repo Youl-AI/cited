@@ -1,0 +1,174 @@
+{
+  "engineId": "gemini",
+  "query": "30대 남자 러닝화 추천해줘",
+  "capturedAt": "2026-07-29T17:59:35.405Z",
+  "elapsedMs": 3807,
+  "usage": {
+    "calls": 1,
+    "searches": 2,
+    "tokensIn": 45,
+    "tokensOut": 498,
+    "tokensThinking": 0
+  },
+  "raw": {
+    "sdkHttpResponse": {
+      "headers": {
+        "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+        "content-encoding": "gzip",
+        "content-type": "application/json; charset=UTF-8",
+        "date": "Wed, 29 Jul 2026 17:59:35 GMT",
+        "server": "scaffolding on HTTPServer2",
+        "server-timing": "gfet4t7; dur=3673",
+        "transfer-encoding": "chunked",
+        "vary": "Origin, X-Origin, Referer",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "SAMEORIGIN",
+        "x-gemini-service-tier": "standard",
+        "x-xss-protection": "0"
+      }
+    },
+    "candidates": [
+      {
+        "content": {
+          "parts": [
+            {
+              "text": "30대 남성 러닝화로는 발 보호와 범용성이 좋은 **데일리 쿠션화**나 **안정화**가 가장 인기가 많습니다. 용도와 발 모양에 따른 대표적인 추천 모델은 다음과 같습니다.\n\n* **올라운드·입문용 (가장 무난한 선택)**\n  * **나이키 페가수스 (최신 시리즈):** 초보부터 중급자까지 두루 쓰는 대표적인 만능형 러닝화입니다. 내구성과 접지력이 좋아 부담 없이 신기 좋습니다.\n  * **아식스 노바블라스트 (최신 시리즈):** 탱탱한 반발력과 푹신한 쿠션을 동시에 제공하여 조깅과 템포런(속도 훈련) 모두에 잘 어울립니다.\n\n* **쿠션감·무릎 보호 중심 (발 편한 신발)**\n  * **아식스 젤-님버스:** 푹신한 쿠셔닝이 뛰어나 장거리 달리거나 체격이 있는 30대 남성들의 무릎 및 관절 부담을 줄여주는 데 탁월합니다.\n  * **뉴발란스 프레시폼X 1080:** 발볼이 넓은(Wide) 옵션이 잘 나와 있어 발등이 높거나 발볼이 넓은 남성들이 편안하게 신기 좋습니다.\n  * **호카 클리프톤:** 가벼운 무게에 뛰어난 쿠션감을 갖추어 데일리 조깅용으로 인기가 높습니다.\n\n* **안정성 중심 (발목 흔들림 교정)**\n  * **아식스 젤카야노:** 대표적인 안정화로, 달릴 때 발목이 안쪽으로 무너지는 과회내 현상을 잡아주어 부상 방지와 자세 교정에 좋습니다.\n\n평소 발볼 너비와 주행 목적(가벼운 조깅, 체중 조절, 기록 단축 등)에 맞춰 매장에서 직접 신어본 뒤 구매하시는 것을 가장 권장합니다.",
+              "thoughtSignature": "EjQKMgERTTIPpURq8KGNC+rfPjKKLqBHvwWiQ93ChhuWK3ur1gij3p1KiZWecNNmFXxqKMyO"
+            }
+          ],
+          "role": "model"
+        },
+        "finishReason": "STOP",
+        "groundingMetadata": {
+          "searchEntryPoint": {
+            "renderedContent": "<style>\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n</style>\n<div class=\"container\">\n  <div class=\"headline\">\n    <svg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/>\n    </svg>\n    <svg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/>\n      <path d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/>\n      <path d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/>\n      <path d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/>\n      <path d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/>\n    </svg>\n    <div class=\"gradient-container\"><div class=\"gradient\"></div></div>\n  </div>\n  <div class=\"carousel\">\n<a class=\"chip\" href=\"https://www.google.com/search?q=30%EB%8C%80+%EB%82%A8%EC%9E%90+%EB%9F%AC%EB%8B%9D%ED%99%94+%EC%B6%94%EC%B2%9C+%EC%9D%B8%EA%B8%B0+%EB%AA%A8%EB%8D%B8+2025+2026&client=app-vertex-grounding&safesearch=active\">30대 남자 러닝화 추천 인기 모델 2025 2026</a>\n<a class=\"chip\" href=\"https://www.google.com/search?q=%EB%82%A8%EC%84%B1+%EB%9F%AC%EB%8B%9D%ED%99%94+%EC%B6%94%EC%B2%9C+%EC%88%9C%EC%9C%84&client=app-vertex-grounding&safesearch=active\">남성 러닝화 추천 순위</a>\n  </div>\n</div>"
+          },
+          "groundingChunks": [
+            {
+              "web": {
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHBzeBTCyIQaHyTsegsuej3Xd6OySK00atn9wJuYDGqb2fo7MS_9FQfyM892g9pLfsKs1LM6fqCuToNH3yM4YLeShK9KV-TSJD6OR-dkTkY15SovTYDacG2ddX3oxtSdxlKF3Ff34tT-iTXYW3xiD_T",
+                "title": "runningwikii.com"
+              }
+            },
+            {
+              "web": {
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGy4I6vUOkPkxCjyhZ__y_b1slMQeLPlwRabxEUoucoBJlKev5VPDe6-8VpsnAaVghWP8QZvo3nvq81v2K7NfckqkFTn5n26nGzuRVdB5MpV-ScGdQ=",
+                "title": "daum.net"
+              }
+            },
+            {
+              "web": {
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEK7KlI-IhsY_FCdBzePlKMdDUOhpL3-PwckfulnnfARZQ7AFP2_OeNR9yPFCIvCUA4k4NAvzMiE_m7r--qY6JtYTZ4SsIiGKpAvm7ZFQN-83cluZwyu4WOjtH05QWxZpUNgSL26g6KVs509Gu2d3AZlAPGADlaZyMzaODF-lkp0zdDbAb4CXk5w-RIHiy0EhnPV9pVWZM1jl1dP33JTI4oOGQs3U-EW4oW2IT4tDtVPQbW48bG4EOKhXVTL3J1jwEK8s6BiOZj94dQ2aZIenozKzBmen8j2YSCetR2HsVGfDXi0gwWUj9M07pJEhLZ8OeJTFOPP92nk6l_ah7uMLEtFWuaNTHDgJ4j2XHNjtUMbQ==",
+                "title": "tistory.com"
+              }
+            },
+            {
+              "web": {
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF1XIV3jqC5JvJpvXCUqaJefGhvKDp33vOAKP8RpO-f1St3XrS0OgbJotSPsQhNuA21vRhUFi-AZcFbLO_3yk1sZUyrilUqTZagEoqngjjvHlcFj8u3LkAZcMt9rUXpTfn_9TbujV0_ep462htPTXFB",
+                "title": "sallaemallae.com"
+              }
+            },
+            {
+              "web": {
+                "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHZURi4R-9pWeVTbCnsyNxNtGGL_l7mMbFrOYNM4GAjrXytIYlmXoP31kaahNlCPURsYGhlA9e0yKD-5TBftUMkXxNIj-1kdr8JG9N2o70u6gWaQF5qquM03dxWaxBilP8eGKDaTxmenMxdO431gSTEt30OIgBFzwXPQ-D90k4zxfSrWoaBqwqSaLgdz9Id-n9NNebZ7fYNkQ==",
+                "title": "reddit.com"
+              }
+            }
+          ],
+          "groundingSupports": [
+            {
+              "segment": {
+                "endIndex": 136,
+                "text": "30대 남성 러닝화로는 발 보호와 범용성이 좋은 **데일리 쿠션화**나 **안정화**가 가장 인기가 많습니다"
+              },
+              "groundingChunkIndices": [
+                0
+              ]
+            },
+            {
+              "segment": {
+                "startIndex": 224,
+                "endIndex": 415,
+                "text": "* **올라운드·입문용 (가장 무난한 선택)**\n  * **나이키 페가수스 (최신 시리즈):** 초보부터 중급자까지 두루 쓰는 대표적인 만능형 러닝화입니다"
+              },
+              "groundingChunkIndices": [
+                1
+              ]
+            },
+            {
+              "segment": {
+                "startIndex": 417,
+                "endIndex": 483,
+                "text": "내구성과 접지력이 좋아 부담 없이 신기 좋습니다"
+              },
+              "groundingChunkIndices": [
+                1
+              ]
+            },
+            {
+              "segment": {
+                "startIndex": 675,
+                "endIndex": 798,
+                "text": "* **쿠션감·무릎 보호 중심 (발 편한 신발)**\n  * **아식스 젤-님버스:** 푹신한 쿠셔닝이 뛰어나"
+              },
+              "groundingChunkIndices": [
+                2
+              ]
+            },
+            {
+              "segment": {
+                "startIndex": 675,
+                "endIndex": 918,
+                "text": "* **쿠션감·무릎 보호 중심 (발 편한 신발)**\n  * **아식스 젤-님버스:** 푹신한 쿠셔닝이 뛰어나 장거리 달리거나 체격이 있는 30대 남성들의 무릎 및 관절 부담을 줄여주는 데 탁월합니다"
+              },
+              "groundingChunkIndices": [
+                2
+              ]
+            },
+            {
+              "segment": {
+                "startIndex": 922,
+                "endIndex": 1011,
+                "text": "* **뉴발란스 프레시폼X 1080:** 발볼이 넓은(Wide) 옵션이 잘 나와 있어"
+              },
+              "groundingChunkIndices": [
+                2
+              ]
+            },
+            {
+              "segment": {
+                "startIndex": 1466,
+                "endIndex": 1645,
+                "text": "평소 발볼 너비와 주행 목적(가벼운 조깅, 체중 조절, 기록 단축 등)에 맞춰 매장에서 직접 신어본 뒤 구매하시는 것을 가장 권장합니다"
+              },
+              "groundingChunkIndices": [
+                3,
+                4,
+                2
+              ]
+            }
+          ],
+          "webSearchQueries": [
+            "30대 남자 러닝화 추천 인기 모델 2025 2026",
+            "남성 러닝화 추천 순위"
+          ]
+        },
+        "index": 0
+      }
+    ],
+    "modelVersion": "gemini-3.5-flash-lite",
+    "responseId": "gz9qaoOQHu6j2roP5Zei6Aw",
+    "usageMetadata": {
+      "promptTokenCount": 45,
+      "candidatesTokenCount": 498,
+      "totalTokenCount": 543,
+      "promptTokensDetails": [
+        {
+          "modality": "TEXT",
+          "tokenCount": 45
+        }
+      ],
+      "serviceTier": "standard"
+    }
+  }
+}
