@@ -1,0 +1,92 @@
+name: 배포 후 헬스체크
+
+# 1단계 계획서는 이 검사를 ci.yml에 넣으라고 했다. 넣지 않았다.
+#
+# ci.yml은 push·pull_request에 돌고 **배포를 수행하지 않는다** — 이 저장소는
+# Vercel의 GitHub 연동으로 배포된다. 그래서 ci.yml에 헬스체크를 넣으면 Vercel이
+# 아직 빌드 중인 시점에 이전 배포(혹은 아직 없는 배포)를 찔러 보게 된다. 통과해도
+# 무엇을 검증했는지 모르고, 실패해도 그게 코드 문제인지 타이밍 문제인지 모른다.
+# 그런 검사는 몇 번 빨갛게 뜨고 나면 사람들이 무시하기 시작한다 — 있는 것보다 나쁘다.
+#
+# 대신 Vercel이 배포를 끝냈을 때 GitHub에 남기는 deployment_status를 트리거로 쓴다.
+# 경합이 구조적으로 없고, 검사 대상 URL을 이벤트가 직접 알려주므로 도메인을
+# 하드코딩하지 않아도 된다(도메인 구매 전에도 동작한다).
+#
+# ★ deployment_status 워크플로는 **기본 브랜치에 있는 파일만** 실행된다.
+#   이 파일이 main에 병합되기 전까지는 수동 실행(workflow_dispatch)만 된다.
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: '검사할 배포의 오리진 (예: https://cited.co.kr). 비우면 저장소 변수 PRODUCTION_URL을 쓴다'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    # 프로덕션 배포가 성공했을 때만. Preview 배포는 Vercel의 배포 보호가 걸려
+    # 있으면 인증 벽에서 401을 돌려주므로 검사해 봐야 거짓 실패만 만든다.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+       contains(github.event.deployment_status.environment, 'Production'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: 대상 URL 결정
+        id: target
+        env:
+          FROM_EVENT: ${{ github.event.deployment_status.target_url }}
+          FROM_INPUT: ${{ inputs.url }}
+          FROM_VARS: ${{ vars.PRODUCTION_URL }}
+        run: |
+          url="${FROM_EVENT:-${FROM_INPUT:-$FROM_VARS}}"
+          # 수동 실행인데 URL도 저장소 변수도 없으면 실패시키지 않고 건너뛴다.
+          # 여기서 빨갛게 만들면 "설정이 없다"와 "서비스가 죽었다"가 뒤섞인다.
+          if [ -z "$url" ]; then
+            echo "::notice::검사할 URL이 없다. 수동 실행 시 url 입력을 주거나 저장소 변수 PRODUCTION_URL을 설정할 것."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "url=${url%/}" >> "$GITHUB_OUTPUT"
+
+      - name: /api/health 확인
+        if: steps.target.outputs.skip != 'true'
+        env:
+          URL: ${{ steps.target.outputs.url }}
+        run: |
+          # 배포 직후 첫 요청은 콜드 스타트라 느리다. Neon도 scale-to-zero에서
+          # 깨어나는 데 시간이 걸린다. 재시도로 흡수한다.
+          code=$(curl -sS -o body.json -w '%{http_code}' \
+            --max-time 30 --retry 5 --retry-delay 6 --retry-all-errors \
+            "$URL/api/health" || true)
+          echo "HTTP $code"
+          cat body.json || true
+          echo
+          # 200이면서 ok:true여야 한다. 503 본문에도 "ok" 문자열은 들어 있으므로
+          # 상태 코드와 본문을 둘 다 본다.
+          if [ "$code" != "200" ] || ! grep -q '"ok":true' body.json; then
+            echo "::error::헬스체크 실패 ($URL/api/health). DB 접속을 확인할 것 — 실패 본문에는 원인이 담기지 않으므로 Vercel 런타임 로그의 health.db.failed 이벤트를 볼 것."
+            exit 1
+          fi
+
+      - name: 공개 페이지가 200인지 확인
+        if: steps.target.outputs.skip != 'true'
+        env:
+          URL: ${{ steps.target.outputs.url }}
+        run: |
+          # 법정 문서 링크가 깨지면 전자상거래법상 표시 의무가 깨진다. 가입
+          # 페이지는 유입 경로 전체가 여기서 시작하므로 같이 본다.
+          fail=0
+          for path in /legal/terms /legal/privacy /sign-up; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$URL$path" || true)
+            echo "$path -> $code"
+            [ "$code" = "200" ] || fail=1
+          done
+          if [ "$fail" = "1" ]; then
+            echo "::error::공개 페이지 중 200이 아닌 것이 있다."
+            exit 1
+          fi
