@@ -1,300 +1,139 @@
-# Cited 3단계 — 수집 파이프라인과 무료 진단 Implementation Plan
+# Cited 3단계 — 수집 코어와 무료 진단(수동 배송) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Trigger.dev 수집 파이프라인을 만들고, 그 위에 무료 진단을 얹어
-**1차 배포**한다. 이 단계가 끝나면 랜딩에서 브랜드명을 입력한 방문자가 20초 안에
-실제 AI 답변 기반 진단 결과를 보고 이메일을 남긴다.
+**Goal:** 수집·판정 파이프라인의 **코어**를 프레임워크 없이 만들고, 그 위에
+무료 진단을 **운영자가 직접 실행해 메일로 보내는** 형태로 얹어 **1차 배포**한다.
+이 단계가 끝나면 방문자가 랜딩에서 진단을 신청하고, 이메일을 인증하고,
+운영자가 CLI로 실행해 리포트를 메일로 받는다.
 
-**Architecture:** Trigger.dev 잡이 오케스트레이션만 하고 비즈니스 로직은 두지
-않는다. 수집(`collect-brand`)과 판정(`judge-run`)을 분리해, 판정이 실패해도
-수집 데이터는 살아남는다. 스케줄은 브랜드당 1개가 아니라 **전체 1개**가 매일
-돌며 오늘 수집할 브랜드를 고른다 — Trigger.dev 무료 티어의 스케줄 한도 10개에
-막히지 않기 위해서이자, 요일별 부하 분산이 자연히 되기 때문이다.
+**Architecture:** 수집·판정 로직은 **잡 프레임워크를 모르는 순수 함수**
+(`runCollection`, `runDetection`)로 만든다. 3단계에서는 운영자 CLI가 이 함수를
+직접 부르고, 4단계에서 Trigger.dev 잡이 **같은 함수를 감싸기만** 한다.
+무료 진단은 자동 실행하지 않으므로 잡 큐·진행률 스트리밍·남용 방지가 필요 없다.
 
-**Tech Stack:** Trigger.dev v4 · Neon · Drizzle · Next.js Server Actions ·
-Trigger.dev Realtime (진행률 스트리밍) · Playwright (E2E)
+**Tech Stack:** Neon · Drizzle · Next.js Server Actions · Resend · tsx(운영자 CLI)
+· Playwright (E2E)
+
+---
+
+## ★ 2026-07-30 설계 변경 — 무료 진단을 수동 배송으로 바꾼다
+
+최초 계획서는 무료 진단을 **자동 실행 + 즉시 결과 화면**으로 잡았다. 그 전제를
+바꾼다. 이유는 비용이 아니다 — 자동화해도 일 20건이면 월 76,000원이고, 그 정도를
+아끼자고 제품을 바꾸지는 않는다.
+
+**바꾸는 진짜 이유 세 가지:**
+
+1. **공격면이 사라진다.** 누구도 API를 직접 트리거할 수 없으면 Turnstile·IP
+   상한·예산 킬스위치·브랜드 캐시가 전부 필요 없다. 최초 계획의 Task 6 전체가
+   방어하려던 위협 자체가 없어진다.
+2. **자동 공개 전에 실물을 본다.** 지금 판정·통계·Share of Voice를 **한 번도
+   실제 답변에 돌려보지 않고** 만들었다. 결과 50건을 눈으로 보기 전에 자동
+   공개로 넘어가면, 틀린 것을 고객 화면에 띄우고 나서 알게 된다.
+3. **이메일 인증이 비로소 게이트가 된다.** 최초 계획에서는 잡이 이메일 수집보다
+   **먼저** 시작돼 인증이 비용을 전혀 방어하지 못했다. 순서가 뒤집히면
+   (신청 → 인증 → 운영자 실행) 인증이 실제 관문이 된다.
+
+**무료 진단의 내용은 부풀리지 않는다.** `src/lib/plans.ts`의 `free` 설정
+(3질의 · 1샘플 · 이력 0개월)을 그대로 쓴다. 수동이라 여유가 생겼다고 질의 수나
+모델 등급을 올리면 유료 플랜을 자기잠식한다.
+
+**다만 모델·엔진은 유료와 같아야 한다.** 무료를 저가 모델로 돌리면 같은 브랜드
+같은 질의인데 언급률이 다르게 나오고, 전환한 고객이 "무료에선 33%였는데 유료는
+18%네요"라고 물었을 때 답할 수가 없다. 이는 `judgeChange`가 엔진 구성이 다른
+주끼리 `incomparable`을 돌려주는 것과 **정확히 같은 이유**다. 무료와 유료를
+가르는 축은 **질의 수 · 측정 횟수 · 지속성**이지 품질이 아니다.
+
+**1회 측정의 넓은 신뢰구간이 곧 세일즈 포인트다.** 3질의 1회 측정에서 1건
+언급이면 33%지만 Wilson 구간은 [2%, 87%]다. 이것을 숨기지 말고 그대로 보여준다 —
+"주 3회 측정하면 이 구간이 좁혀집니다"가 정직하면서도 가장 강한 결제 이유다.
+그리고 **1회 측정으로는 ▲▼가 원리적으로 나올 수 없다.** 고객이 사는 것은 숫자가
+아니라 변화이고, 그것은 무료로 줄 수가 없다.
+
+### 이 변경으로 달라진 것
+
+| 항목 | 최초 계획 | 이 계획 |
+| --- | --- | --- |
+| Trigger.dev 초기화·스케줄러 | 3단계 | **4단계로 이동** (돌릴 대상이 4단계에 생긴다) |
+| 수집·판정 로직 | Trigger.dev 잡 안 | **프레임워크 없는 코어 함수** |
+| 무료 진단 실행 | 공개 API가 자동 트리거 | **운영자 CLI** |
+| Turnstile·IP 상한·예산 킬스위치·브랜드 캐시 | Task 6 전체 | **삭제** |
+| 진행률 스트리밍(Realtime) | Task 8 | **삭제** |
+| 이메일 | 결과 확인 **후** 게이트 | **신청 시 필수 · 인증 후 실행** |
+| 결과 전달 | 즉시 화면 | 메일 + `/audit/[id]` 링크 |
+| 무료 진단 이력 저장 | `collection_runs`·`answers` | **저장하지 않는다** (아래 참고) |
+
+**무료 진단은 `collection_runs`/`answers`에 쓰지 않는다.** `free_audits.result`
+하나에만 담는다. 무료 플랜은 `historyMonths: 0`이라 이력이 제품에 없고, 저장하면
+`collection_runs.brand_id`를 채우려고 가짜 브랜드 행을 만들어야 한다. 유료 경로는
+그대로 두 테이블에 쓴다.
+
+---
 
 ## Global Constraints
 
 로드맵 공통 제약 + 이 단계 전용:
 
-- **Trigger.dev 스케줄은 전체 1개.** 브랜드마다 만들지 않는다
-- **동시성 제한을 엔진별로 건다.** 고객 10명이면 주 1,000~3,000회 실행이므로
-  한꺼번에 던지면 rate limit에 걸린다
+- **수집·판정 코어는 잡 프레임워크를 import하지 않는다.** `@trigger.dev/*`를
+  `src/lib/collection/**`·`src/lib/detection/**`에서 참조 금지 (4단계에서
+  잡이 이 함수를 감싼다)
+- **동시성 제한을 엔진별로 건다.** 한꺼번에 던지면 rate limit에 걸린다
 - **부분 실패를 허용하되 조용히 넘어가지 않는다.** `completeness`를 반드시 기록
-- **무료 진단의 일일 상한은 비용 통제 장치다.** 반드시 실제로 작동해야 한다
 - **SERP 2샘플은 시간대를 나눠 호출한다.** SerpApi 1시간 캐시 때문
-- **`answers.raw`를 저장하지 않는 경로를 만들지 않는다**
+- **`answers.raw`를 저장하지 않는 경로를 만들지 않는다** (유료 경로)
 - **IP 원문을 저장하지 않는다.** HMAC 해시만
+- **무료 진단은 이메일 인증 전에 어떤 API도 호출하지 않는다**
+- **무료 진단과 유료 측정은 같은 모델·같은 엔진을 쓴다.** `GEMINI_MODEL` 하나만
+  둔다 (2단계 `FREE_AUDIT_PRICING`은 **단가표일 뿐 모델 분기가 아니다**)
 - 각 태스크의 마지막 Step은 커밋
 
 ## 이 단계의 파일 구조
 
 | 파일 | 책임 |
 | --- | --- |
-| `trigger.config.ts` | Trigger.dev 프로젝트 설정, 동시성 큐 |
-| `src/trigger/collect-brand.ts` | 브랜드 1개 수집 (팬아웃·재시도·completeness) |
-| `src/trigger/collect-one.ts` | 질의×엔진×샘플 1회 실행 (재시도 단위) |
-| `src/trigger/judge-run.ts` | 수집 완료 후 판정 배치 |
-| `src/trigger/aggregate-run.ts` | 판정 완료 후 집계·리포트 |
-| `src/trigger/daily-scheduler.ts` | 매일 1회, 오늘 수집할 브랜드 선별 |
-| `src/trigger/free-audit.ts` | 무료 진단 잡 |
-| `src/trigger/audit-waitlist.ts` | 대기 등록된 진단 후속 처리 |
-| `src/lib/audit/verify.ts` | 진단 이메일 인증 토큰 (HMAC) |
 | `src/lib/collection/plan-snapshot.ts` | planSnapshot 생성 (순수) |
 | `src/lib/collection/fanout.ts` | 팬아웃 계획 생성 (순수) |
 | `src/lib/collection/completeness.ts` | completeness 집계·판정 (순수) |
-| `src/lib/collection/schedule.ts` | 오늘 수집할 브랜드 선별 (순수) |
-| `src/lib/audit/limits.ts` | IP·브랜드 상한 판정 (순수) |
-| `src/lib/audit/hash.ts` | IP HMAC 해시 |
-| `src/lib/audit/queries.ts` | 카테고리별 기본 질의 생성 |
+| `src/lib/collection/run.ts` | **수집 실행 코어** — 팬아웃을 실제로 돌린다 |
+| `src/lib/collection/repository.ts` | 수집 결과 DB 저장 (유료 경로) |
+| `src/lib/detection/pipeline.ts` | **판정·집계 코어** — 1차→2차→지표 |
+| `src/lib/audit/queries.ts` | 카테고리별 기본 질의 3개 생성 |
+| `src/lib/audit/token.ts` | 진단 이메일 인증 토큰 (HMAC) |
+| `src/lib/audit/repository.ts` | 진단 신청 CRUD |
+| `src/lib/audit/result.ts` | `buildAuditResult` — 리포트 구성 (순수) |
+| `src/lib/email/templates.ts` | 인증·운영자 알림·리포트 메일 (기존 파일 확장) |
+| `src/app/api/audit/request/route.ts` | 진단 신청 접수 |
+| `src/app/api/audit/verify/route.ts` | 이메일 인증 |
 | `src/app/(marketing)/page.tsx` | 랜딩 |
-| `src/app/audit/[id]/page.tsx` | 진행 화면 + 결과 |
-| `src/app/api/audit/route.ts` | 진단 시작 |
-| `src/app/api/audit/[id]/email/route.ts` | 이메일 게이트 |
+| `src/app/(marketing)/pricing/page.tsx` | 요금제 |
+| `src/app/audit/requested/page.tsx` | 신청 완료 안내 |
+| `src/app/audit/[id]/page.tsx` | 리포트 |
+| `src/components/audit/request-form.tsx` | 신청 폼 |
+| `src/components/audit/result-view.tsx` | 리포트 본문 (메일·웹 공용) |
+| `scripts/audit-list.mts` | 운영자 CLI — 대기 목록 |
+| `scripts/audit-run.mts` | 운영자 CLI — 실행·발송 |
 | `tests/e2e/free-audit.spec.ts` | E2E |
 
 ---
 
-### Task 1: Trigger.dev 초기화와 크레딧 소진 실측
+### Task 1: 수집 계획 순수 함수
 
-**Files:**
-- Create: `trigger.config.ts`, `src/trigger/hello.ts`
-- Modify: `package.json`, `.env.example`, `.github/workflows/ci.yml`
-- Create: `docs/superpowers/notes/2026-07-28-trigger-credits.md`
-
-**Interfaces:**
-- Consumes: `env` (1단계)
-- Produces: 동작하는 Trigger.dev 프로젝트, 엔진별 동시성 큐 정의,
-  **$5 무료 크레딧 소진 속도 실측치** (로드맵의 유일한 미확정 비용 변수)
-
-- [ ] **Step 1: Trigger.dev 프로젝트 생성과 초기화**
-
-```bash
-pnpm dlx trigger.dev@latest init
-```
-
-프롬프트에서 새 프로젝트를 만들고, 생성된 `trigger.config.ts`와 예제 태스크를
-확인한다. **생성된 예제의 import 경로를 그대로 따른다** — 버전에 따라
-`@trigger.dev/sdk` 또는 `@trigger.dev/sdk/v3`다. 추측하지 말고 생성된 파일을 본다.
-
-```bash
-cat trigger.config.ts
-ls src/trigger/
-head -20 src/trigger/*.ts
-```
-
-- [ ] **Step 2: 설정을 우리 구조에 맞게 고친다**
-
-`trigger.config.ts`:
-
-```ts
-import { defineConfig } from '@trigger.dev/sdk'
-
-export default defineConfig({
-  project: process.env.TRIGGER_PROJECT_REF!,
-  dirs: ['./src/trigger'],
-  maxDuration: 1800, // 30분 — 수집 한 번이 5~15분이므로 여유를 둔다
-  retries: {
-    enabledInDev: false,
-    default: {
-      maxAttempts: 3,
-      factor: 2,
-      minTimeoutInMs: 2_000,
-      maxTimeoutInMs: 60_000,
-      randomize: true,
-    },
-  },
-  build: {
-    external: ['@neondatabase/serverless'],
-  },
-})
-```
-
-`.env.example`에 추가:
-
-```bash
-TRIGGER_SECRET_KEY=      # Trigger.dev 대시보드 > API Keys
-TRIGGER_PROJECT_REF=     # proj_...
-```
-
-- [ ] **Step 3: 실패하는 테스트 — 동시성 큐 상수**
-
-`src/lib/collection/queues.test.ts`:
-
-```ts
-import { describe, expect, it } from 'vitest'
-import { ENGINE_QUEUE_CONCURRENCY, queueNameFor } from '@/lib/collection/queues'
-import { PLANS } from '@/lib/plans'
-
-describe('엔진별 동시성 큐', () => {
-  it('모든 엔진에 큐가 정의되어 있다', () => {
-    for (const id of PLANS.business.engines) {
-      expect(queueNameFor(id)).toBeTruthy()
-      expect(ENGINE_QUEUE_CONCURRENCY[id]).toBeGreaterThan(0)
-    }
-  })
-
-  it('SERP 엔진의 동시성이 LLM보다 낮다 (선약정 쿼터 보호)', () => {
-    expect(ENGINE_QUEUE_CONCURRENCY.naver).toBeLessThanOrEqual(
-      ENGINE_QUEUE_CONCURRENCY.chatgpt,
-    )
-  })
-
-  it('전체 동시성 합이 Trigger.dev 무료 티어 한도(20) 이하다', () => {
-    const total = Object.values(ENGINE_QUEUE_CONCURRENCY).reduce((a, b) => a + b, 0)
-    expect(total).toBeLessThanOrEqual(20)
-  })
-})
-```
-
-- [ ] **Step 4: 실패 확인**
-
-```bash
-pnpm vitest run src/lib/collection/queues.test.ts
-```
-
-Expected: FAIL — 모듈 없음
-
-- [ ] **Step 5: 구현**
-
-`src/lib/collection/queues.ts`:
-
-```ts
-import type { EngineId } from '@/lib/plans'
-
-/**
- * 엔진별 동시성 제한.
- *
- * 고객 10명이면 주 1,000~3,000회 실행이다. 한꺼번에 던지면 각 엔진의
- * rate limit에 걸린다. 합계는 Trigger.dev 무료 티어 동시 실행 한도(20) 이하로
- * 유지한다 — Hobby($10)로 올리면 50까지 늘릴 수 있다.
- */
-export const ENGINE_QUEUE_CONCURRENCY: Record<EngineId, number> = {
-  chatgpt: 6,
-  gemini: 6,
-  // SERP는 선약정 쿼터라 더 보수적으로. 한 번에 몰아 쓰면 쿼터가 순식간에 준다.
-  naver: 3,
-  google_aio: 3,
-}
-
-export function queueNameFor(engineId: EngineId): string {
-  return `engine-${engineId}`
-}
-```
-
-- [ ] **Step 6: 통과 확인**
-
-```bash
-pnpm vitest run src/lib/collection/queues.test.ts
-```
-
-Expected: PASS (3 passed)
-
-- [ ] **Step 7: 크레딧 소진 실측용 태스크**
-
-`src/trigger/hello.ts` — 실제 수집과 비슷한 시간이 걸리는 태스크를 만들어
-크레딧 소진을 잰다. Trigger.dev는 실행 시간에 비례해 크레딧을 쓴다.
-
-```ts
-import { logger, task } from '@trigger.dev/sdk'
-
-export const creditProbe = task({
-  id: 'credit-probe',
-  maxDuration: 600,
-  run: async (payload: { seconds: number }) => {
-    const start = Date.now()
-    // 실제 수집은 대부분 외부 API 대기 시간이다. sleep으로 흉내낸다.
-    await new Promise((r) => setTimeout(r, payload.seconds * 1000))
-    logger.info('credit probe done', { elapsedMs: Date.now() - start })
-    return { elapsedMs: Date.now() - start }
-  },
-})
-```
-
-- [ ] **Step 8: 배포하고 크레딧 소진을 실측한다**
-
-```bash
-pnpm dlx trigger.dev@latest dev
-```
-
-다른 터미널에서 Trigger.dev 대시보드의 "Test" 화면으로 `credit-probe`를
-`{ "seconds": 60 }`로 10회 실행한다 (총 10분 실행 시간).
-
-**대시보드의 Usage 화면에서 실행 전후 크레딧 잔액을 기록한다.**
-
-- [ ] **Step 9: 실측 결과 기록**
-
-`docs/superpowers/notes/2026-07-28-trigger-credits.md`:
-
-```markdown
-# Trigger.dev 크레딧 소진 실측 (2026-07-28)
-
-로드맵이 남긴 "1단계 비용 추정의 유일한 미확정 변수"를 해소한다.
-
-## 측정
-- 실행: 60초짜리 태스크 10회 = 총 10분 실행 시간
-- 크레딧 소진: $____ (전: $____ → 후: $____)
-- **분당 소진: $____**
-
-## 무료 크레딧 $5로 감당 가능한 실행 시간
-- $5 ÷ (분당 소진) = ____분 = ____시간
-
-## 시나리오별 예측
-
-**무료 진단** — 1건당 6호출, 실행 시간 약 20초
-| 월 진단 건수 | 월 실행 시간 | 크레딧 소진 |
-| --- | --- | --- |
-| 300건 (일 10명) | ____분 | $____ |
-| 900건 (일 30명) | ____분 | $____ |
-| 3,000건 (일 100명) | ____분 | $____ |
-
-**유료 수집** — Starter 1명당 주 100회, 실행 시간 약 5분
-| 고객 수 | 월 실행 시간 | 크레딧 소진 |
-| --- | --- | --- |
-| 3명 | ____분 | $____ |
-| 10명 | ____분 | $____ |
-
-## 결론
-- 무료 크레딧이 언제 소진되는가: ____
-- Hobby($10, 동시 50) 전환 시점: ____
-- SerpApi보다 먼저 막히는가: (예 / 아니오)
-
-## 대응
-Hobby $10로 올리면 해결된다. 1단계 고정비 33,000원에 14,000원이 더해져
-약 47,000원이 된다. 진단 트래픽이 월 900건을 넘으면 이 항목을 다시 잰다.
-```
-
-- [ ] **Step 10: CI에 Trigger.dev 빌드 검증 추가**
-
-`.github/workflows/ci.yml`의 `verify` job에:
-
-```yaml
-      - name: Trigger.dev 태스크 빌드 검증
-        run: pnpm dlx trigger.dev@latest deploy --dry-run --skip-update-check
-        env:
-          TRIGGER_SECRET_KEY: ${{ secrets.TRIGGER_SECRET_KEY }}
-        continue-on-error: true
-```
-
-`continue-on-error: true`는 의도적이다. Trigger.dev CLI가 CI에서 불안정할 수
-있고, 이 검증 때문에 전체 CI가 막히면 안 된다. 실패는 로그로 남는다.
-
-- [ ] **Step 11: 커밋**
-
-```bash
-git add -A
-git commit -m "chore: Trigger.dev 초기화 · 엔진별 동시성 큐 · 크레딧 소진 실측"
-```
-
----
-
-### Task 2: 수집 계획 순수 함수
+> ### ★ 2026-07-30 조정 — 이 태스크에서 두 가지가 바뀐다
+>
+> **① `src/lib/collection/schedule.ts`(`selectBrandsForToday`)를 만들지 않는다.**
+> 오늘 수집할 브랜드를 고르는 함수인데, 그것을 쓰는 일일 스케줄러가 4단계로
+> 옮겨갔다. 3단계에는 소비자가 없다. **4단계에서 스케줄러와 함께 만든다.**
+> 아래 본문에서 해당 Step은 이미 제거했다 — 되살리지 마라.
+>
+> **② 원가 필드는 밀리원 정수로 만든다.** 2단계에서 `estimateCostMilliKrw`가
+> 누적 단위가 됐다. 아래 본문에 `costKrw`가 나오면 전부 **`costMilliKrw`**로
+> 읽고, 화면에 보일 때만 1000으로 나눈다. 호출당 3.2원을 원 단위로 반올림하면
+> 매번 0.2원이 사라지고 그 누락이 그대로 원가 집계의 오차가 된다.
 
 **Files:**
 - Create: `src/lib/collection/plan-snapshot.ts`, `src/lib/collection/fanout.ts`,
-  `src/lib/collection/completeness.ts`, `src/lib/collection/schedule.ts`
+  `src/lib/collection/completeness.ts`
 - Test: 각각의 `.test.ts`
 
 **Interfaces:**
@@ -305,8 +144,8 @@ git commit -m "chore: Trigger.dev 초기화 · 엔진별 동시성 큐 · 크레
   - `interface FanoutItem { queryId; queryText; engineId; sampleIndex; scheduledOffsetMs }`
   - `summarizeCompleteness(items, outcomes): Completeness`
   - `completenessRatio(c): number`, `isDegraded(c): boolean`
-  - `selectBrandsForToday(brands, today): Brand[]`
-  - 3~5 태스크의 Trigger.dev 잡이 소비한다
+  - Task 2의 `runCollection`이 `FanoutItem[]`을 소비한다
+  - (`selectBrandsForToday`는 만들지 않는다 — 위 조정 블록 참고)
 
 수집 로직을 잡 안에 두면 테스트가 불가능하다. 계획 생성은 전부 순수 함수로 빼낸다.
 
@@ -479,62 +318,6 @@ describe('comparableEngines', () => {
 })
 ```
 
-`src/lib/collection/schedule.test.ts`:
-
-```ts
-import { describe, expect, it } from 'vitest'
-import { selectBrandsForToday, weekdayInSeoul } from '@/lib/collection/schedule'
-
-const brands = [
-  { id: 'b1', collectionWeekday: 1, isActive: true, subscriptionStatus: 'active' as const },
-  { id: 'b2', collectionWeekday: 3, isActive: true, subscriptionStatus: 'active' as const },
-  { id: 'b3', collectionWeekday: 1, isActive: false, subscriptionStatus: 'active' as const },
-  { id: 'b4', collectionWeekday: 1, isActive: true, subscriptionStatus: 'suspended' as const },
-  { id: 'b5', collectionWeekday: 1, isActive: true, subscriptionStatus: 'past_due' as const },
-]
-
-describe('weekdayInSeoul', () => {
-  it('UTC 시각을 서울 기준 요일로 변환한다', () => {
-    // 2026-07-27 23:00 UTC = 2026-07-28 08:00 KST (화요일)
-    expect(weekdayInSeoul(new Date('2026-07-27T23:00:00Z'))).toBe(2)
-  })
-
-  it('자정 직전 UTC가 다음날 서울로 넘어간다', () => {
-    // 2026-07-26 16:00 UTC = 2026-07-27 01:00 KST (월요일)
-    expect(weekdayInSeoul(new Date('2026-07-26T16:00:00Z'))).toBe(1)
-  })
-})
-
-describe('selectBrandsForToday', () => {
-  it('오늘 요일에 해당하는 활성 브랜드만 고른다', () => {
-    const monday = new Date('2026-07-26T16:00:00Z') // KST 월요일
-    const picked = selectBrandsForToday(brands, monday).map((b) => b.id)
-    expect(picked).toContain('b1')
-    expect(picked).not.toContain('b2') // 수요일
-  })
-
-  it('비활성 브랜드를 제외한다', () => {
-    const monday = new Date('2026-07-26T16:00:00Z')
-    expect(selectBrandsForToday(brands, monday).map((b) => b.id)).not.toContain('b3')
-  })
-
-  it('구독이 정지된 고객은 수집하지 않는다 (설계 ⑤ 결제 실패 대응)', () => {
-    const monday = new Date('2026-07-26T16:00:00Z')
-    expect(selectBrandsForToday(brands, monday).map((b) => b.id)).not.toContain('b4')
-  })
-
-  it('유예 기간(past_due) 중에는 수집을 계속한다', () => {
-    const monday = new Date('2026-07-26T16:00:00Z')
-    expect(selectBrandsForToday(brands, monday).map((b) => b.id)).toContain('b5')
-  })
-
-  it('해당 요일 브랜드가 없으면 빈 배열', () => {
-    const saturday = new Date('2026-07-31T16:00:00Z') // KST 토요일
-    expect(selectBrandsForToday(brands, saturday)).toEqual([])
-  })
-})
-```
-
 - [ ] **Step 2: 실패 확인**
 
 ```bash
@@ -703,67 +486,106 @@ export function failedEngines(c: Completeness): EngineId[] {
 }
 ```
 
-`src/lib/collection/schedule.ts`:
-
-```ts
-import type { SubscriptionStatus } from '@/lib/db/schema'
-
-export interface SchedulableBrand {
-  id: string
-  /** 0=일 … 6=토 */
-  collectionWeekday: number
-  isActive: boolean
-  subscriptionStatus: SubscriptionStatus
-}
-
-/** UTC 시각의 서울 기준 요일 (0=일 … 6=토) */
-export function weekdayInSeoul(date: Date): number {
-  const seoul = new Date(date.getTime() + 9 * 60 * 60 * 1000)
-  return seoul.getUTCDay()
-}
-
-/**
- * 오늘 수집할 브랜드를 고른다.
- *
- * 설계 ②: 브랜드마다 스케줄을 만들면 Trigger.dev 무료 티어의 스케줄 한도 10개에
- * 고객 10명에서 막힌다. 매일 도는 스케줄 1개가 오늘 수집할 브랜드를 고르는 편이
- * 한도와 무관하게 더 나은 설계다 — 가입 요일 기준이라 부하가 자연히 분산된다.
- */
-export function selectBrandsForToday<T extends SchedulableBrand>(
-  brands: readonly T[],
-  now: Date,
-): T[] {
-  const today = weekdayInSeoul(now)
-  return brands.filter(
-    (b) =>
-      b.isActive &&
-      b.collectionWeekday === today &&
-      // 결제 실패 후 유예 기간(past_due)에는 수집을 계속한다.
-      // 유예가 만료돼 suspended가 되면 중단하되, 과거 데이터는 유지한다.
-      b.subscriptionStatus !== 'suspended' &&
-      b.subscriptionStatus !== 'canceled',
-  )
-}
-```
-
 - [ ] **Step 4: 통과 확인**
 
 ```bash
 pnpm vitest run src/lib/collection/
 ```
 
-Expected: PASS (21 passed)
+Expected: PASS (schedule 관련을 뺀 나머지 전부)
 
 - [ ] **Step 5: 커밋**
 
 ```bash
 git add src/lib/collection
-git commit -m "feat(collection): planSnapshot · 팬아웃 · completeness · 요일 스케줄 (순수 함수)"
+git commit -m "feat(collection): planSnapshot · 팬아웃 · completeness (순수 함수)"
 ```
 
 ---
 
-### Task 3: 수집 잡
+### Task 2: 수집 실행 코어
+
+> ### ★ 2026-07-30 조정 — Trigger.dev 잡이 아니라 **코어 함수**를 만든다
+>
+> 아래 본문은 `collectOne`/`collectBrand`를 Trigger.dev 잡으로 정의한다.
+> **잡 껍데기는 4단계로 옮겼다.** 여기서는 같은 로직을 프레임워크 없는 함수로
+> 만든다. 이유는 두 가지다.
+>
+> - 3단계에는 잡을 돌릴 소비자가 없다. 무료 진단은 **운영자 CLI**가 부르고,
+>   유료 주간 수집은 4단계에 생긴다.
+> - 잡 안에 로직이 있으면 테스트가 불가능하다. CLI로 먼저 실제 API에 돌려보고,
+>   4단계에서 검증된 함수를 감싸기만 하는 순서가 위험이 훨씬 낮다.
+>
+> **만들 것 (`src/lib/collection/run.ts`):**
+>
+> ```ts
+> import type { EngineId } from '@/lib/plans'
+> import type { FanoutItem } from '@/lib/collection/fanout'
+> import type { Completeness } from '@/lib/collection/completeness'
+>
+> export interface CollectedAnswer {
+>   queryId: string
+>   queryText: string
+>   engineId: EngineId
+>   sampleIndex: number
+>   text: string
+>   citations: { url: string; title: string }[]
+>   raw: unknown
+>   usage: { calls: number; searches?: number; tokensIn?: number; tokensOut?: number; tokensThinking?: number }
+>   costMilliKrw: number
+> }
+>
+> export interface CollectOneOutcome {
+>   engineId: EngineId
+>   ok: boolean
+>   answer: CollectedAnswer | null
+>   error: string | null
+> }
+>
+> export interface CollectionResult {
+>   answers: CollectedAnswer[]
+>   outcomes: CollectOneOutcome[]
+>   completeness: Completeness
+>   costMilliKrw: number
+>   durationMs: number
+> }
+>
+> export interface RunCollectionDeps {
+>   /** 기본값은 `getEngine`. 테스트가 가짜 엔진을 주입한다. */
+>   runOne?: (item: FanoutItem) => Promise<CollectedAnswer>
+>   /** 기본값은 setTimeout. 테스트가 즉시 반환하게 바꾼다. */
+>   sleep?: (ms: number) => Promise<void>
+>   /** 진행률 통지. CLI가 콘솔에, 4단계 잡이 metadata.set에 연결한다. */
+>   onProgress?: (done: number, total: number) => void
+>   /** 엔진별 동시 실행 수. 기본값은 ENGINE_QUEUE_CONCURRENCY. */
+>   concurrency?: Partial<Record<EngineId, number>>
+> }
+>
+> export async function runCollection(
+>   items: FanoutItem[],
+>   deps?: RunCollectionDeps,
+> ): Promise<CollectionResult>
+> ```
+>
+> **본문을 옮길 때의 대응표:**
+>
+> | 아래 본문 | `run.ts`에서 |
+> | --- | --- |
+> | `collectOne.batchTriggerAndWait(batch)` | `deps.runOne`을 엔진별 동시성 상한 안에서 병렬 실행 |
+> | 재시도(`retry: { maxAttempts: 3 }`) | 2단계 `isRetryable(error)` + `backoffHint`로 직접 구현 |
+> | `wait.for({ seconds })` | `deps.sleep(ms)` |
+> | `metadata.set('progress', …)` | `deps.onProgress(done, total)` |
+> | `logger.info(...)` | `console.info(...)` |
+> | `await judgeRun.trigger(...)` | **하지 않는다.** 호출자가 `runDetection`을 이어서 부른다 |
+> | `throw new Error('브랜드를 찾을 수 없습니다')` | 브랜드 로드는 호출자 책임. `runCollection`은 `FanoutItem[]`만 받는다 |
+>
+> **재시도는 반드시 직접 구현한다.** Trigger.dev의 `maxAttempts: 3`이 사라지면
+> 재시도가 통째로 없어진다. 2단계가 `EngineError.retryable`과 `backoffHint`를
+> 만들어 둔 이유가 이것이다 — `'long'`은 429라 더 길게 쉬어야 하고,
+> `isRetryable`이 `false`면(400류·취소) 즉시 포기한다.
+>
+> **`repository.ts`는 그대로 만든다.** 유료 경로가 쓴다. 다만 무료 진단은
+> 이 저장 계층을 **부르지 않는다**(Global Constraints 참고).
 
 > **개인정보처리방침을 함께 고쳐야 하는 태스크다.** 여기서 만드는
 > `collect-brand`/`collect-one`이 **이용자의 브랜드명·질의문을 OpenAI·Gemini·
@@ -1406,7 +1228,64 @@ git commit -m "feat(collection): 수집 잡 · 팬아웃 · 부분 실패 허용
 
 ---
 
-### Task 4: 판정·집계 잡
+### Task 3: 판정·집계 코어
+
+> ### ★ 2026-07-30 조정 — Trigger.dev 잡이 아니라 **코어 함수**를 만든다
+>
+> 아래 본문은 `judgeRun`/`aggregateRun`을 Trigger.dev 잡으로 정의한다.
+> **잡 껍데기는 4단계로 옮겼다.** 여기서는 같은 로직을 하나의 프레임워크 없는
+> 함수로 만든다.
+>
+> **만들 것 (`src/lib/detection/pipeline.ts`):**
+>
+> ```ts
+> import type { BrandProfile, DetectionResult } from '@/lib/detection/types'
+> import type { JudgeFn } from '@/lib/judge/types'
+> import type { BrandMetrics } from '@/lib/stats/metrics'
+> import type { CollectedAnswer } from '@/lib/collection/run'
+>
+> export interface DetectionInput {
+>   answers: CollectedAnswer[]
+>   /** 고객 브랜드 */
+>   self: BrandProfile
+>   /** 경쟁사. 비어 있으면 Share of Voice는 n=0("측정 없음")이 된다 */
+>   competitors: BrandProfile[]
+> }
+>
+> export interface DetectionOutput {
+>   /** answerId(=queryId:engineId:sampleIndex) → 대상별 판정 */
+>   detections: Map<string, DetectionResult[]>
+>   metrics: BrandMetrics
+>   /** 1차를 통과해 2차로 간 비율. 원가 관측용 */
+>   stage1PassRate: number
+>   /** 2차 판정에 쓴 비용 */
+>   judgeCostMilliKrw: number
+>   /** 2차가 실패해 미판정으로 남은 건수 */
+>   unresolved: number
+> }
+>
+> export async function runDetection(
+>   input: DetectionInput,
+>   judge: JudgeFn,
+> ): Promise<DetectionOutput>
+> ```
+>
+> **본문을 옮길 때의 대응표:**
+>
+> | 아래 본문 | `pipeline.ts`에서 |
+> | --- | --- |
+> | `judgeRun` + `aggregateRun` 두 잡 | **한 함수**. 나눈 이유는 잡 재시도 경계였는데 그 경계가 없다 |
+> | `await aggregateRun.trigger(...)` | 같은 함수 안에서 이어서 계산 |
+> | DB에서 `answers` 로드 | 인자로 받는다. 무료 진단은 DB에 answers가 없다 |
+> | `detections` 테이블 기록 | **하지 않는다.** 호출자가 필요하면 저장한다 |
+> | `claudeJudge` 직접 참조 | `judge: JudgeFn`을 주입받는다 (2단계 Task 8의 경계 유지) |
+>
+> **`judge`를 주입받는 것이 중요하다.** 2단계가 `runStage2(items, judge)`로
+> 판정기를 주입 가능하게 만들어 둔 이유가 여기서 살아난다 — 골든 라벨 회귀
+> 테스트를 API 키 없이 가짜 판정기로 돌릴 수 있다.
+>
+> **판정 실패는 던지지 말고 `unresolved`로 센다.** 2차 LLM이 하나 실패했다고
+> 진단 전체를 버리면 안 된다. 이미 돈을 쓴 수집 데이터다.
 
 **Files:**
 - Create: `src/trigger/judge-run.ts`, `src/trigger/aggregate-run.ts`,
@@ -1825,332 +1704,1334 @@ git commit -m "feat(collection): 판정 배치 잡 · 집계 잡 · 주간 리�
 
 ---
 
-### Task 5: 일일 스케줄러
+### Task 4: 진단 신청 — 스키마 · 인증 토큰 · 리포지토리
 
 **Files:**
-- Create: `src/trigger/daily-scheduler.ts`
-- Test: `tests/integration/scheduler.test.ts`
+- Modify: `src/lib/db/schema.ts`
+- Create: `src/lib/audit/token.ts`, `src/lib/audit/queries.ts`,
+  `src/lib/audit/repository.ts`
+- Test: `src/lib/audit/token.test.ts`, `src/lib/audit/queries.test.ts`
+- Create: `drizzle/` 마이그레이션 (생성물)
 
 **Interfaces:**
-- Consumes: `selectBrandsForToday` (Task 2), `collectBrand` (Task 3)
-- Produces: `dailyScheduler` — 매일 1회 도는 유일한 스케줄
+- Consumes: `env` (1단계), `db`·`schema` (1단계)
+- Produces:
+  - `AUDIT_STATUSES = ['requested','verified','running','sent','failed','rejected']`
+  - `createVerifyToken(auditId, email): string`
+  - `readVerifyToken(token): { auditId: string; email: string } | null`
+  - `generateAuditQueries(category, brandName): string[]` — 정확히 3개
+  - `createAuditRequest(args): Promise<FreeAudit>`
+  - `markVerified(auditId, email): Promise<FreeAudit | null>`
+  - `listPendingAudits(): Promise<FreeAudit[]>`
+  - `markRunning/markSent/markFailed(auditId, ...)`
+  - `countRecentByIpHash(ipHash, sinceHours): Promise<number>`
+  - Task 5의 API와 Task 7의 CLI가 소비한다
 
-- [ ] **Step 1: 통합 테스트 작성**
+**상태 전이는 이 하나뿐이다.** 다른 전이는 없다:
 
-`tests/integration/scheduler.test.ts`:
+```
+requested ──인증──> verified ──운영자 실행──> running ──┬──> sent
+                                                        └──> failed ──재실행──> running
+     └──운영자 거부──> rejected
+```
+
+- [ ] **Step 1: 스키마 상태값 교체**
+
+`src/lib/db/schema.ts`의 `AUDIT_STATUSES`와 `freeAudits`를 바꾼다.
+기존 값(`queued`/`running`/`succeeded`/`failed`/`waitlisted`)은 **자동 실행을
+전제한 이름**이라 수동 플로우에 맞지 않는다. `free_audits`는 현재 0행이므로
+데이터 마이그레이션이 필요 없다.
 
 ```ts
-import { describe, expect, it } from 'vitest'
-import { selectBrandsForToday } from '@/lib/collection/schedule'
+export const AUDIT_STATUSES = [
+  'requested', // 신청됨. 이메일 미인증 — 이 상태에서는 어떤 API도 호출하지 않는다
+  'verified', // 인증 완료. 운영자 실행 대기
+  'running', // 운영자가 실행 중
+  'sent', // 리포트 발송 완료
+  'failed', // 실행 실패. 재실행 가능
+  'rejected', // 운영자가 거부 (스팸·장난 신청)
+] as const
+export type AuditStatus = (typeof AUDIT_STATUSES)[number]
 
-describe('스케줄 설계 — 전체 1개', () => {
-  it('요일이 고르게 분산되면 하루 부하가 1/7로 준다', () => {
-    // 고객 70명이 요일별로 10명씩 가입했다고 가정
-    const brands = Array.from({ length: 70 }, (_, i) => ({
-      id: `b${i}`,
-      collectionWeekday: i % 7,
-      isActive: true,
-      subscriptionStatus: 'active' as const,
-    }))
+export const freeAudits = pgTable(
+  'free_audits',
+  {
+    id: text('id').primaryKey(),
+    brandName: text('brand_name').notNull(),
+    category: text('category').notNull(),
+    /**
+     * ★ notNull이다. 최초 설계는 결과를 보여준 **뒤** 이메일을 받아서 nullable
+     * 이었는데, 그 순서 때문에 이메일 인증이 비용을 전혀 방어하지 못했다.
+     * 이제는 신청 시점에 받고, 인증 전에는 아무것도 실행하지 않는다.
+     */
+    email: text('email').notNull(),
+    emailVerified: boolean('email_verified').notNull().default(false),
+    /** 경쟁사. 비어 있으면 Share of Voice는 "측정 없음"이 된다 */
+    competitors: jsonb('competitors').$type<string[]>().notNull().default([]),
+    status: text('status').$type<AuditStatus>().notNull().default('requested'),
+    /** 진단 결과 — AuditResult (Task 6). 발송 전에는 null */
+    result: jsonb('result').$type<unknown>(),
+    /** 실패 사유. 운영자가 재실행 여부를 판단하는 근거 */
+    failureReason: text('failure_reason'),
+    /** IP 원문을 저장하지 않는다. HMAC 해시만. 스팸 관측용 */
+    ipHash: text('ip_hash').notNull(),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    /** 전환 결과 — 리포트를 받은 뒤 가입했는가 */
+    convertedSignupAt: timestamp('converted_signup_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('audits_iphash_created_idx').on(t.ipHash, t.createdAt),
+    index('audits_status_created_idx').on(t.status, t.createdAt),
+    enumCheck('free_audits_status_check', t.status, AUDIT_STATUSES),
+  ],
+)
+```
 
-    const monday = new Date('2026-07-26T16:00:00Z') // KST 월요일
-    const today = selectBrandsForToday(brands, monday)
-    expect(today).toHaveLength(10)
+`variant`·`convertedEmailAt` 컬럼은 지운다. 전자는 결과 화면 노출 순서 실험용인데
+화면이 메일로 바뀌었고, 후자는 이메일이 이제 신청 시점에 들어오므로 의미가 없다.
+
+- [ ] **Step 2: 마이그레이션 생성과 적용**
+
+```bash
+pnpm db:generate
+pnpm db:migrate
+```
+
+Expected: `free_audits` 테이블에 `competitors`·`failure_reason`·`verified_at`·
+`sent_at` 추가, `variant`·`converted_email_at` 삭제, `email`이 NOT NULL,
+`free_audits_status_check` 제약이 새 6개 값으로 교체.
+
+적용 후 확인:
+
+```bash
+node --env-file=.env.local -e "
+const {neon}=require('@neondatabase/serverless');const sql=neon(process.env.DATABASE_URL);
+sql\`select column_name,is_nullable from information_schema.columns where table_name='free_audits' order by column_name\`.then(r=>console.table(r))"
+```
+
+Expected: `email`의 `is_nullable`이 `NO`, `competitors`·`failure_reason`·
+`sent_at`·`verified_at`이 목록에 있고 `variant`·`converted_email_at`이 없다.
+
+- [ ] **Step 3: 인증 토큰 실패 테스트**
+
+`src/lib/audit/token.test.ts`:
+
+```ts
+import { describe, expect, it, vi } from 'vitest'
+import { createVerifyToken, readVerifyToken, VERIFY_TTL_MS } from '@/lib/audit/token'
+
+describe('진단 이메일 인증 토큰', () => {
+  it('만든 토큰을 되읽는다', () => {
+    const token = createVerifyToken('aud_1', 'a@example.com')
+    expect(readVerifyToken(token)).toEqual({ auditId: 'aud_1', email: 'a@example.com' })
   })
 
-  it('스케줄이 브랜드 수와 무관하게 1개다 (Trigger.dev 한도 10개 회피)', () => {
-    // 이 테스트는 설계 의도를 문서화한다.
-    // src/trigger/ 에서 schedules.task 를 쓰는 파일이 정확히 1개여야 한다.
-    const scheduleFileCount = 1
-    expect(scheduleFileCount).toBe(1)
+  it('URL에 그대로 넣을 수 있다 (base64url)', () => {
+    const token = createVerifyToken('aud_1', 'a+b@example.com')
+    expect(token).toBe(encodeURIComponent(token))
+  })
+
+  it('한 글자만 바뀌어도 거부한다', () => {
+    const token = createVerifyToken('aud_1', 'a@example.com')
+    const tampered = token.slice(0, -1) + (token.endsWith('A') ? 'B' : 'A')
+    expect(readVerifyToken(tampered)).toBeNull()
+  })
+
+  it('페이로드를 바꿔치기하면 거부한다', () => {
+    // 서명 없이 페이로드만 만들어 붙인 위조 토큰
+    const forged = Buffer.from(
+      JSON.stringify({ auditId: 'aud_2', email: 'x@example.com', exp: Date.now() + 1000 }),
+    ).toString('base64url')
+    expect(readVerifyToken(`${forged}.deadbeef`)).toBeNull()
+  })
+
+  it('만료된 토큰을 거부한다', () => {
+    vi.useFakeTimers()
+    try {
+      const token = createVerifyToken('aud_1', 'a@example.com')
+      vi.advanceTimersByTime(VERIFY_TTL_MS + 1)
+      expect(readVerifyToken(token)).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('만료 직전에는 통과한다', () => {
+    vi.useFakeTimers()
+    try {
+      const token = createVerifyToken('aud_1', 'a@example.com')
+      vi.advanceTimersByTime(VERIFY_TTL_MS - 1000)
+      expect(readVerifyToken(token)?.auditId).toBe('aud_1')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('형식이 깨진 입력에 던지지 않는다', () => {
+    for (const bad of ['', '.', 'a.b.c', 'notbase64!!!.sig', '없는토큰']) {
+      expect(readVerifyToken(bad), bad).toBeNull()
+    }
   })
 })
 ```
 
-- [ ] **Step 2: 실행 (기존 코드로 통과해야 한다)**
+- [ ] **Step 4: 실패 확인**
 
 ```bash
-pnpm vitest run tests/integration/scheduler.test.ts
+pnpm vitest run src/lib/audit/token.test.ts
 ```
 
-Expected: PASS (2 passed)
+Expected: FAIL — 모듈 없음
 
-- [ ] **Step 3: 스케줄러 구현**
+- [ ] **Step 5: 토큰 구현**
 
-`src/trigger/daily-scheduler.ts`:
+`src/lib/audit/token.ts`:
 
 ```ts
-import { logger, schedules } from '@trigger.dev/sdk'
-import { eq } from 'drizzle-orm'
-import { selectBrandsForToday } from '@/lib/collection/schedule'
-import { db } from '@/lib/db'
-import { brands, subscriptions } from '@/lib/db/schema'
-import { collectBrand } from './collect-brand'
+import { createHmac, timingSafeEqual } from 'node:crypto'
+import { env } from '@/lib/env'
+
+/** 인증 링크 유효기간. 메일을 하루 뒤에 열어보는 사람이 흔하다. */
+export const VERIFY_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 /**
- * 이 프로젝트의 **유일한** 스케줄이다.
- *
- * 브랜드마다 스케줄을 만들면 Trigger.dev 무료 티어의 스케줄 한도 10개에
- * 고객 10명에서 막힌다. 매일 도는 스케줄 1개가 오늘 수집할 브랜드를 고르는
- * 편이 한도와 무관하게 더 나은 설계다.
- *
- * 새 스케줄을 추가하기 전에 이 태스크로 흡수할 수 있는지 먼저 검토한다.
+ * ★ 인증 키를 BETTER_AUTH_SECRET 그대로 쓰지 않고 용도 문자열로 한 번 파생한다.
+ *   같은 키를 두 목적(로그인 세션 / 진단 인증)에 쓰면, 한쪽에서 서명한 값이
+ *   다른 쪽에서 유효해질 여지가 생긴다. env 변수를 늘리지 않으면서 키를
+ *   분리하는 표준적인 방법이다.
  */
-export const dailyScheduler = schedules.task({
-  id: 'daily-scheduler',
-  // 매일 KST 오전 9시 = UTC 0시. SERP 두 번째 샘플이 오후에 나가도록.
-  cron: { pattern: '0 0 * * *', timezone: 'Asia/Seoul' },
-  maxDuration: 600,
-  run: async (payload) => {
-    const now = payload.timestamp
-
-    const rows = await db
-      .select({
-        id: brands.id,
-        collectionWeekday: brands.collectionWeekday,
-        isActive: brands.isActive,
-        subscriptionStatus: subscriptions.status,
-      })
-      .from(brands)
-      .leftJoin(subscriptions, eq(subscriptions.userId, brands.userId))
-
-    const targets = selectBrandsForToday(
-      rows.map((r) => ({
-        id: r.id,
-        collectionWeekday: r.collectionWeekday,
-        isActive: r.isActive,
-        subscriptionStatus: r.subscriptionStatus ?? 'canceled',
-      })),
-      now,
-    )
-
-    logger.info('daily-scheduler.selected', {
-      total: rows.length,
-      selected: targets.length,
-      weekday: now.getUTCDay(),
-    })
-
-    if (targets.length === 0) return { triggered: 0 }
-
-    await collectBrand.batchTrigger(
-      targets.map((b) => ({ payload: { brandId: b.id, trigger: 'schedule' as const } })),
-    )
-
-    return { triggered: targets.length }
-  },
-})
-```
-
-- [ ] **Step 4: 배포 후 스케줄 등록 확인**
-
-```bash
-pnpm dlx trigger.dev@latest deploy
-```
-
-Trigger.dev 대시보드 > Schedules에서 `daily-scheduler`가 **1개만** 등록되어
-있는지 확인한다. 다음 실행 시각이 KST 오전 9시인지 확인한다.
-
-- [ ] **Step 5: 커밋**
-
-```bash
-git add -A
-git commit -m "feat(collection): 일일 스케줄러 (전체 1개, 요일별 부하 분산)"
-```
-
----
-
-### Task 6: 무료 진단 남용 방지
-
-**Files:**
-- Create: `src/lib/audit/hash.ts`, `src/lib/audit/limits.ts`,
-  `src/lib/audit/queries.ts`
-- Test: 각각의 `.test.ts`
-- Modify: `.env.example` (`AUDIT_IP_SALT` 추가)
-
-**Interfaces:**
-- Consumes: 없음 (순수 + 해시)
-- Produces:
-  - `hashIp(ip: string): string` — HMAC. 원문 저장 금지
-  - `checkAuditLimits(args): LimitVerdict`
-  - `DAILY_IP_LIMIT`, `DAILY_GLOBAL_LIMIT`, `BRAND_MONTHLY_LIMIT`
-  - `MONTHLY_BUDGET_KRW`, `BUDGET_ALERT_RATIO`
-  - `generateAuditQueries(category, brandName): string[]` — 3개
-
-**이것은 남용 방지 장치이기 이전에 비용 통제 장치다.** 설계 문서: "무료 진단은
-트래픽이 늘수록 순수 적자다. 일일 상한은 반드시 실제로 작동해야 한다."
-
-> ### ★ 2026-07-29 설계 변경 — 이 태스크의 전제가 바뀌었다
->
-> 최초 계획서는 남용 방지를 **"이메일 인증 + 브랜드 월 1회 + IP 일일 상한"**
-> 3축으로 잡았다. 그런데 무료 진단 플로우는 **이메일을 받기 전에 잡을 시작한다**
-> (Task 7 참고 — `free_audits.email`은 진단 시작 시점에 `null`이다).
-> 즉 **이메일 인증은 돈이 나간 뒤에 걸리는 리드 수집 장치였지 비용 방어가 아니다.**
-> 실제 방어는 IP 상한 하나뿐이었고 그것은 프록시로 뚫린다.
->
-> 설계 문서의 "무료 진단 남용 방지" 절을 먼저 읽을 것. 요지:
->
-> - **위협의 대부분은 자동화다.** 손으로 50번 = 5,000원(위협 아님),
->   스크립트+프록시 10,000번 = 100만원. 자동화만 막으면 대부분이 사라진다
-> - **최대 손실은 예산 킬스위치가 이미 묶는다.** 그러므로 방어의 목적은 손실
->   방지가 아니라 **남은 예산을 진짜 사람에게 쓰는 것**이다. 공격자가 아침에
->   예산을 태우면 그달 남은 29일간 진짜 잠재고객이 진단을 못 돌린다
->
-> **이 태스크에 다음 셋을 추가한다.** 전부 **잡을 시작하기 전** 관문이어야 한다 —
-> 잡이 시작되는 순간 돈이 나간다.
->
-> 1. **Cloudflare Turnstile 검증** — 무료, 대부분 사용자에게 보이지 않는다.
->    자동화를 막는 유일한 수단이고 **나머지 전부보다 효과가 크다.**
->    서버에서 siteverify를 호출해 검증하고, 실패하면 잡을 시작하지 않는다.
->    `TURNSTILE_SECRET_KEY`·`NEXT_PUBLIC_TURNSTILE_SITE_KEY`를 env 스키마에 추가.
-> 2. **브랜드+카테고리 캐시(7일)** — 같은 (브랜드, 카테고리)의 최근 성공 결과가
->    있으면 API를 태우지 않고 그대로 돌려준다. `audits_brand_created_idx`가 이미
->    있다. 정당한 중복도 아끼므로 순이득이고, 공격자는 매번 다른 브랜드명을
->    넣어야만 비용을 태울 수 있다. (`BRAND_MONTHLY_LIMIT`과 별개다 — 그쪽은
->    거부, 이쪽은 **캐시 응답**이라 사용자 경험이 다르다.)
-> 3. **월 예산 킬스위치** — `MONTHLY_BUDGET_KRW`. 실제 토큰 사용량으로 누적한
->    원가가 예산에 닿으면 차단, 80%에서 알림. **10만원을 실제로 보장하는 것은
->    건수 상한이 아니라 이쪽이다** (건당 원가가 토큰 수에 따라 변하므로).
->
-> **채택하지 않은 것: 점진적 마찰**(1회차 무마찰 → 2회차 Turnstile → 3회차 이메일).
-> 한국 사무실은 대부분 공유 IP(NAT)라 **대행사에서 마케터 3명이 각자 브랜드를
-> 돌리면 세 번째가 막힌다.** 그 대행사가 우리가 가장 원하는 고객이다.
-> 오탐 비용이 방어 이득보다 크다. 제안하지 말 것.
->
-> **이메일 게이트 위치는 환경변수 플래그로 만든다** (`AUDIT_EMAIL_GATE=before|after`,
-> 기본 `after`). 트래픽이 예산을 채우기 시작하면 `before`로 전환한다 — 그때는
-> 예산이 병목이라 인증 통과자에게만 쓰는 편이 리드를 더 많이 가져온다.
-> 어차피 만들 이메일 인증 컴포넌트의 **호출 위치만 바꾸는 일**이다.
-> 터진 뒤에 코드를 고치면 늦으므로 지금 플래그로 잡아 둔다.
-
-- [ ] **Step 1: 실패하는 테스트 작성**
-
-`src/lib/audit/limits.test.ts`:
-
-```ts
-import { describe, expect, it } from 'vitest'
-import {
-  BRAND_MONTHLY_LIMIT,
-  DAILY_GLOBAL_LIMIT,
-  DAILY_IP_LIMIT,
-  checkAuditLimits,
-} from '@/lib/audit/limits'
-
-const base = {
-  ipCountToday: 0,
-  globalCountToday: 0,
-  brandCountThisMonth: 0,
+function key(): Buffer {
+  return createHmac('sha256', env.BETTER_AUTH_SECRET).update('cited:audit-verify:v1').digest()
 }
 
-describe('checkAuditLimits', () => {
-  it('한도 내면 허용한다', () => {
-    expect(checkAuditLimits(base).allowed).toBe(true)
-  })
+function sign(payload: string): string {
+  return createHmac('sha256', key()).update(payload).digest('base64url')
+}
 
-  it('IP 일일 상한을 넘으면 거부한다', () => {
-    const v = checkAuditLimits({ ...base, ipCountToday: DAILY_IP_LIMIT })
-    expect(v.allowed).toBe(false)
-    expect(v.reason).toBe('ip_daily')
-  })
+export function createVerifyToken(auditId: string, email: string): string {
+  const payload = Buffer.from(
+    JSON.stringify({ auditId, email, exp: Date.now() + VERIFY_TTL_MS }),
+  ).toString('base64url')
+  return `${payload}.${sign(payload)}`
+}
 
-  it('전체 일일 상한을 넘으면 거부한다 (비용 통제)', () => {
-    const v = checkAuditLimits({ ...base, globalCountToday: DAILY_GLOBAL_LIMIT })
-    expect(v.allowed).toBe(false)
-    expect(v.reason).toBe('global_daily')
-  })
+export function readVerifyToken(token: string): { auditId: string; email: string } | null {
+  const dot = token.indexOf('.')
+  if (dot <= 0 || dot === token.length - 1) return null
+  const payload = token.slice(0, dot)
+  const provided = token.slice(dot + 1)
 
-  it('같은 브랜드 월 1회를 넘으면 거부한다', () => {
-    const v = checkAuditLimits({ ...base, brandCountThisMonth: BRAND_MONTHLY_LIMIT })
-    expect(v.allowed).toBe(false)
-    expect(v.reason).toBe('brand_monthly')
-  })
+  // ★ 길이가 다르면 timingSafeEqual이 **던진다.** 길이를 먼저 비교하면 조기
+  //   반환이 생기지만, 길이는 비밀이 아니므로(서명 길이는 고정) 문제되지 않는다.
+  const expected = sign(payload)
+  if (provided.length !== expected.length) return null
+  if (!timingSafeEqual(Buffer.from(provided), Buffer.from(expected))) return null
 
-  it('전체 상한이 먼저 걸린다 (비용이 가장 중요한 제약)', () => {
-    const v = checkAuditLimits({
-      ipCountToday: DAILY_IP_LIMIT,
-      globalCountToday: DAILY_GLOBAL_LIMIT,
-      brandCountThisMonth: BRAND_MONTHLY_LIMIT,
-    })
-    expect(v.reason).toBe('global_daily')
-  })
-
-  it('거부 시에도 대기 등록은 허용한다 (리드는 확보한다)', () => {
-    const v = checkAuditLimits({ ...base, globalCountToday: DAILY_GLOBAL_LIMIT })
-    expect(v.allowWaitlist).toBe(true)
-  })
-
-  it('전체 일일 상한이 월 예산 안에 있다', () => {
-    // ★ 건수를 손으로 적어 검사하지 않는다 — 예산에서 역산해 검사한다.
-    //   그래야 원가 추정이 바뀔 때 이 테스트가 **먼저 깨져서** 상한을 다시
-    //   보게 만든다. 상수를 상수와 비교하면 아무것도 지키지 못한다.
-    const estimatedKrwPerAudit = 100 // 저가 모델 기준 (설계 "비용 구조")
-    const monthlySpend = DAILY_GLOBAL_LIMIT * 30 * estimatedKrwPerAudit
-    expect(monthlySpend).toBeLessThanOrEqual(MONTHLY_BUDGET_KRW)
-    expect(DAILY_GLOBAL_LIMIT).toBeGreaterThan(0)
-  })
-})
+  try {
+    const parsed: unknown = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+    if (typeof parsed !== 'object' || parsed === null) return null
+    const { auditId, email, exp } = parsed as Record<string, unknown>
+    if (typeof auditId !== 'string' || typeof email !== 'string' || typeof exp !== 'number') {
+      return null
+    }
+    if (Date.now() > exp) return null
+    return { auditId, email }
+  } catch {
+    return null
+  }
+}
 ```
 
-`src/lib/audit/hash.test.ts`:
+- [ ] **Step 6: 통과 확인**
 
-```ts
-import { describe, expect, it } from 'vitest'
-import { hashIp } from '@/lib/audit/hash'
-
-describe('hashIp', () => {
-  it('같은 IP는 같은 해시를 낸다', () => {
-    expect(hashIp('1.2.3.4', 'salt')).toBe(hashIp('1.2.3.4', 'salt'))
-  })
-
-  it('다른 IP는 다른 해시를 낸다', () => {
-    expect(hashIp('1.2.3.4', 'salt')).not.toBe(hashIp('1.2.3.5', 'salt'))
-  })
-
-  it('솔트가 다르면 다른 해시를 낸다', () => {
-    expect(hashIp('1.2.3.4', 'a')).not.toBe(hashIp('1.2.3.4', 'b'))
-  })
-
-  it('원본 IP가 결과에 나타나지 않는다', () => {
-    expect(hashIp('192.168.0.1', 'salt')).not.toContain('192')
-  })
-
-  it('IPv6도 처리한다', () => {
-    expect(hashIp('2001:db8::1', 'salt')).toHaveLength(64)
-  })
-
-  it('빈 문자열도 던지지 않는다', () => {
-    expect(hashIp('', 'salt')).toHaveLength(64)
-  })
-})
+```bash
+pnpm vitest run src/lib/audit/token.test.ts
 ```
+
+Expected: PASS (7 passed)
+
+- [ ] **Step 7: 기본 질의 생성 실패 테스트**
 
 `src/lib/audit/queries.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest'
-import { AUDIT_QUERY_COUNT, generateAuditQueries } from '@/lib/audit/queries'
+import { AUDIT_QUERY_COUNT, generateAuditQueries, KNOWN_CATEGORIES } from '@/lib/audit/queries'
 
 describe('generateAuditQueries', () => {
-  it('정확히 3개를 만든다 (원가 통제 — 설계 문서)', () => {
+  it('정확히 3개를 만든다', () => {
+    // ★ 이 숫자가 곧 원가다. 3 → 4는 무료 진단 원가가 33% 오른다.
     expect(generateAuditQueries('패션', '무신사')).toHaveLength(AUDIT_QUERY_COUNT)
     expect(AUDIT_QUERY_COUNT).toBe(3)
   })
 
-  it('브랜드명을 질의에 넣지 않는다 (넣으면 반드시 언급된다)', () => {
+  it('브랜드명을 질의에 넣지 않는다', () => {
+    // ★ 결정적으로 중요하다. "무신사 어때?"라고 물으면 AI는 당연히 무신사를
+    //   말하고 언급률이 100%가 된다. 우리가 재려는 것은 **브랜드를 말하지 않은
+    //   질문에 AI가 그 브랜드를 꺼내는가**다.
     for (const q of generateAuditQueries('패션', '무신사')) {
-      expect(q).not.toContain('무신사')
+      expect(q, q).not.toContain('무신사')
     }
   })
 
-  it('알 수 없는 카테고리에도 기본 질의를 만든다', () => {
-    expect(generateAuditQueries('한 번도 본 적 없는 분야', 'X')).toHaveLength(3)
+  it('아는 카테고리는 그 카테고리 문구를 쓴다', () => {
+    const qs = generateAuditQueries('화장품', '토리든')
+    expect(qs.some((q) => q.includes('화장품') || q.includes('스킨케어'))).toBe(true)
   })
 
-  it('같은 입력에 같은 질의를 낸다 (재현 가능)', () => {
-    expect(generateAuditQueries('패션', 'X')).toEqual(generateAuditQueries('패션', 'X'))
+  it('모르는 카테고리도 던지지 않고 3개를 만든다', () => {
+    const qs = generateAuditQueries('수제 도자기 공방', '가나다')
+    expect(qs).toHaveLength(3)
+    for (const q of qs) expect(q).toContain('수제 도자기 공방')
   })
 
-  it('카테고리별로 다른 질의를 낸다', () => {
-    expect(generateAuditQueries('패션', 'X')).not.toEqual(generateAuditQueries('스포츠', 'X'))
+  it('질의가 서로 다르다', () => {
+    const qs = generateAuditQueries('패션', '무신사')
+    expect(new Set(qs).size).toBe(3)
+  })
+
+  it('빈 카테고리를 거부한다', () => {
+    expect(() => generateAuditQueries('', '무신사')).toThrow()
+    expect(() => generateAuditQueries('   ', '무신사')).toThrow()
+  })
+
+  it('알려진 카테고리 목록을 노출한다 (폼의 자동완성용)', () => {
+    expect(KNOWN_CATEGORIES.length).toBeGreaterThan(0)
+    for (const c of KNOWN_CATEGORIES) {
+      expect(generateAuditQueries(c, '테스트브랜드')).toHaveLength(3)
+    }
+  })
+})
+```
+
+- [ ] **Step 8: 실패 확인**
+
+```bash
+pnpm vitest run src/lib/audit/queries.test.ts
+```
+
+Expected: FAIL — 모듈 없음
+
+- [ ] **Step 9: 질의 생성 구현**
+
+`src/lib/audit/queries.ts`:
+
+```ts
+/**
+ * 무료 진단용 기본 질의 3개.
+ *
+ * ★ 브랜드명을 질의에 넣지 않는다. "무신사 어때?"라고 물으면 AI는 당연히
+ *   무신사를 말한다. 우리가 재는 것은 **브랜드를 언급하지 않은 소비자 질문에
+ *   AI가 그 브랜드를 자발적으로 꺼내는가**다. 이것이 GEO 측정의 전부다.
+ *
+ * ★ 3개인 이유는 원가다(설계 문서 "무료 진단 플로우"). 이 숫자를 올리려면
+ *   `src/lib/plans.ts`의 `free.maxQueries`와 함께 올려야 하고, 그 전에
+ *   무료 진단 월 예산을 다시 계산해야 한다.
+ *
+ * 순수 함수다. 외부 I/O 없음.
+ */
+export const AUDIT_QUERY_COUNT = 3
+
+interface CategoryTemplate {
+  /** 폼에서 고르는 이름 */
+  label: string
+  /** 이 카테고리로 인정할 입력 (부분 일치) */
+  aliases: string[]
+  queries: [string, string, string]
+}
+
+const TEMPLATES: CategoryTemplate[] = [
+  {
+    label: '패션',
+    aliases: ['패션', '의류', '옷', '쇼핑몰'],
+    queries: [
+      '30대 남자 옷 어디서 사는 게 좋아?',
+      '가성비 좋은 온라인 패션 쇼핑몰 추천해줘',
+      '요즘 인기 있는 국내 패션 브랜드 알려줘',
+    ],
+  },
+  {
+    label: '화장품',
+    aliases: ['화장품', '뷰티', '스킨케어', '코스메틱'],
+    queries: [
+      '건성 피부에 맞는 수분크림 추천해줘',
+      '가성비 좋은 국내 스킨케어 브랜드 뭐가 있어?',
+      '올리브영에서 잘 팔리는 화장품 알려줘',
+    ],
+  },
+  {
+    label: '식품',
+    aliases: ['식품', '음식', '먹거리', '간편식', '밀키트'],
+    queries: [
+      '간편하게 먹을 수 있는 밀키트 추천해줘',
+      '선물하기 좋은 국내 식품 브랜드 알려줘',
+      '요즘 인기 있는 건강식품 뭐가 있어?',
+    ],
+  },
+  {
+    label: '가전',
+    aliases: ['가전', '전자제품', '전자기기', '디지털'],
+    queries: [
+      '자취방에 놓기 좋은 소형가전 추천해줘',
+      '가성비 좋은 무선 이어폰 뭐가 있어?',
+      '요즘 잘 나가는 국내 가전 브랜드 알려줘',
+    ],
+  },
+  {
+    label: '교육',
+    aliases: ['교육', '학원', '강의', '인강', '온라인 강의'],
+    queries: [
+      '온라인으로 코딩 배우려면 어디가 좋아?',
+      '직장인이 듣기 좋은 온라인 강의 플랫폼 추천해줘',
+      '국내 이러닝 서비스 뭐가 있어?',
+    ],
+  },
+]
+
+export const KNOWN_CATEGORIES = TEMPLATES.map((t) => t.label)
+
+/**
+ * @param category 고객이 고르거나 입력한 카테고리
+ * @param brandName 브랜드명. **질의에는 넣지 않는다.** 향후 카테고리 추론에
+ *   쓸 수 있도록 받아두되, 지금은 의도적으로 사용하지 않는다.
+ */
+export function generateAuditQueries(category: string, brandName: string): string[] {
+  void brandName
+  const trimmed = category.trim()
+  if (!trimmed) throw new Error('카테고리가 비어 있습니다')
+
+  const matched = TEMPLATES.find((t) => t.aliases.some((a) => trimmed.includes(a)))
+  if (matched) return [...matched.queries]
+
+  // 모르는 카테고리 — 입력을 그대로 넣어 일반형 질의를 만든다.
+  // 억지로 가까운 카테고리에 끼워 맞추면 엉뚱한 질의로 측정하게 된다.
+  return [
+    `${trimmed} 추천해줘`,
+    `가성비 좋은 ${trimmed} 브랜드 뭐가 있어?`,
+    `요즘 인기 있는 ${trimmed} 알려줘`,
+  ]
+}
+```
+
+- [ ] **Step 10: 통과 확인**
+
+```bash
+pnpm vitest run src/lib/audit/queries.test.ts
+```
+
+Expected: PASS (7 passed)
+
+- [ ] **Step 11: 리포지토리 구현**
+
+`src/lib/audit/repository.ts` — DB 접근만 모은다. 순수 로직을 두지 않는다.
+
+```ts
+import { and, desc, eq, gte, sql } from 'drizzle-orm'
+import { createHmac, randomBytes } from 'node:crypto'
+import { db, schema } from '@/lib/db'
+import { env } from '@/lib/env'
+import type { FreeAudit } from '@/lib/db/schema'
+
+/** 추측 불가능한 ID. `/audit/<id>`가 곧 비공개 링크라 짧으면 안 된다. */
+function newAuditId(): string {
+  return `aud_${randomBytes(16).toString('base64url')}`
+}
+
+/** IP 원문은 저장하지 않는다. 토큰과 같은 이유로 용도별 키를 파생한다. */
+export function hashIp(ip: string): string {
+  const key = createHmac('sha256', env.BETTER_AUTH_SECRET).update('cited:audit-ip:v1').digest()
+  return createHmac('sha256', key).update(ip).digest('base64url')
+}
+
+export async function createAuditRequest(args: {
+  brandName: string
+  category: string
+  email: string
+  competitors: string[]
+  ipHash: string
+}): Promise<FreeAudit> {
+  const rows = await db
+    .insert(schema.freeAudits)
+    .values({ id: newAuditId(), status: 'requested', ...args })
+    .returning()
+  const created = rows[0]
+  if (!created) throw new Error('진단 신청을 저장하지 못했습니다')
+  return created
+}
+
+/**
+ * 인증 처리. **토큰의 이메일이 저장된 이메일과 같을 때만** 넘어간다.
+ * 다르면 다른 신청의 토큰을 가져다 쓴 것이다.
+ */
+export async function markVerified(auditId: string, email: string): Promise<FreeAudit | null> {
+  const rows = await db
+    .update(schema.freeAudits)
+    .set({ emailVerified: true, status: 'verified', verifiedAt: new Date() })
+    .where(
+      and(
+        eq(schema.freeAudits.id, auditId),
+        eq(schema.freeAudits.email, email),
+        // 이미 실행됐거나 발송된 건을 되돌리지 않는다. 재인증은 무해해야 한다.
+        eq(schema.freeAudits.status, 'requested'),
+      ),
+    )
+    .returning()
+  return rows[0] ?? null
+}
+
+export async function getAudit(auditId: string): Promise<FreeAudit | null> {
+  const row = await db.query.freeAudits.findFirst({
+    where: eq(schema.freeAudits.id, auditId),
+  })
+  return row ?? null
+}
+
+/** 운영자 대기 목록. 오래된 것부터 — 먼저 신청한 사람이 먼저 받아야 한다. */
+export async function listPendingAudits(): Promise<FreeAudit[]> {
+  return db
+    .select()
+    .from(schema.freeAudits)
+    .where(sql`${schema.freeAudits.status} in ('verified', 'failed')`)
+    .orderBy(schema.freeAudits.createdAt)
+}
+
+export async function listRecentAudits(limit = 20): Promise<FreeAudit[]> {
+  return db
+    .select()
+    .from(schema.freeAudits)
+    .orderBy(desc(schema.freeAudits.createdAt))
+    .limit(limit)
+}
+
+export async function markRunning(auditId: string): Promise<void> {
+  await db
+    .update(schema.freeAudits)
+    .set({ status: 'running', failureReason: null })
+    .where(eq(schema.freeAudits.id, auditId))
+}
+
+export async function markSent(auditId: string, result: unknown): Promise<void> {
+  await db
+    .update(schema.freeAudits)
+    .set({ status: 'sent', result, sentAt: new Date() })
+    .where(eq(schema.freeAudits.id, auditId))
+}
+
+export async function markFailed(auditId: string, reason: string): Promise<void> {
+  await db
+    .update(schema.freeAudits)
+    .set({ status: 'failed', failureReason: reason.slice(0, 500) })
+    .where(eq(schema.freeAudits.id, auditId))
+}
+
+/** 같은 IP의 최근 신청 수. 신청 테이블이 스팸으로 차는 것만 막는다. */
+export async function countRecentByIpHash(ipHash: string, sinceHours: number): Promise<number> {
+  const since = new Date(Date.now() - sinceHours * 60 * 60 * 1000)
+  const rows = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(schema.freeAudits)
+    .where(and(eq(schema.freeAudits.ipHash, ipHash), gte(schema.freeAudits.createdAt, since)))
+  return rows[0]?.n ?? 0
+}
+```
+
+- [ ] **Step 12: 타입·린트·전체 테스트 확인**
+
+```bash
+pnpm typecheck && pnpm lint && pnpm test
+```
+
+Expected: 전부 통과
+
+- [ ] **Step 13: 커밋**
+
+```bash
+git add src/lib/db/schema.ts src/lib/audit drizzle
+git commit -m "feat(audit): 진단 신청 스키마·인증 토큰·기본 질의·리포지토리
+
+상태값을 자동 실행 전제(queued/succeeded/waitlisted)에서 수동 배송 전제
+(requested/verified/running/sent/failed/rejected)로 교체했다.
+
+email을 notNull로 바꿨다. 최초 설계는 결과를 보여준 뒤 이메일을 받아서
+nullable이었고, 그 순서 때문에 이메일 인증이 비용을 전혀 방어하지 못했다.
+
+인증 토큰은 BETTER_AUTH_SECRET을 용도 문자열로 한 번 파생해 서명한다.
+같은 키를 로그인 세션과 진단 인증에 그대로 쓰면 한쪽 서명이 다른 쪽에서
+유효해질 여지가 생긴다."
+```
+
+---
+
+### Task 5: 신청 API · 이메일 인증 · 운영자 알림
+
+**Files:**
+- Create: `src/lib/audit/request-schema.ts`,
+  `src/app/api/audit/request/route.ts`, `src/app/api/audit/verify/route.ts`
+- Modify: `src/lib/email/templates.ts`, `src/lib/env.ts`, `.env.example`
+- Test: `src/lib/audit/request-schema.test.ts`,
+  `src/lib/email/audit-templates.test.ts`,
+  `tests/integration/audit-request.test.ts`
+
+**Interfaces:**
+- Consumes: Task 4의 `createVerifyToken`/`readVerifyToken`/리포지토리/`generateAuditQueries`,
+  `sendEmail`·`EmailContent` (1단계)
+- Produces:
+  - `auditRequestSchema` — zod. `parseAuditRequest(input): AuditRequestInput`
+  - `POST /api/audit/request` → `{ ok: true }` | `{ ok: false, error }`
+  - `GET /api/audit/verify?token=…` → `/audit/requested`로 리다이렉트
+  - `auditVerificationEmail({ url, brandName })`
+  - `auditRequestedNotice({ audit })` — 운영자 알림
+  - `OPERATOR_EMAIL` (env)
+  - Task 7의 CLI가 `listPendingAudits`로 이어받는다
+
+**이 태스크의 유일한 보안 요구사항:** 인증 전에는 **어떤 외부 API도 호출하지
+않는다.** 신청 접수는 DB 쓰기 1회 + 메일 1통이 전부다. 그래서 Turnstile도,
+예산 킬스위치도 필요 없다 — 태울 돈이 없다.
+
+- [ ] **Step 1: env에 운영자 주소 추가**
+
+`src/lib/env.ts`의 스키마에 추가한다:
+
+```ts
+  /**
+   * 진단 신청 알림을 받을 운영자 주소. 무료 진단은 운영자가 직접 실행하므로
+   * 이 주소로 알림이 안 가면 **신청이 그대로 방치된다.** 배포 환경에서는
+   * 필수다 (아래 superRefine).
+   */
+  OPERATOR_EMAIL: z.string().email().optional(),
+```
+
+같은 파일의 `superRefine` 안, `CRON_SECRET`을 필수로 올리는 블록 바로 옆에
+추가한다:
+
+```ts
+    if (!value.OPERATOR_EMAIL) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['OPERATOR_EMAIL'],
+        message:
+          '배포 환경에서는 OPERATOR_EMAIL이 필요합니다 (무료 진단 신청 알림이 가지 않으면 신청이 방치됩니다)',
+      })
+    }
+```
+
+`.env.example`에 추가한다:
+
+```
+# 무료 진단 신청 알림을 받을 주소 (운영자 본인)
+OPERATOR_EMAIL=
+```
+
+- [ ] **Step 2: 입력 검증 실패 테스트**
+
+`src/lib/audit/request-schema.test.ts`:
+
+```ts
+import { describe, expect, it } from 'vitest'
+import { MAX_COMPETITORS, parseAuditRequest } from '@/lib/audit/request-schema'
+
+const valid = {
+  brandName: '무신사',
+  category: '패션',
+  email: 'a@example.com',
+  competitors: ['29CM', 'W컨셉'],
+}
+
+describe('parseAuditRequest', () => {
+  it('정상 입력을 통과시킨다', () => {
+    expect(parseAuditRequest(valid)).toEqual(valid)
+  })
+
+  it('앞뒤 공백을 제거한다', () => {
+    const r = parseAuditRequest({ ...valid, brandName: '  무신사  ', email: ' a@example.com ' })
+    expect(r.brandName).toBe('무신사')
+    expect(r.email).toBe('a@example.com')
+  })
+
+  it('이메일을 소문자로 정규화한다', () => {
+    // 같은 사람이 대소문자만 바꿔 여러 번 신청하는 것을 세려면 정규화가 필요하다.
+    expect(parseAuditRequest({ ...valid, email: 'A@Example.COM' }).email).toBe('a@example.com')
+  })
+
+  it('경쟁사를 생략할 수 있다', () => {
+    const { competitors: _omit, ...withoutCompetitors } = valid
+    expect(parseAuditRequest(withoutCompetitors).competitors).toEqual([])
+  })
+
+  it('경쟁사 중복과 빈 값을 걷어낸다', () => {
+    const r = parseAuditRequest({ ...valid, competitors: ['29CM', '', '  ', '29CM', 'W컨셉'] })
+    expect(r.competitors).toEqual(['29CM', 'W컨셉'])
+  })
+
+  it('경쟁사가 브랜드 자신과 같으면 걷어낸다', () => {
+    // 자기 자신이 경쟁사로 들어가면 Share of Voice가 자기를 두 번 센다.
+    const r = parseAuditRequest({ ...valid, competitors: ['무신사', '29CM'] })
+    expect(r.competitors).toEqual(['29CM'])
+  })
+
+  it(`경쟁사는 ${MAX_COMPETITORS}개를 넘을 수 없다`, () => {
+    expect(() =>
+      parseAuditRequest({ ...valid, competitors: ['a', 'b', 'c', 'd'] }),
+    ).toThrow()
+    expect(MAX_COMPETITORS).toBe(3) // PLANS.free.maxCompetitors와 같아야 한다
+  })
+
+  it('잘못된 이메일을 거부한다', () => {
+    for (const email of ['', 'a', 'a@', '@b.com', 'a b@c.com']) {
+      expect(() => parseAuditRequest({ ...valid, email }), email).toThrow()
+    }
+  })
+
+  it('빈 브랜드명·카테고리를 거부한다', () => {
+    expect(() => parseAuditRequest({ ...valid, brandName: '   ' })).toThrow()
+    expect(() => parseAuditRequest({ ...valid, category: '' })).toThrow()
+  })
+
+  it('지나치게 긴 입력을 거부한다', () => {
+    // 길이 제한이 없으면 신청 테이블에 소설을 넣을 수 있다.
+    expect(() => parseAuditRequest({ ...valid, brandName: 'ㄱ'.repeat(101) })).toThrow()
+    expect(() => parseAuditRequest({ ...valid, category: 'ㄱ'.repeat(101) })).toThrow()
+  })
+
+  it('객체가 아닌 입력에 던진다', () => {
+    for (const bad of [null, undefined, 'x', 42, []]) {
+      expect(() => parseAuditRequest(bad)).toThrow()
+    }
+  })
+})
+```
+
+- [ ] **Step 3: 실패 확인**
+
+```bash
+pnpm vitest run src/lib/audit/request-schema.test.ts
+```
+
+Expected: FAIL — 모듈 없음
+
+- [ ] **Step 4: 입력 검증 구현**
+
+`src/lib/audit/request-schema.ts`:
+
+```ts
+import { z } from 'zod'
+import { PLANS } from '@/lib/plans'
+
+/** 무료 플랜의 경쟁사 한도와 같아야 한다. 다르면 화면과 제품이 어긋난다. */
+export const MAX_COMPETITORS = PLANS.free.maxCompetitors
+
+const name = z.string().trim().min(1).max(100)
+
+export const auditRequestSchema = z
+  .object({
+    brandName: name,
+    category: name,
+    email: z.string().trim().toLowerCase().email(),
+    competitors: z.array(z.string()).optional().default([]),
+  })
+  .transform((v) => ({
+    ...v,
+    // 빈 값·중복·자기 자신을 걷어낸 뒤에 개수를 센다. 사용자가 실수로
+    // 빈 칸을 남긴 것 때문에 거부당하면 안 된다.
+    competitors: [
+      ...new Set(
+        v.competitors
+          .map((c) => c.trim())
+          .filter((c) => c.length > 0 && c !== v.brandName.trim()),
+      ),
+    ],
+  }))
+  .refine((v) => v.competitors.length <= MAX_COMPETITORS, {
+    message: `경쟁사는 최대 ${MAX_COMPETITORS}개까지 등록할 수 있습니다`,
+    path: ['competitors'],
+  })
+
+export type AuditRequestInput = z.infer<typeof auditRequestSchema>
+
+export function parseAuditRequest(input: unknown): AuditRequestInput {
+  return auditRequestSchema.parse(input)
+}
+```
+
+- [ ] **Step 5: 통과 확인**
+
+```bash
+pnpm vitest run src/lib/audit/request-schema.test.ts
+```
+
+Expected: PASS (11 passed)
+
+- [ ] **Step 6: 메일 템플릿 실패 테스트**
+
+`src/lib/email/audit-templates.test.ts`:
+
+```ts
+import { describe, expect, it } from 'vitest'
+import { auditRequestedNotice, auditVerificationEmail } from '@/lib/email/templates'
+
+describe('auditVerificationEmail', () => {
+  it('인증 링크와 브랜드명을 담는다', () => {
+    const mail = auditVerificationEmail({
+      url: 'https://cited.co.kr/api/audit/verify?token=abc',
+      brandName: '무신사',
+    })
+    expect(mail.subject).toContain('무신사')
+    expect(mail.html).toContain('https://cited.co.kr/api/audit/verify?token=abc')
+  })
+
+  it('언제 결과를 받는지 말한다', () => {
+    // 즉시 결과가 아니므로 기다림을 명시하지 않으면 이탈한다.
+    const mail = auditVerificationEmail({ url: 'https://x', brandName: 'A' })
+    expect(mail.html).toMatch(/영업일|1일|24시간/)
+  })
+
+  it('HTML을 이스케이프한다', () => {
+    const mail = auditVerificationEmail({ url: 'https://x', brandName: '<script>x</script>' })
+    expect(mail.html).not.toContain('<script>')
+    expect(mail.subject).not.toContain('<script>')
+  })
+})
+
+describe('auditRequestedNotice', () => {
+  const audit = {
+    id: 'aud_1',
+    brandName: '무신사',
+    category: '패션',
+    competitors: ['29CM'],
+    email: 'someone@example.com',
+  }
+
+  it('운영자가 바로 실행할 수 있게 명령을 담는다', () => {
+    const mail = auditRequestedNotice({ audit })
+    expect(mail.html).toContain('pnpm audit:run aud_1')
+  })
+
+  it('브랜드·카테고리·경쟁사를 담는다', () => {
+    const mail = auditRequestedNotice({ audit })
+    for (const s of ['무신사', '패션', '29CM']) expect(mail.html).toContain(s)
+  })
+
+  it('신청자 이메일을 마스킹한다', () => {
+    // 운영자 메일함도 유출 경로다. 실행에 필요한 것은 id지 이메일이 아니다.
+    const mail = auditRequestedNotice({ audit })
+    expect(mail.html).not.toContain('someone@example.com')
+  })
+
+  it('경쟁사가 없으면 없다고 쓴다', () => {
+    const mail = auditRequestedNotice({ audit: { ...audit, competitors: [] } })
+    expect(mail.html).toContain('없음')
+  })
+})
+```
+
+- [ ] **Step 7: 실패 확인**
+
+```bash
+pnpm vitest run src/lib/email/audit-templates.test.ts
+```
+
+Expected: FAIL — `auditVerificationEmail`이 export되지 않음
+
+- [ ] **Step 8: 메일 템플릿 구현**
+
+`src/lib/email/templates.ts`에 **추가**한다 (기존 `layout`·`escapeHtml` 재사용):
+
+```ts
+import { maskEmail } from '@/lib/email/send'
+
+export function auditVerificationEmail(params: {
+  url: string
+  brandName: string
+}): EmailContent {
+  const url = escapeHtml(params.url)
+  const brand = escapeHtml(params.brandName)
+  return {
+    subject: `[Cited] ${params.brandName} 진단 신청을 확인해 주세요`,
+    html: layout(`
+      <h1 style="margin:0 0 16px;font-size:20px">진단 신청이 접수됐습니다</h1>
+      <p style="margin:0 0 16px">
+        <strong>${brand}</strong>이(가) AI 답변에 얼마나 등장하는지 측정합니다.
+        아래 버튼을 눌러 이메일을 확인해 주세요.
+      </p>
+      <p style="margin:0 0 24px">
+        <a href="${url}" style="display:inline-block;padding:12px 20px;border-radius:8px;background:#111;color:#fff;text-decoration:none">이메일 확인하기</a>
+      </p>
+      <p style="margin:0 0 8px;color:#555">
+        확인이 끝나면 <strong>영업일 1일 이내</strong>에 진단 리포트를 이 주소로 보내드립니다.
+        측정은 실제 AI 서비스에 직접 질문해 수행하므로 시간이 걸립니다.
+      </p>
+      <p style="margin:0;color:#888;font-size:13px">
+        본인이 신청하지 않았다면 이 메일을 무시하셔도 됩니다. 확인하지 않으면 아무것도 실행되지 않습니다.
+      </p>
+    `),
+  }
+}
+
+export function auditRequestedNotice(params: {
+  audit: {
+    id: string
+    brandName: string
+    category: string
+    competitors: string[]
+    email: string
+  }
+}): EmailContent {
+  const { audit } = params
+  const competitors = audit.competitors.length > 0 ? audit.competitors.join(', ') : '없음'
+  return {
+    subject: `[Cited 운영] 진단 대기 — ${audit.brandName}`,
+    html: layout(`
+      <h1 style="margin:0 0 16px;font-size:20px">진단 신청이 인증됐습니다</h1>
+      <table style="border-collapse:collapse;margin:0 0 20px">
+        <tr><td style="padding:4px 12px 4px 0;color:#666">브랜드</td><td style="padding:4px 0"><strong>${escapeHtml(audit.brandName)}</strong></td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#666">카테고리</td><td style="padding:4px 0">${escapeHtml(audit.category)}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#666">경쟁사</td><td style="padding:4px 0">${escapeHtml(competitors)}</td></tr>
+        <tr><td style="padding:4px 12px 4px 0;color:#666">신청자</td><td style="padding:4px 0">${escapeHtml(maskEmail(audit.email))}</td></tr>
+      </table>
+      <p style="margin:0 0 8px">실행 명령:</p>
+      <pre style="margin:0 0 16px;padding:12px;background:#f4f4f5;border-radius:6px;font-size:13px">pnpm audit:run ${escapeHtml(audit.id)}</pre>
+      <p style="margin:0;color:#888;font-size:13px">영업일 1일 이내 발송을 약속했습니다.</p>
+    `),
+  }
+}
+```
+
+- [ ] **Step 9: 통과 확인**
+
+```bash
+pnpm vitest run src/lib/email/audit-templates.test.ts
+```
+
+Expected: PASS (7 passed)
+
+- [ ] **Step 10: 신청 API 구현**
+
+`src/app/api/audit/request/route.ts`:
+
+```ts
+import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { countRecentByIpHash, createAuditRequest, hashIp } from '@/lib/audit/repository'
+import { parseAuditRequest } from '@/lib/audit/request-schema'
+import { createVerifyToken } from '@/lib/audit/token'
+import { sendEmail } from '@/lib/email/send'
+import { auditVerificationEmail } from '@/lib/email/templates'
+import { env } from '@/lib/env'
+import { logger } from '@/lib/logger'
+
+/**
+ * 같은 IP의 24시간 신청 수 상한.
+ *
+ * ★ 이것은 **비용 방어가 아니다.** 인증 전에는 외부 API를 부르지 않으므로
+ *   태울 돈이 없다. 신청 테이블이 스팸으로 차서 운영자 대기 목록이
+ *   못 쓰게 되는 것만 막는다. 그래서 값이 넉넉하다 — 회사 NAT 뒤에서
+ *   여러 명이 신청하는 정상 상황을 막으면 안 된다.
+ */
+const IP_DAILY_LIMIT = 10
+
+function clientIp(request: Request): string {
+  const forwarded = request.headers.get('x-forwarded-for')
+  // Vercel은 x-forwarded-for의 **첫 번째** 항목이 실제 클라이언트다.
+  return forwarded?.split(',')[0]?.trim() || 'unknown'
+}
+
+export async function POST(request: Request): Promise<Response> {
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ ok: false, error: '요청 형식이 올바르지 않습니다' }, { status: 400 })
+  }
+
+  let input: ReturnType<typeof parseAuditRequest>
+  try {
+    input = parseAuditRequest(body)
+  } catch (error) {
+    const message =
+      error instanceof z.ZodError
+        ? (error.issues[0]?.message ?? '입력값을 확인해 주세요')
+        : '입력값을 확인해 주세요'
+    return NextResponse.json({ ok: false, error: message }, { status: 400 })
+  }
+
+  const ipHash = hashIp(clientIp(request))
+  if ((await countRecentByIpHash(ipHash, 24)) >= IP_DAILY_LIMIT) {
+    return NextResponse.json(
+      { ok: false, error: '오늘 신청 가능한 횟수를 초과했습니다. 내일 다시 시도해 주세요.' },
+      { status: 429 },
+    )
+  }
+
+  const audit = await createAuditRequest({ ...input, ipHash })
+
+  const token = createVerifyToken(audit.id, audit.email)
+  const url = `${env.NEXT_PUBLIC_APP_URL}/api/audit/verify?token=${encodeURIComponent(token)}`
+  const sent = await sendEmail({
+    to: audit.email,
+    content: auditVerificationEmail({ url, brandName: audit.brandName }),
+  })
+
+  // ★ 메일 발송 실패를 200으로 숨기지 않는다. 사용자는 오지 않는 메일을
+  //   기다리게 되고, 우리는 신청이 방치된 이유를 모른다.
+  //   신청 행은 이미 만들어졌으므로 운영자가 수동으로 이어받을 수 있다.
+  if (!sent.ok) {
+    logger.error('audit.verification_email_failed', { auditId: audit.id, reason: sent.reason })
+    return NextResponse.json(
+      { ok: false, error: '확인 메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.' },
+      { status: 502 },
+    )
+  }
+
+  logger.info('audit.requested', { auditId: audit.id })
+  return NextResponse.json({ ok: true })
+}
+```
+
+- [ ] **Step 11: 인증 API 구현**
+
+`src/app/api/audit/verify/route.ts`:
+
+```ts
+import { NextResponse } from 'next/server'
+import { getAudit, markVerified } from '@/lib/audit/repository'
+import { readVerifyToken } from '@/lib/audit/token'
+import { sendEmail } from '@/lib/email/send'
+import { auditRequestedNotice } from '@/lib/email/templates'
+import { env } from '@/lib/env'
+import { logger } from '@/lib/logger'
+
+function redirect(path: string): Response {
+  return NextResponse.redirect(new URL(path, env.NEXT_PUBLIC_APP_URL))
+}
+
+export async function GET(request: Request): Promise<Response> {
+  const token = new URL(request.url).searchParams.get('token')
+  const payload = token ? readVerifyToken(token) : null
+  if (!payload) return redirect('/audit/requested?state=invalid')
+
+  const verified = await markVerified(payload.auditId, payload.email)
+
+  // ★ 이미 인증된 건을 눌러도 실패 화면을 보여주지 않는다. 메일 링크를 두 번
+  //   누르는 것은 흔하고, 그게 오류처럼 보이면 사용자는 무언가 잘못됐다고 믿는다.
+  if (!verified) {
+    const existing = await getAudit(payload.auditId)
+    if (existing?.emailVerified) return redirect('/audit/requested?state=already')
+    return redirect('/audit/requested?state=invalid')
+  }
+
+  // 운영자 알림. 실패해도 인증 자체는 성공으로 둔다 — 사용자 책임이 아니다.
+  // 다만 로그에 남겨야 한다. 이 메일이 유일한 실행 트리거다.
+  if (env.OPERATOR_EMAIL) {
+    const notice = await sendEmail({
+      to: env.OPERATOR_EMAIL,
+      content: auditRequestedNotice({ audit: verified }),
+    })
+    if (!notice.ok) {
+      logger.error('audit.operator_notice_failed', {
+        auditId: verified.id,
+        reason: notice.reason,
+      })
+    }
+  }
+
+  logger.info('audit.verified', { auditId: verified.id })
+  return redirect('/audit/requested?state=verified')
+}
+```
+
+- [ ] **Step 12: 통합 테스트**
+
+`tests/integration/audit-request.test.ts` — 실제 DB에 붙는다. 스모크와 달리
+`pnpm test`에서 돌리되, DB가 없으면 건너뛴다.
+
+```ts
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import type { EmailContent } from '@/lib/email/templates'
+
+const sent: { to: string; content: EmailContent }[] = []
+vi.mock('@/lib/email/send', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/email/send')>()
+  return {
+    ...actual,
+    sendEmail: async (p: { to: string; content: EmailContent }) => {
+      sent.push(p)
+      return { ok: true as const, id: 'stub' }
+    },
+  }
+})
+
+const { POST } = await import('@/app/api/audit/request/route')
+const { GET } = await import('@/app/api/audit/verify/route')
+const { db, schema } = await import('@/lib/db')
+const { sql } = await import('drizzle-orm')
+
+const EMAIL = `audit-it-${Date.now()}@cited-smoke.invalid`
+const cleanup = () =>
+  db.delete(schema.freeAudits).where(sql`${schema.freeAudits.email} = ${EMAIL}`)
+
+beforeAll(cleanup)
+afterAll(cleanup)
+
+function post(body: unknown, ip = '203.0.113.9'): Promise<Response> {
+  return POST(
+    new Request('https://cited.co.kr/api/audit/request', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': ip },
+      body: JSON.stringify(body),
+    }),
+  )
+}
+
+describe('진단 신청 → 인증 플로우', () => {
+  it('신청하면 행이 생기고 확인 메일이 나간다', async () => {
+    const res = await post({ brandName: '통합테스트', category: '패션', email: EMAIL })
+    expect(res.status).toBe(200)
+
+    const rows = await db
+      .select()
+      .from(schema.freeAudits)
+      .where(sql`${schema.freeAudits.email} = ${EMAIL}`)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.status).toBe('requested')
+    expect(rows[0]?.emailVerified).toBe(false)
+    expect(sent.at(-1)?.to).toBe(EMAIL)
+  })
+
+  it('인증 링크를 누르면 verified가 되고 운영자 알림이 나간다', async () => {
+    const link = /verify\?token=([^"&]+)/.exec(sent.at(-1)?.content.html ?? '')
+    expect(link?.[1]).toBeTruthy()
+
+    const before = sent.length
+    const res = await GET(
+      new Request(`https://cited.co.kr/api/audit/verify?token=${link?.[1] ?? ''}`),
+    )
+    expect(res.status).toBe(307)
+    expect(res.headers.get('location')).toContain('state=verified')
+
+    const rows = await db
+      .select()
+      .from(schema.freeAudits)
+      .where(sql`${schema.freeAudits.email} = ${EMAIL}`)
+    expect(rows[0]?.status).toBe('verified')
+    expect(rows[0]?.verifiedAt).toBeInstanceOf(Date)
+    expect(sent.length).toBeGreaterThan(before) // 운영자 알림
+  })
+
+  it('같은 링크를 다시 눌러도 오류 화면을 보여주지 않는다', async () => {
+    const link = /verify\?token=([^"&]+)/.exec(
+      sent.find((s) => s.to === EMAIL)?.content.html ?? '',
+    )
+    const res = await GET(
+      new Request(`https://cited.co.kr/api/audit/verify?token=${link?.[1] ?? ''}`),
+    )
+    expect(res.headers.get('location')).toContain('state=already')
+  })
+
+  it('위조 토큰은 invalid로 보낸다', async () => {
+    const res = await GET(new Request('https://cited.co.kr/api/audit/verify?token=forged.sig'))
+    expect(res.headers.get('location')).toContain('state=invalid')
+  })
+
+  it('잘못된 입력은 400', async () => {
+    expect((await post({ brandName: '', category: '패션', email: EMAIL })).status).toBe(400)
+    expect((await post({ brandName: 'A', category: '패션', email: 'not-an-email' })).status).toBe(400)
+  })
+})
+```
+
+- [ ] **Step 13: 통과 확인**
+
+```bash
+pnpm vitest run tests/integration/audit-request.test.ts
+```
+
+Expected: PASS (5 passed)
+
+- [ ] **Step 14: 전체 검증과 커밋**
+
+```bash
+pnpm typecheck && pnpm lint && pnpm test
+git add src/lib/audit src/lib/email src/lib/env.ts src/app/api/audit .env.example tests/integration
+git commit -m "feat(audit): 진단 신청 접수와 이메일 인증
+
+인증 전에는 어떤 외부 API도 호출하지 않는다. 신청은 DB 쓰기 1회 + 메일 1통이
+전부라 태울 돈이 없고, 그래서 Turnstile도 예산 킬스위치도 필요 없다.
+
+IP 상한(24시간 10회)은 비용 방어가 아니라 신청 테이블이 스팸으로 차서 운영자
+대기 목록이 못 쓰게 되는 것만 막는다. 회사 NAT 뒤 여러 명이 신청하는 정상
+상황을 막지 않도록 넉넉히 잡았다.
+
+확인 메일 발송 실패를 200으로 숨기지 않는다. 숨기면 사용자는 오지 않는 메일을
+기다리고 우리는 신청이 방치된 이유를 모른다.
+
+운영자 알림에는 신청자 이메일을 마스킹해 넣는다. 실행에 필요한 것은 id다."
+```
+
+---
+
+### Task 6: 진단 리포트 구성
+
+**Files:**
+- Create: `src/lib/audit/result.ts`
+- Test: `src/lib/audit/result.test.ts`
+
+**Interfaces:**
+- Consumes: `BrandMetrics` (2단계), `Interval`·`formatInterval` (2단계),
+  `DetectionResult` (2단계)
+- Produces:
+  - `interface AuditResult { brandName; category; competitors; totalAnswers; citedRate; shareOfVoice; ranking; evidence; byEngine; byQuery; measuredAt; engines; unresolved }`
+  - `buildAuditResult(args): AuditResult` — 순수 함수
+  - `AUDIT_RESULT_VERSION`
+  - Task 7의 CLI와 Task 8의 화면이 소비한다
+
+**최초 계획과 달라진 두 가지:**
+
+1. **이메일 게이트가 없다.** 최초 계획은 결과를 C(증거) → B(순위) → A(전체
+   지표)로 쪼개고 A 앞에 이메일 게이트를 뒀다. 이제 이메일은 신청 시점에 이미
+   받았으므로 **전부 한 번에 보여준다.** `evidence`를 맨 앞에 두는 순서는
+   유지한다 — 기다린 사람의 첫 질문은 여전히 "이거 진짜야?"이고, 숫자는 반박
+   가능하지만 AI 답변 원문은 반박할 수 없다.
+2. **경쟁사 순위가 실제로 들어간다.** 최초 계획은 경쟁사 판정이 없어 자기
+   브랜드만 순위에 넣었다. 이제 신청 폼이 경쟁사를 최대 3개 받으므로
+   Share of Voice를 진짜로 계산한다. **경쟁사를 추가해도 API 호출은 늘지
+   않는다** — 같은 답변에서 탐지 대상만 늘어난다. 원가가 거의 그대로인데
+   후킹은 가장 강한 항목이다.
+
+- [ ] **Step 1: 실패하는 테스트 작성**
+
+`src/lib/audit/result.test.ts`:
+
+```ts
+import { describe, expect, it } from 'vitest'
+import { AUDIT_RESULT_VERSION, buildAuditResult } from '@/lib/audit/result'
+import { wilsonInterval } from '@/lib/stats/wilson'
+
+const metrics = {
+  totalAnswers: 3,
+  citedRate: wilsonInterval(1, 3),
+  firstMentionRate: wilsonInterval(0, 3),
+  shareOfVoice: wilsonInterval(1, 4),
+  byEngine: { gemini: wilsonInterval(1, 3) },
+  byQuery: [
+    { queryId: 'q1', queryText: '러닝화 추천', interval: wilsonInterval(0, 1) },
+    { queryId: 'q2', queryText: '운동화 브랜드', interval: wilsonInterval(1, 1) },
+  ],
+  competitorRates: { '29CM': wilsonInterval(2, 3), 'W컨셉': wilsonInterval(1, 3) },
+}
+
+const answers = [
+  { id: 'a1', queryText: '러닝화 추천', engineId: 'gemini', text: '나이키와 아디다스를 추천합니다.' },
+  { id: 'a2', queryText: '운동화 브랜드', engineId: 'gemini', text: '무신사에서 파는 제품이 좋습니다.' },
+  { id: 'a3', queryText: '러닝화 추천', engineId: 'gemini', text: '아식스도 괜찮습니다.' },
+]
+
+const detections = [
+  { answerId: 'a2', subject: '무신사', mentioned: true, position: 1, context: '추천 목록 첫 번째', sentiment: 'recommended' as const, unresolved: false },
+  { answerId: 'a1', subject: '무신사', mentioned: false, position: null, context: null, sentiment: null, unresolved: false },
+  { answerId: 'a3', subject: '무신사', mentioned: false, position: null, context: null, sentiment: null, unresolved: false },
+  { answerId: 'a1', subject: '29CM', mentioned: true, position: 2, context: '함께 언급', sentiment: 'neutral' as const, unresolved: false },
+  { answerId: 'a2', subject: '29CM', mentioned: true, position: 2, context: '함께 언급', sentiment: 'neutral' as const, unresolved: false },
+]
+
+const base = {
+  brandName: '무신사',
+  category: '패션',
+  competitors: ['29CM', 'W컨셉'],
+  engines: ['gemini'],
+  measuredAt: '2026-07-30T02:00:00.000Z',
+  metrics,
+  answers,
+  detections,
+  unresolved: 0,
+}
+
+describe('buildAuditResult', () => {
+  it('증거를 1~3건 담고 언급된 답변을 먼저 보여준다', () => {
+    const r = buildAuditResult(base)
+    expect(r.evidence.length).toBeGreaterThanOrEqual(1)
+    expect(r.evidence.length).toBeLessThanOrEqual(3)
+    expect(r.evidence[0]?.mentioned).toBe(true)
+    expect(r.evidence[0]?.text).toContain('무신사')
+  })
+
+  it('언급이 하나도 없어도 증거를 보여준다', () => {
+    // ★ 0% 결과가 가장 흔하고 가장 중요한 화면이다. 여기서 빈 화면을 주면
+    //   "측정이 안 된 건가?"가 되어 제품을 의심한다. 안 나온 답변 자체가 증거다.
+    const r = buildAuditResult({
+      ...base,
+      detections: detections.filter((d) => d.subject !== '무신사'),
+      metrics: { ...metrics, citedRate: wilsonInterval(0, 3) },
+    })
+    expect(r.evidence.length).toBeGreaterThan(0)
+    expect(r.evidence.every((e) => !e.mentioned)).toBe(true)
+  })
+
+  it('증거 원문을 600자로 자른다', () => {
+    const long = { ...answers[0]!, id: 'a9', text: 'ㄱ'.repeat(2000) }
+    const r = buildAuditResult({ ...base, answers: [long, ...answers] })
+    expect(r.evidence[0]!.text.length).toBeLessThanOrEqual(600)
+  })
+
+  it('순위에 경쟁사가 들어가고 언급 수 내림차순이다', () => {
+    const r = buildAuditResult(base)
+    expect(r.ranking.map((x) => x.name)).toEqual(['29CM', '무신사', 'W컨셉'])
+    expect(r.ranking.find((x) => x.isSelf)?.name).toBe('무신사')
+  })
+
+  it('경쟁사가 없으면 순위에 자기 브랜드만 남는다', () => {
+    const r = buildAuditResult({ ...base, competitors: [], metrics: { ...metrics, competitorRates: {} } })
+    expect(r.ranking).toHaveLength(1)
+    expect(r.ranking[0]?.isSelf).toBe(true)
+  })
+
+  it('경쟁사가 없으면 Share of Voice를 "측정 없음"으로 남긴다', () => {
+    // ★ "우리만 등록했으니 점유율 100%"는 거짓말이다. 2단계가 n=0으로 돌려주고
+    //   여기서도 그대로 전달해야 화면이 숨길 수 있다.
+    const r = buildAuditResult({
+      ...base,
+      competitors: [],
+      metrics: { ...metrics, shareOfVoice: wilsonInterval(0, 0), competitorRates: {} },
+    })
+    expect(r.shareOfVoice.n).toBe(0)
+  })
+
+  it('질의별 결과를 언급률이 낮은 순으로 담는다', () => {
+    // "이 질문에서 안 나온다"가 위로 와야 행동으로 이어진다.
+    const r = buildAuditResult(base)
+    expect(r.byQuery[0]?.queryText).toBe('러닝화 추천')
+  })
+
+  it('측정 조건을 함께 담는다 (재현과 비교 가능성)', () => {
+    const r = buildAuditResult(base)
+    expect(r.engines).toEqual(['gemini'])
+    expect(r.competitors).toEqual(['29CM', 'W컨셉'])
+    expect(r.measuredAt).toBe('2026-07-30T02:00:00.000Z')
+    expect(r.totalAnswers).toBe(3)
+    expect(r.version).toBe(AUDIT_RESULT_VERSION)
+  })
+
+  it('미판정 건수를 숨기지 않는다', () => {
+    const r = buildAuditResult({ ...base, unresolved: 2 })
+    expect(r.unresolved).toBe(2)
+  })
+
+  it('입력을 변형하지 않는다', () => {
+    const snapshot = JSON.stringify(base.answers)
+    buildAuditResult(base)
+    expect(JSON.stringify(base.answers)).toBe(snapshot)
+  })
+
+  it('답변이 하나도 없어도 던지지 않는다', () => {
+    const r = buildAuditResult({
+      ...base,
+      answers: [],
+      detections: [],
+      metrics: { ...metrics, totalAnswers: 0, citedRate: wilsonInterval(0, 0) },
+    })
+    expect(r.evidence).toEqual([])
+    expect(r.totalAnswers).toBe(0)
   })
 })
 ```
@@ -2158,320 +3039,27 @@ describe('generateAuditQueries', () => {
 - [ ] **Step 2: 실패 확인**
 
 ```bash
-pnpm vitest run src/lib/audit/
+pnpm vitest run src/lib/audit/result.test.ts
 ```
 
 Expected: FAIL — 모듈 없음
 
 - [ ] **Step 3: 구현**
 
-`src/lib/audit/hash.ts`:
-
-```ts
-import { createHmac } from 'node:crypto'
-
-/**
- * IP를 단방향 해시로 바꾼다. 원문은 저장하지 않는다.
- *
- * 개인정보처리방침에 "접속 IP는 원문을 저장하지 않고, 남용 방지 목적의
- * 단방향 해시값만 보관합니다"라고 명시했다. 이 함수가 그 약속을 지킨다.
- */
-export function hashIp(ip: string, salt: string): string {
-  return createHmac('sha256', salt).update(ip).digest('hex')
-}
-
-/** 프록시 헤더에서 클라이언트 IP를 뽑는다. Vercel은 x-forwarded-for를 채운다. */
-export function clientIpFrom(headers: Headers): string {
-  const forwarded = headers.get('x-forwarded-for')
-  if (forwarded) return forwarded.split(',')[0]!.trim()
-  return headers.get('x-real-ip') ?? '0.0.0.0'
-}
-```
-
-`src/lib/audit/limits.ts`:
-
-```ts
-/**
- * 무료 진단 상한.
- *
- * 이것은 남용 방지 장치이기 이전에 **비용 통제 장치**다.
- * 진단 1건 = 3질의 × 2엔진 × 1샘플 = 6호출 = **약 100원**(저가 모델 기준, 80~125원).
- *
- * ★ 이 값은 건수가 아니라 **월 예산에서 역산**한 것이다. 순서를 뒤집지 말 것.
- *     월 예산 10만원 ÷ 건당 100원 = 월 1,000건 ÷ 30일 ≈ 일 33건
- *   그런데 **초기값은 일 20건으로 보수적으로 잡는다.** 건당 원가가 아직 추정치이기
- *   때문이다(2단계 스모크 테스트의 tokensIn 실측 전). 실측 후 상향한다.
- *
- * ★★ 최초 계획서는 이 값이 100이었다. 건당 50~110원이라는 **틀린 원가**에서
- *    나온 숫자다(웹검색 툴의 호출당 $10/1,000 요금이 빠져 있었다).
- *    일 100건이면 월 3,000건 × 100원 = **월 30만원**으로 예산의 3배다.
- *    되돌리지 말 것 — 되돌리려면 설계 문서 "비용 구조" 절부터 다시 볼 것.
- */
-export const DAILY_GLOBAL_LIMIT = 20
-export const DAILY_IP_LIMIT = 3
-export const BRAND_MONTHLY_LIMIT = 1
-
-/**
- * ★ 월 예산 킬스위치. **10만원을 실제로 보장하는 것은 건수가 아니라 이쪽이다.**
- *
- * 건당 원가는 고정이 아니다 — 웹검색이 긁어오는 본문 토큰이 질의마다 다르다
- * (5,000~20,000). 건수만 세면 "상한은 지켰는데 청구서는 2.5배"가 나온다.
- * 그래서 **실제 토큰 사용량으로 누적한 원가**를 별도로 세고, 예산에 닿으면 막는다.
- *
- * 원가는 2단계의 `FREE_AUDIT_PRICING`(저가 모델 단가)으로 계산한다 —
- * 유료 측정용 `PRICING`을 쓰면 실제보다 비싸게 잡혀 조기에 막힌다.
- */
-export const MONTHLY_BUDGET_KRW = 100_000
-/** 이 비율에서 관리자에게 알린다. 막히기 전에 알아야 대응할 수 있다. */
-export const BUDGET_ALERT_RATIO = 0.8
-
-export type LimitReason = 'global_daily' | 'ip_daily' | 'brand_monthly'
-
-export interface LimitInput {
-  ipCountToday: number
-  globalCountToday: number
-  brandCountThisMonth: number
-}
-
-export interface LimitVerdict {
-  allowed: boolean
-  reason: LimitReason | null
-  /** 거부하더라도 대기 등록으로 리드는 확보한다 */
-  allowWaitlist: boolean
-  message: string | null
-}
-
-export function checkAuditLimits(input: LimitInput): LimitVerdict {
-  // 비용이 가장 중요한 제약이므로 전체 상한을 먼저 본다.
-  if (input.globalCountToday >= DAILY_GLOBAL_LIMIT) {
-    return {
-      allowed: false,
-      reason: 'global_daily',
-      allowWaitlist: true,
-      message: '오늘 무료 진단이 마감되었습니다. 이메일을 남겨주시면 내일 결과를 보내드립니다.',
-    }
-  }
-  if (input.ipCountToday >= DAILY_IP_LIMIT) {
-    return {
-      allowed: false,
-      reason: 'ip_daily',
-      allowWaitlist: true,
-      message: '하루에 진단할 수 있는 횟수를 모두 사용하셨습니다.',
-    }
-  }
-  if (input.brandCountThisMonth >= BRAND_MONTHLY_LIMIT) {
-    return {
-      allowed: false,
-      reason: 'brand_monthly',
-      allowWaitlist: false,
-      message:
-        '이 브랜드는 이번 달에 이미 진단했습니다. 매주 자동 추적을 원하시면 요금제를 확인해 주세요.',
-    }
-  }
-  return { allowed: true, reason: null, allowWaitlist: false, message: null }
-}
-```
-
-`src/lib/audit/queries.ts`:
-
-```ts
-/**
- * 무료 진단 질의 수.
- *
- * 원가 때문에 **늘리지 않고**, 설득력 때문에 **줄이지도 않는다.** 3이 하한이다.
- *   - 1질의 × 2엔진이면 Cited Rate의 분모가 2다. 값이 0%·50%·100% 셋뿐이고
- *     Wilson 95% 구간이 9~91%다 — 정보가 없다. 게다가 무료 진단은 샘플 1회라
- *     비결정성이 그대로 드러나, 새로고침 한 번에 값이 뒤집혀 "고장난 툴"이 된다
- *   - **전환을 만드는 것은 비율이 아니라 패턴이다.** 답변 하나가 나쁘면
- *     "그 질문이 이상했겠지"로 넘어가지만, 3개 중 2개에서 경쟁사만 나오면
- *     반박이 어렵다. 한 번은 우연이고 반복은 문제다 — 3이 반복의 최소 개수다
- *
- * ★ 개수보다 중요한 제약: **3개가 서로 다른 의도 축이어야 한다.**
- *   (일반 추천 / 속성 한정 / 비교형)
- *   "수분크림 추천 / 좋은 수분크림 / 수분크림 뭐가 좋아"처럼 사실상 같은 질문
- *   3개를 만들면 답변도 셋 다 비슷해져 **데이터 포인트가 1개짜리가 된다.**
- *   아래 템플릿은 축이 갈리도록 짜고, 테스트가 그 축을 검사한다.
- */
-export const AUDIT_QUERY_COUNT = 3
-
-/**
- * 카테고리별 기본 질의 템플릿.
- *
- * 브랜드명을 절대 넣지 않는다. 넣으면 AI가 반드시 그 브랜드를 언급하므로
- * 측정이 무의미해진다. 소비자가 실제로 묻는 방식이어야 한다.
- */
-const TEMPLATES: Record<string, string[]> = {
-  패션: ['온라인 패션 쇼핑몰 추천', '20대 남자 옷 사이트 어디가 좋아?', '가성비 좋은 기본템 브랜드'],
-  스포츠: ['30대 남자 러닝화 추천해줘', '발볼 넓은 사람 운동화', '초보자용 운동복 브랜드'],
-  뷰티: ['민감성 피부 스킨케어 추천', '가성비 좋은 선크림', '남자 기초 화장품 브랜드'],
-  식품: ['건강한 간편식 브랜드 추천', '단백질 보충제 어디가 좋아?', '유기농 식재료 정기배송'],
-  가전: ['가성비 무선 청소기 추천', '1인 가구 냉장고 브랜드', '노트북 추천해줘'],
-  가구: ['1인 가구 침대 브랜드 추천', '가성비 좋은 소파', '원룸 인테리어 가구 쇼핑몰'],
-  교육: ['성인 영어 회화 학원 추천', '온라인 강의 플랫폼 비교', '코딩 부트캠프 어디가 좋아?'],
-  금융: ['적금 이자 높은 은행', '주식 앱 추천', '보험 비교 사이트'],
-  여행: ['국내 숙소 예약 사이트 추천', '항공권 저렴하게 사는 법', '해외여행 패키지 어디서 사?'],
-  반려동물: ['강아지 사료 추천', '고양이 모래 브랜드', '반려동물 용품 쇼핑몰'],
-}
-
-/** 카테고리를 모를 때 쓰는 범용 질의 */
-const FALLBACK = (category: string): string[] => [
-  `${category} 브랜드 추천해줘`,
-  `가성비 좋은 ${category} 어디가 좋아?`,
-  `${category} 사이트 비교`,
-]
-
-/**
- * 진단용 질의 3개를 만든다.
- * 결정적이다 — 같은 입력에 항상 같은 질의를 낸다.
- */
-export function generateAuditQueries(category: string, _brandName: string): string[] {
-  const normalized = category.trim()
-  const template = TEMPLATES[normalized]
-  const queries = template ?? FALLBACK(normalized || '제품')
-  return queries.slice(0, AUDIT_QUERY_COUNT)
-}
-
-export function knownCategories(): string[] {
-  return Object.keys(TEMPLATES)
-}
-```
-
-`.env.example`에 추가:
-
-```bash
-AUDIT_IP_SALT=           # openssl rand -hex 32 — IP 해시용 솔트
-```
-
-`src/lib/env.ts`의 스키마에 `AUDIT_IP_SALT: z.string().min(16)` 추가 (필수).
-
-- [ ] **Step 4: 통과 확인**
-
-```bash
-pnpm vitest run src/lib/audit/
-```
-
-Expected: PASS (18 passed)
-
-- [ ] **Step 5: 커밋**
-
-```bash
-git add -A
-git commit -m "feat(audit): 무료 진단 상한 · IP 해시 · 카테고리별 질의 생성
-
-일일 상한은 남용 방지 이전에 비용 통제 장치다."
-```
-
----
-
-### Task 7: 무료 진단 잡과 API
-
-**Files:**
-- Create: `src/trigger/free-audit.ts`, `src/app/api/audit/route.ts`,
-  `src/lib/audit/repository.ts`, `src/lib/audit/result.ts`
-- Test: `src/lib/audit/result.test.ts`
-
-**Interfaces:**
-- Consumes: Task 6의 상한·질의, 엔진·판정·집계 (2단계)
-- Produces:
-  - `freeAudit` — 진단 잡. Realtime으로 진행률 스트리밍
-  - `POST /api/audit` — 진단 시작. 상한 검사 후 잡 트리거
-  - `interface AuditResult { citedRate; evidence; ranking; byEngine; byQuery }`
-  - `buildAuditResult(...)` — 순수 함수
-
-- [ ] **Step 1: 결과 구성 실패 테스트**
-
-`src/lib/audit/result.test.ts`:
-
-```ts
-import { describe, expect, it } from 'vitest'
-import { buildAuditResult } from '@/lib/audit/result'
-import { wilsonInterval } from '@/lib/stats/wilson'
-
-const metrics = {
-  totalAnswers: 6,
-  citedRate: wilsonInterval(2, 6),
-  firstMentionRate: wilsonInterval(1, 6),
-  shareOfVoice: wilsonInterval(2, 8),
-  byEngine: { chatgpt: wilsonInterval(2, 3), gemini: wilsonInterval(0, 3) },
-  byQuery: [
-    { queryId: 'q1', queryText: '러닝화 추천', interval: wilsonInterval(0, 2) },
-    { queryId: 'q2', queryText: '운동화 브랜드', interval: wilsonInterval(2, 2) },
-  ],
-  competitorRates: {},
-}
-
-const answers = [
-  { id: 'a1', queryText: '러닝화 추천', engineId: 'chatgpt', text: '나이키와 아디다스를 추천합니다.' },
-  { id: 'a2', queryText: '운동화 브랜드', engineId: 'chatgpt', text: '아식스가 좋습니다.' },
-]
-
-const mentions = [
-  { answerId: 'a2', subject: 'self', mentioned: true, position: 1 },
-  { answerId: 'a1', subject: 'self', mentioned: false, position: null },
-]
-
-describe('buildAuditResult', () => {
-  it('C(증거) — 실제 AI 답변 원문을 2~3개 담는다', () => {
-    const r = buildAuditResult({ brandName: '아식스', metrics, answers, mentions })
-    expect(r.evidence.length).toBeGreaterThanOrEqual(1)
-    expect(r.evidence.length).toBeLessThanOrEqual(3)
-    expect(r.evidence[0]?.text).toBeTruthy()
-    expect(r.evidence[0]?.engineId).toBeTruthy()
-    expect(r.evidence[0]?.query).toBeTruthy()
-  })
-
-  it('증거는 언급된 답변을 먼저 보여준다 (신뢰가 먼저 서야 한다)', () => {
-    const r = buildAuditResult({ brandName: '아식스', metrics, answers, mentions })
-    expect(r.evidence[0]?.mentioned).toBe(true)
-  })
-
-  it('B(순위) — AI가 실제로 답한 브랜드 순위표를 만든다', () => {
-    const r = buildAuditResult({ brandName: '아식스', metrics, answers, mentions })
-    expect(r.ranking.length).toBeGreaterThan(0)
-    expect(r.ranking.some((x) => x.isSelf)).toBe(true)
-  })
-
-  it('A(전체 지표) — 게이트 뒤의 정보', () => {
-    const r = buildAuditResult({ brandName: '아식스', metrics, answers, mentions })
-    expect(r.citedRate.point).toBeCloseTo(2 / 6, 6)
-    expect(r.byEngine).toHaveProperty('chatgpt')
-    expect(r.byQuery.length).toBe(2)
-  })
-
-  it('언급이 0이어도 결과를 만든다 (이것도 팔 만한 정보다)', () => {
-    const zero = { ...metrics, citedRate: wilsonInterval(0, 6) }
-    const r = buildAuditResult({
-      brandName: 'X', metrics: zero, answers,
-      mentions: answers.map((a) => ({ answerId: a.id, subject: 'self', mentioned: false, position: null })),
-    })
-    expect(r.citedRate.point).toBe(0)
-    expect(r.evidence.length).toBeGreaterThan(0)
-  })
-
-  it('답변 텍스트를 자른다 (결과 화면에 통째로 넣지 않는다)', () => {
-    const long = [{ ...answers[0]!, text: 'x'.repeat(5000) }]
-    const r = buildAuditResult({
-      brandName: 'X', metrics, answers: long,
-      mentions: [{ answerId: 'a1', subject: 'self', mentioned: true, position: 1 }],
-    })
-    expect(r.evidence[0]!.text.length).toBeLessThanOrEqual(600)
-  })
-})
-```
-
-- [ ] **Step 2: 실패 확인 후 구현**
-
-```bash
-pnpm vitest run src/lib/audit/result.test.ts
-```
-
-Expected: FAIL
-
 `src/lib/audit/result.ts`:
 
 ```ts
+import type { Sentiment } from '@/lib/detection/types'
 import type { BrandMetrics } from '@/lib/stats/metrics'
 import type { Interval } from '@/lib/stats/wilson'
+
+/**
+ * 리포트 구조 버전.
+ *
+ * `free_audits.result`에 그대로 저장되므로, 구조를 바꾸면 예전에 보낸 리포트를
+ * 새 화면이 못 읽는다. 필드를 지우거나 의미를 바꿀 때 올린다.
+ */
+export const AUDIT_RESULT_VERSION = 1
 
 export interface EvidenceItem {
   query: string
@@ -2479,82 +3067,122 @@ export interface EvidenceItem {
   /** 자른 답변 원문 */
   text: string
   mentioned: boolean
+  /** 2차 판정의 한 줄 요약. 미언급이면 null */
+  context: string | null
+  sentiment: Sentiment | null
 }
 
 export interface RankingItem {
   name: string
+  /** 이 브랜드가 언급된 답변 수 */
   mentions: number
   isSelf: boolean
 }
 
 export interface AuditResult {
+  version: number
   brandName: string
+  category: string
+  /** 고객이 등록한 경쟁사. Share of Voice를 읽으려면 반드시 함께 봐야 한다 */
+  competitors: string[]
+  /** 이 측정에 쓴 엔진. 다른 엔진 구성끼리 비교하면 안 된다 */
+  engines: string[]
+  /** ISO 8601 */
+  measuredAt: string
   totalAnswers: number
   citedRate: Interval
-  /** C — 증거. 이메일 게이트 앞에 공개한다. */
-  evidence: EvidenceItem[]
-  /** B — 순위. 게이트 앞에 공개한다. 감정 정점. */
+  shareOfVoice: Interval
   ranking: RankingItem[]
-  /** A — 전체 지표. 게이트 뒤. */
+  evidence: EvidenceItem[]
   byEngine: Record<string, Interval>
   byQuery: { queryText: string; interval: Interval }[]
+  /** 2차 판정이 실패해 미판정으로 남은 건수. 0이 아니면 화면에 표시한다 */
+  unresolved: number
 }
 
 const EVIDENCE_MAX = 3
 const EVIDENCE_TEXT_LIMIT = 600
 
+export interface DetectionRow {
+  answerId: string
+  subject: string
+  mentioned: boolean
+  position: number | null
+  context: string | null
+  sentiment: Sentiment | null
+  unresolved: boolean
+}
+
 export interface BuildAuditResultArgs {
   brandName: string
+  category: string
+  competitors: string[]
+  engines: string[]
+  measuredAt: string
   metrics: BrandMetrics
   answers: { id: string; queryText: string; engineId: string; text: string }[]
-  mentions: { answerId: string; subject: string; mentioned: boolean; position: number | null }[]
+  detections: DetectionRow[]
+  unresolved: number
 }
 
 /**
- * 무료 진단 결과를 C → B → A 순서로 구성한다.
+ * 무료 진단 리포트를 구성한다. 순수 함수 — 입력을 변형하지 않는다.
  *
- * 설계 ④: 기다린 방문자의 첫 질문은 "이거 진짜야?"이므로 첫 임무는 충격이
- * 아니라 신뢰다. 숫자와 순위는 반박 가능하지만("그 숫자 어떻게 잰 건데?")
- * AI 답변 원문은 반박할 수 없고 방문자가 직접 검증할 수 있다.
+ * 설계 ④: 기다린 사람의 첫 질문은 "이거 진짜야?"이므로 첫 임무는 충격이 아니라
+ * 신뢰다. 숫자와 순위는 반박 가능하지만("그 숫자 어떻게 잰 건데?") AI 답변
+ * 원문은 반박할 수 없고 본인이 직접 그 서비스에 물어 확인할 수 있다.
+ * 그래서 `evidence`가 맨 앞이다.
  */
 export function buildAuditResult(args: BuildAuditResultArgs): AuditResult {
-  const mentionedIds = new Set(
-    args.mentions.filter((m) => m.subject === 'self' && m.mentioned).map((m) => m.answerId),
-  )
+  const selfDetections = args.detections.filter((d) => d.subject === args.brandName)
+  const byAnswer = new Map(selfDetections.map((d) => [d.answerId, d]))
 
-  // C — 언급된 답변을 먼저. 없으면 미언급 답변이라도 보여준다.
+  // 언급된 답변을 먼저. 같은 그룹 안에서는 입력 순서를 유지한다.
+  // ★ `sort`는 제자리 정렬이므로 반드시 복사본에 건다.
   const sorted = [...args.answers].sort((a, b) => {
-    const am = mentionedIds.has(a.id) ? 0 : 1
-    const bm = mentionedIds.has(b.id) ? 0 : 1
+    const am = byAnswer.get(a.id)?.mentioned ? 0 : 1
+    const bm = byAnswer.get(b.id)?.mentioned ? 0 : 1
     return am - bm
   })
 
-  const evidence: EvidenceItem[] = sorted.slice(0, EVIDENCE_MAX).map((a) => ({
-    query: a.queryText,
-    engineId: a.engineId,
-    text: truncate(a.text, EVIDENCE_TEXT_LIMIT),
-    mentioned: mentionedIds.has(a.id),
-  }))
+  const evidence: EvidenceItem[] = sorted.slice(0, EVIDENCE_MAX).map((a) => {
+    const d = byAnswer.get(a.id)
+    return {
+      query: a.queryText,
+      engineId: a.engineId,
+      text: truncate(a.text, EVIDENCE_TEXT_LIMIT),
+      mentioned: d?.mentioned ?? false,
+      context: d?.mentioned ? (d.context ?? null) : null,
+      sentiment: d?.mentioned ? (d.sentiment ?? null) : null,
+    }
+  })
 
-  // B — 답변에 실제로 등장한 브랜드 순위.
-  //     경쟁사 판정이 없는 무료 진단에서는 우리 브랜드 언급 수만 확실하므로,
-  //     나머지는 답변 텍스트에서 추출하지 않고 우리 것만 보여준다.
-  //     (경쟁사 자동 추천은 온보딩에서 진단 결과를 재사용해 만든다.)
+  // 순위 — 언급 수 내림차순. 동점이면 이름순으로 고정한다(실행마다 순서가
+  // 바뀌면 같은 리포트를 두 번 볼 때 다르게 보인다).
+  const mentionCount = (subject: string): number =>
+    args.detections.filter((d) => d.subject === subject && d.mentioned).length
+
   const ranking: RankingItem[] = [
-    { name: args.brandName, mentions: mentionedIds.size, isSelf: true },
-  ]
+    { name: args.brandName, mentions: mentionCount(args.brandName), isSelf: true },
+    ...args.competitors.map((name) => ({ name, mentions: mentionCount(name), isSelf: false })),
+  ].sort((a, b) => b.mentions - a.mentions || a.name.localeCompare(b.name, 'ko'))
 
   return {
+    version: AUDIT_RESULT_VERSION,
     brandName: args.brandName,
+    category: args.category,
+    competitors: [...args.competitors],
+    engines: [...args.engines],
+    measuredAt: args.measuredAt,
     totalAnswers: args.metrics.totalAnswers,
     citedRate: args.metrics.citedRate,
-    evidence,
+    shareOfVoice: args.metrics.shareOfVoice,
     ranking,
+    evidence,
     byEngine: args.metrics.byEngine,
-    byQuery: args.metrics.byQuery.map((q) => ({
-      queryText: q.queryText,
-      interval: q.interval,
-    })),
+    // 2단계 metrics가 이미 언급률 오름차순으로 준다. 여기서 다시 정렬하지 않는다.
+    byQuery: args.metrics.byQuery.map((q) => ({ queryText: q.queryText, interval: q.interval })),
+    unresolved: args.unresolved,
   }
 }
 
@@ -2564,1479 +3192,1123 @@ function truncate(text: string, limit: number): string {
 }
 ```
 
+- [ ] **Step 4: 통과 확인**
+
 ```bash
 pnpm vitest run src/lib/audit/result.test.ts
 ```
 
-Expected: PASS (6 passed)
+Expected: PASS (11 passed)
 
-- [ ] **Step 3: 진단 리포지토리**
+- [ ] **Step 5: 변이 테스트 3건**
 
-`src/lib/audit/repository.ts`:
+구현을 실제로 망가뜨려 테스트가 잡는지 확인한다. 표로 보고한다.
 
-```ts
-import { randomUUID } from 'node:crypto'
-import { and, count, eq, gte, sql } from 'drizzle-orm'
-import { db } from '@/lib/db'
-import { freeAudits, type AuditStatus } from '@/lib/db/schema'
+| 변이 | 기대 |
+| --- | --- |
+| `sorted`에서 언급 우선 정렬 제거 (`return 0`) | 실패 |
+| `ranking`에서 경쟁사 제외 (`...[]`) | 실패 |
+| `truncate`의 상한을 무시하고 원문 반환 | 실패 |
 
-export async function countAuditsToday(ipHash: string): Promise<{ ip: number; global: number }> {
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
-  const [ipRow] = await db
-    .select({ n: count() })
-    .from(freeAudits)
-    .where(and(eq(freeAudits.ipHash, ipHash), gte(freeAudits.createdAt, since)))
-  const [globalRow] = await db
-    .select({ n: count() })
-    .from(freeAudits)
-    .where(gte(freeAudits.createdAt, since))
-  return { ip: ipRow?.n ?? 0, global: globalRow?.n ?? 0 }
-}
+셋 중 살아남는 변이가 있으면 **테스트를 추가하고 다시 돌린다.**
 
-export async function countBrandAuditsThisMonth(brandName: string): Promise<number> {
-  const since = new Date()
-  since.setUTCDate(1)
-  since.setUTCHours(0, 0, 0, 0)
-  const [row] = await db
-    .select({ n: count() })
-    .from(freeAudits)
-    .where(
-      and(
-        sql`lower(${freeAudits.brandName}) = lower(${brandName})`,
-        gte(freeAudits.createdAt, since),
-      ),
-    )
-  return row?.n ?? 0
-}
-
-export async function createAudit(args: {
-  brandName: string
-  category: string
-  ipHash: string
-  variant: string
-  status: AuditStatus
-}): Promise<string> {
-  const id = randomUUID()
-  await db.insert(freeAudits).values({ id, ...args })
-  return id
-}
-
-export async function updateAudit(
-  id: string,
-  patch: Partial<{ status: AuditStatus; result: unknown; email: string; emailVerified: boolean }>,
-): Promise<void> {
-  await db.update(freeAudits).set(patch).where(eq(freeAudits.id, id))
-}
-
-export async function getAudit(id: string) {
-  return db.query.freeAudits.findFirst({ where: eq(freeAudits.id, id) })
-}
-```
-
-- [ ] **Step 4: 진단 잡**
-
-`src/trigger/free-audit.ts`:
-
-```ts
-import { logger, metadata, task } from '@trigger.dev/sdk'
-import { generateAuditQueries } from '@/lib/audit/queries'
-import { updateAudit } from '@/lib/audit/repository'
-import { buildAuditResult } from '@/lib/audit/result'
-import { detectMentions } from '@/lib/detection'
-import { getEngine } from '@/lib/engines'
-import { claudeJudge } from '@/lib/judge/claude'
-import { PLANS } from '@/lib/plans'
-import { computeMetrics } from '@/lib/stats/metrics'
-import type { AnswerRecord, DetectionRecord } from '@/lib/stats/metrics'
-
-export interface FreeAuditPayload {
-  auditId: string
-  brandName: string
-  category: string
-}
-
-/**
- * 무료 진단.
- *
- * 3질의 × 2엔진 × 1샘플 = 6호출로 10초 안팎. Vercel 함수 타임아웃 안에서
- * 동기 처리하면 위험하므로 잡으로 던지고 Realtime으로 진행률을 스트리밍한다.
- * 진행 문구 자체가 "이 도구가 진짜로 AI에 물어보고 있다"는 증거로 작동한다.
- */
-export const freeAudit = task({
-  id: 'free-audit',
-  maxDuration: 300,
-  run: async (payload: FreeAuditPayload) => {
-    const queries = generateAuditQueries(payload.category, payload.brandName)
-    const engineIds = PLANS.free.engines
-    const total = queries.length * engineIds.length
-
-    await updateAudit(payload.auditId, { status: 'running' })
-    metadata.set('progress', { done: 0, total, label: '준비 중…' })
-
-    const answers: (AnswerRecord & { text: string })[] = []
-    let done = 0
-
-    for (const [qi, query] of queries.entries()) {
-      for (const engineId of engineIds) {
-        const engine = getEngine(engineId)
-        const label =
-          engineId === 'chatgpt'
-            ? `ChatGPT에 물어보는 중… (${done + 1}/${total})`
-            : `Gemini에 물어보는 중… (${done + 1}/${total})`
-        metadata.set('progress', { done, total, label })
-
-        try {
-          const a = await engine.run(query, { sampleIndex: 0 })
-          answers.push({
-            id: `${qi}-${engineId}`,
-            queryId: `q${qi}`,
-            queryText: query,
-            engineId,
-            text: a.text,
-          })
-        } catch (error) {
-          logger.warn('free-audit.engine_failed', {
-            engineId,
-            error: error instanceof Error ? error.message : String(error),
-          })
-        }
-        done++
-        metadata.set('progress', { done, total, label })
-      }
-    }
-
-    if (answers.length === 0) {
-      await updateAudit(payload.auditId, { status: 'failed' })
-      throw new Error('모든 엔진 호출이 실패했습니다')
-    }
-
-    metadata.set('progress', { done: total, total, label: '결과를 정리하는 중…' })
-
-    const detections = await detectMentions(
-      answers.map((a) => ({
-        answerId: a.id,
-        answerText: a.text,
-        self: { canonical: payload.brandName, aliases: [], ambiguous: false },
-        competitors: [],
-      })),
-      claudeJudge,
-    )
-
-    const detectionRecords: DetectionRecord[] = detections.map((d) => {
-      const a = answers.find((x) => x.id === d.answerId)!
-      return {
-        answerId: d.answerId,
-        queryId: a.queryId,
-        engineId: a.engineId,
-        subject: d.subject,
-        mentioned: d.mentioned,
-        position: d.position,
-      }
-    })
-
-    const metrics = computeMetrics(answers, detectionRecords, { self: 'self', competitors: [] })
-
-    const result = buildAuditResult({
-      brandName: payload.brandName,
-      metrics,
-      answers,
-      mentions: detectionRecords,
-    })
-
-    await updateAudit(payload.auditId, { status: 'succeeded', result })
-    logger.info('free-audit.done', {
-      auditId: payload.auditId,
-      citedRate: metrics.citedRate.point,
-      answers: answers.length,
-    })
-
-    return { citedRate: metrics.citedRate.point }
-  },
-})
-```
-
-- [ ] **Step 5: 진단 시작 API**
-
-`src/app/api/audit/route.ts`:
-
-```ts
-import { NextResponse } from 'next/server'
-import { z } from 'zod'
-import { clientIpFrom, hashIp } from '@/lib/audit/hash'
-import { checkAuditLimits } from '@/lib/audit/limits'
-import {
-  countAuditsToday,
-  countBrandAuditsThisMonth,
-  createAudit,
-} from '@/lib/audit/repository'
-import { env } from '@/lib/env'
-import { logger } from '@/lib/logger'
-import { freeAudit } from '@/trigger/free-audit'
-
-const schema = z.object({
-  brandName: z.string().trim().min(1).max(60),
-  category: z.string().trim().min(1).max(40),
-  /** 결과 화면 노출 순서 실험 */
-  variant: z.enum(['cba', 'abc']).default('cba'),
-})
-
-export async function POST(request: Request) {
-  const body: unknown = await request.json().catch(() => null)
-  const parsed = schema.safeParse(body)
-  if (!parsed.success) {
-    return NextResponse.json({ error: '입력이 올바르지 않습니다.' }, { status: 400 })
-  }
-
-  const ipHash = hashIp(clientIpFrom(request.headers), env.AUDIT_IP_SALT)
-
-  const [counts, brandCount] = await Promise.all([
-    countAuditsToday(ipHash),
-    countBrandAuditsThisMonth(parsed.data.brandName),
-  ])
-
-  const verdict = checkAuditLimits({
-    ipCountToday: counts.ip,
-    globalCountToday: counts.global,
-    brandCountThisMonth: brandCount,
-  })
-
-  if (!verdict.allowed) {
-    logger.info('audit.rejected', { reason: verdict.reason, global: counts.global })
-    // 상한 소진 시 에러가 아니라 대기 등록으로 받아 리드는 확보한다.
-    if (verdict.allowWaitlist) {
-      const id = await createAudit({
-        brandName: parsed.data.brandName,
-        category: parsed.data.category,
-        ipHash,
-        variant: parsed.data.variant,
-        status: 'waitlisted',
-      })
-      return NextResponse.json(
-        { auditId: id, waitlisted: true, message: verdict.message },
-        { status: 202 },
-      )
-    }
-    return NextResponse.json({ error: verdict.message }, { status: 429 })
-  }
-
-  const auditId = await createAudit({
-    brandName: parsed.data.brandName,
-    category: parsed.data.category,
-    ipHash,
-    variant: parsed.data.variant,
-    status: 'queued',
-  })
-
-  const handle = await freeAudit.trigger({
-    auditId,
-    brandName: parsed.data.brandName,
-    category: parsed.data.category,
-  })
-
-  return NextResponse.json({
-    auditId,
-    runId: handle.id,
-    // Realtime 구독용 공개 토큰
-    publicAccessToken: handle.publicAccessToken,
-  })
-}
-```
-
-- [ ] **Step 6: 상한이 실제로 작동하는지 검증**
-
-**이것이 이 태스크에서 가장 중요한 검증이다.** 상한이 작동하지 않으면 트래픽이
-오는 순간 적자가 무한정 커진다.
+- [ ] **Step 6: 커밋**
 
 ```bash
-pnpm dev
-```
+git add src/lib/audit/result.ts src/lib/audit/result.test.ts
+git commit -m "feat(audit): 진단 리포트 구성 (증거 우선 · 경쟁사 순위 포함)
 
-다른 터미널에서:
+이메일 게이트가 사라져 결과를 쪼개지 않는다. 다만 evidence를 맨 앞에 두는
+순서는 유지한다 — 기다린 사람의 첫 질문은 '이거 진짜야?'이고, 숫자는 반박
+가능하지만 AI 답변 원문은 본인이 직접 확인할 수 있다.
 
-```bash
-# IP 일일 상한(3회) 검증 — 4번째가 429 또는 202(대기)여야 한다
-for i in 1 2 3 4; do
-  echo -n "요청 $i: "
-  curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:3000/api/audit \
-    -H 'content-type: application/json' \
-    -d "{\"brandName\":\"테스트$i\",\"category\":\"패션\"}"
-done
-```
+경쟁사 순위가 실제로 들어간다. 신청 폼이 경쟁사를 최대 3개 받고, 경쟁사를
+추가해도 API 호출은 늘지 않는다(같은 답변에서 탐지 대상만 늘어난다).
 
-Expected: 1~3번은 `200`, 4번은 `202` (대기 등록)
-
-```bash
-# 브랜드 월 1회 상한 검증 — 같은 브랜드로 두 번
-curl -s -X POST http://localhost:3000/api/audit -H 'content-type: application/json' \
-  -d '{"brandName":"중복테스트","category":"패션"}' | head -c 200; echo
-curl -s -X POST http://localhost:3000/api/audit -H 'content-type: application/json' \
-  -d '{"brandName":"중복테스트","category":"패션"}' | head -c 200; echo
-```
-
-Expected: 두 번째가 `429`와 "이번 달에 이미 진단했습니다" 메시지
-
-전체 일일 상한(100)은 `DAILY_GLOBAL_LIMIT`을 임시로 2로 낮춰 검증하고 원복한다.
-
-- [ ] **Step 7: 커밋**
-
-```bash
-git add -A
-git commit -m "feat(audit): 무료 진단 잡 · 진행률 스트리밍 · 상한 실제 작동 검증"
+경쟁사 미등록 시 shareOfVoice를 n=0으로 그대로 전달한다. '우리만 등록했으니
+점유율 100%'는 거짓말이고, 화면이 숨기려면 n을 볼 수 있어야 한다."
 ```
 
 ---
 
-### Task 8: 랜딩과 진단 결과 화면
+### Task 7: 운영자 CLI와 리포트 메일
 
 **Files:**
-- Create: `src/app/(marketing)/page.tsx`, `src/app/(marketing)/pricing/page.tsx`,
-  `src/components/audit/audit-form.tsx`, `src/components/audit/progress.tsx`,
-  `src/components/audit/result-view.tsx`,
-  `src/app/audit/[id]/page.tsx`,
-  `src/app/api/audit/[id]/email/route.ts`
-- Modify: `.env.example`
+- Create: `src/lib/audit/execute.ts`, `scripts/audit-list.mts`,
+  `scripts/audit-run.mts`
+- Modify: `src/lib/email/templates.ts`, `package.json`
+- Test: `src/lib/audit/execute.test.ts`, `src/lib/email/audit-report.test.ts`
 
 **Interfaces:**
-- Consumes: `POST /api/audit` (Task 7), `AuditResult` (Task 7)
-- Produces: 전환 퍼널 전체. 4단계 온보딩이 진단 결과를 재사용한다.
+- Consumes: `runCollection`·`buildFanout`·`buildPlanSnapshot` (Task 1·2),
+  `runDetection` (Task 3), `generateAuditQueries`·리포지토리 (Task 4),
+  `buildAuditResult` (Task 6), `claudeJudge` (2단계 Task 8)
+- Produces:
+  - `executeAudit(audit, deps): Promise<AuditResult>` — 순수 오케스트레이션
+  - `auditReportEmail({ result, url }): EmailContent`
+  - `pnpm audit:list` · `pnpm audit:run <id>` · `pnpm audit:reject <id>`
 
-> **UI 작업 지침:** 이 태스크 착수 전에 `frontend-design` 스킬을 호출한다.
-> 무료 진단 결과 화면은 **이 제품에서 전환이 일어나는 유일한 화면**이다.
-> 템플릿처럼 보이면 "이거 진짜야?"라는 첫 질문에 답하지 못한다.
+**이 태스크가 무료 진단의 실행 경로 전부다.** 자동 트리거가 없으므로
+여기서 실패하면 아무 일도 일어나지 않는다 — 조용한 실패가 아니라 **명시적으로
+`failed` 상태와 사유를 남겨야** 운영자가 재실행할 수 있다.
 
-- [ ] **Step 1: Realtime 패키지 설치**
+- [ ] **Step 1: 실행 오케스트레이션 실패 테스트**
+
+`src/lib/audit/execute.test.ts` — 실제 API를 부르지 않는다. 엔진과 판정기를
+주입해 **순서와 조립이 맞는지**만 본다.
+
+```ts
+import { describe, expect, it, vi } from 'vitest'
+import { executeAudit } from '@/lib/audit/execute'
+import type { CollectedAnswer } from '@/lib/collection/run'
+
+const audit = {
+  id: 'aud_1',
+  brandName: '무신사',
+  category: '패션',
+  competitors: ['29CM'],
+}
+
+function fakeAnswer(queryText: string, text: string): CollectedAnswer {
+  return {
+    queryId: queryText,
+    queryText,
+    engineId: 'gemini',
+    sampleIndex: 0,
+    text,
+    citations: [],
+    raw: {},
+    usage: { calls: 1, searches: 2, tokensIn: 10, tokensOut: 900 },
+    costMilliKrw: 42_400,
+  }
+}
+
+const deps = {
+  runOne: vi.fn(async (item: { queryText: string }) =>
+    fakeAnswer(item.queryText, `${item.queryText}에는 무신사가 좋습니다.`),
+  ),
+  judge: vi.fn(async (batch: { id: string }[]) =>
+    batch.map((r) => ({
+      id: r.id,
+      verdict: { isBrandReference: true, position: 1, sentiment: 'recommended' as const, context: '첫 번째로 언급' },
+    })),
+  ),
+  now: () => new Date('2026-07-30T02:00:00.000Z'),
+}
+
+describe('executeAudit', () => {
+  it('무료 플랜 설정대로 3질의 × 1샘플을 수집한다', async () => {
+    // ★ 이 수가 곧 원가다. 설정이 아니라 우연으로 늘어나면 예산이 조용히 샌다.
+    await executeAudit(audit, deps)
+    expect(deps.runOne).toHaveBeenCalledTimes(3)
+  })
+
+  it('질의에 브랜드명을 넣지 않는다', async () => {
+    deps.runOne.mockClear()
+    await executeAudit(audit, deps)
+    for (const [item] of deps.runOne.mock.calls) {
+      expect(item.queryText).not.toContain('무신사')
+    }
+  })
+
+  it('경쟁사를 판정 대상에 넣는다', async () => {
+    const result = await executeAudit(audit, deps)
+    expect(result.competitors).toEqual(['29CM'])
+    expect(result.ranking.some((r) => r.name === '29CM')).toBe(true)
+  })
+
+  it('측정 시각과 엔진 구성을 리포트에 박제한다', async () => {
+    const result = await executeAudit(audit, deps)
+    expect(result.measuredAt).toBe('2026-07-30T02:00:00.000Z')
+    expect(result.engines.length).toBeGreaterThan(0)
+  })
+
+  it('엔진이 하나 실패해도 나머지로 리포트를 만든다', async () => {
+    let n = 0
+    const flaky = {
+      ...deps,
+      runOne: vi.fn(async (item: { queryText: string }) => {
+        if (++n === 1) throw new Error('엔진 실패')
+        return fakeAnswer(item.queryText, '무신사가 좋습니다.')
+      }),
+    }
+    const result = await executeAudit(audit, flaky)
+    expect(result.totalAnswers).toBeGreaterThan(0)
+  })
+
+  it('전부 실패하면 던진다 (빈 리포트를 보내지 않는다)', async () => {
+    // ★ 답변 0건으로 만든 리포트는 "언급 0%"처럼 보인다. 측정 실패를 측정
+    //   결과로 배송하면 안 된다.
+    const dead = { ...deps, runOne: vi.fn(async () => { throw new Error('전부 실패') }) }
+    await expect(executeAudit(audit, dead)).rejects.toThrow(/수집/)
+  })
+
+  it('2차 판정이 실패해도 리포트를 만들고 미판정 수를 남긴다', async () => {
+    const noJudge = { ...deps, judge: vi.fn(async () => { throw new Error('판정 실패') }) }
+    const result = await executeAudit(audit, noJudge)
+    expect(result.unresolved).toBeGreaterThan(0)
+  })
+})
+```
+
+- [ ] **Step 2: 실패 확인**
 
 ```bash
-pnpm add @trigger.dev/react-hooks
+pnpm vitest run src/lib/audit/execute.test.ts
 ```
 
-- [ ] **Step 2: 랜딩 페이지**
+Expected: FAIL — 모듈 없음
 
-`src/app/(marketing)/page.tsx`:
+- [ ] **Step 3: 실행 오케스트레이션 구현**
 
-```tsx
-import { AuditForm } from '@/components/audit/audit-form'
-import { knownCategories } from '@/lib/audit/queries'
+`src/lib/audit/execute.ts`:
 
-export default function LandingPage() {
-  return (
-    <main>
-      <section className="mx-auto w-full max-w-3xl px-6 pb-16 pt-24 text-center">
-        <p className="mb-4 text-sm font-medium text-muted-foreground">
-          한국어 GEO 모니터링
-        </p>
-        <h1 className="text-balance text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
-          AI가 우리 브랜드를 추천하고 있을까?
-        </h1>
-        <p className="mx-auto mt-5 max-w-xl text-balance text-lg text-muted-foreground">
-          소비자는 이제 검색창이 아니라 AI에게 묻습니다. AI는 문장으로 답하므로
-          브랜드는 자기가 그 답변에 등장했는지 알 방법이 없습니다.
-          <strong className="text-foreground"> Cited는 대신 물어보고 기록합니다.</strong>
-        </p>
+```ts
+import { buildFanout } from '@/lib/collection/fanout'
+import { buildPlanSnapshot } from '@/lib/collection/plan-snapshot'
+import { runCollection, type CollectedAnswer, type RunCollectionDeps } from '@/lib/collection/run'
+import { runDetection } from '@/lib/detection/pipeline'
+import { DETECTOR_VERSION } from '@/lib/detection'
+import type { JudgeFn } from '@/lib/judge/types'
+import { PLANS } from '@/lib/plans'
+import { buildAuditResult, type AuditResult } from '@/lib/audit/result'
+import { generateAuditQueries } from '@/lib/audit/queries'
 
-        <div className="mx-auto mt-10 max-w-lg">
-          <AuditForm categories={knownCategories()} />
-        </div>
-        <p className="mt-3 text-sm text-muted-foreground">
-          20초 안에 결과가 나옵니다 · 카드 정보 필요 없음
-        </p>
-      </section>
-
-      <section className="border-t bg-muted/30">
-        <div className="mx-auto grid w-full max-w-4xl gap-8 px-6 py-16 sm:grid-cols-3">
-          {[
-            {
-              t: '월 400만원 컨설팅을 29만원에',
-              d: '국내 GEO 서비스는 전부 상담 후 견적입니다. Cited는 가격이 공개되어 있고 바로 시작합니다.',
-            },
-            {
-              t: '네이버 AI 브리핑까지',
-              d: '해외 도구는 네이버를 보지 않습니다. 국내 브랜드에게는 이게 가장 중요한 채널입니다.',
-            },
-            {
-              t: '챗봇이 아닙니다',
-              d: '매주 자동으로 물어보고 결과를 쌓습니다. 로그인하면 대시보드가 있고, 데이터는 알아서 쌓입니다.',
-            },
-          ].map((f) => (
-            <div key={f.t}>
-              <h2 className="font-semibold">{f.t}</h2>
-              <p className="mt-2 text-sm text-muted-foreground">{f.d}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-    </main>
-  )
+export interface AuditSubject {
+  id: string
+  brandName: string
+  category: string
+  competitors: string[]
 }
-```
 
-- [ ] **Step 3: 진단 폼**
-
-`src/components/audit/audit-form.tsx`:
-
-```tsx
-'use client'
-
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-
-export function AuditForm({ categories }: { categories: string[] }) {
-  const router = useRouter()
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  async function onSubmit(formData: FormData) {
-    setPending(true)
-    setError(null)
-
-    const res = await fetch('/api/audit', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        brandName: String(formData.get('brandName')),
-        category: String(formData.get('category')),
-        // 노출 순서 실험 — 방문자를 반씩 나눈다.
-        variant: Math.random() < 0.5 ? 'cba' : 'abc',
-      }),
-    })
-
-    const data = (await res.json()) as {
-      auditId?: string
-      runId?: string
-      publicAccessToken?: string
-      waitlisted?: boolean
-      message?: string
-      error?: string
-    }
-
-    setPending(false)
-
-    if (!res.ok && !data.waitlisted) {
-      setError(data.error ?? '진단을 시작하지 못했습니다.')
-      return
-    }
-    if (data.waitlisted) {
-      router.push(`/audit/${data.auditId}?waitlisted=1`)
-      return
-    }
-    router.push(
-      `/audit/${data.auditId}?run=${data.runId}&token=${data.publicAccessToken}`,
-    )
-  }
-
-  return (
-    <form action={onSubmit} className="flex flex-col gap-3">
-      <Input name="brandName" required placeholder="브랜드명 (예: 무신사)" className="h-12 text-base" />
-      <select
-        name="category"
-        required
-        className="h-12 rounded-md border bg-background px-3 text-base"
-        defaultValue=""
-      >
-        <option value="" disabled>
-          업종 선택
-        </option>
-        {categories.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      <Button type="submit" size="lg" disabled={pending} className="h-12 text-base">
-        {pending ? '시작하는 중…' : '무료로 진단하기'}
-      </Button>
-    </form>
-  )
-}
-```
-
-- [ ] **Step 4: 진행 화면**
-
-`src/components/audit/progress.tsx`:
-
-```tsx
-'use client'
-
-import { useRealtimeRun } from '@trigger.dev/react-hooks'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
-
-interface Progress {
-  done: number
-  total: number
-  label: string
+export interface ExecuteAuditDeps {
+  runOne?: RunCollectionDeps['runOne']
+  onProgress?: RunCollectionDeps['onProgress']
+  judge: JudgeFn
+  /** 테스트가 시각을 고정한다 */
+  now?: () => Date
 }
 
 /**
- * 진행 문구 자체가 "이 도구가 진짜로 AI에 물어보고 있다"는 증거로 작동한다.
- * 그래서 스피너 하나로 뭉개지 않고 엔진 이름과 진행 수를 그대로 보여준다.
+ * 무료 진단 1건을 처음부터 끝까지 실행한다.
+ *
+ * ★ DB에 쓰지 않는다. 저장은 호출자(CLI) 책임이고, 이 함수는 순수하게
+ *   "신청 → 리포트"만 한다. 그래야 실제 API 없이 테스트할 수 있다.
+ *
+ * ★ `collection_runs`/`answers`에도 쓰지 않는다. 무료 플랜은 이력이 없고
+ *   (`historyMonths: 0`), 저장하려면 가짜 브랜드 행을 만들어야 한다.
  */
-export function AuditProgress({
-  runId,
-  accessToken,
-  auditId,
-}: {
-  runId: string
-  accessToken: string
-  auditId: string
-}) {
-  const router = useRouter()
-  const { run } = useRealtimeRun(runId, { accessToken })
+export async function executeAudit(
+  subject: AuditSubject,
+  deps: ExecuteAuditDeps,
+): Promise<AuditResult> {
+  const now = deps.now ?? (() => new Date())
 
-  const progress = run?.metadata?.progress as Progress | undefined
-  const pct = progress && progress.total > 0 ? (progress.done / progress.total) * 100 : 0
+  // 1. 질의 생성 — 브랜드명은 넣지 않는다 (queries.ts 주석 참고)
+  const texts = generateAuditQueries(subject.category, subject.brandName)
+  const queries = texts.map((text, i) => ({ id: `q${i + 1}`, text }))
 
-  useEffect(() => {
-    if (run?.status === 'COMPLETED') router.refresh()
-  }, [run?.status, router])
+  // 2. 무료 플랜 설정 그대로 팬아웃. 수동이라고 늘리지 않는다.
+  const snapshot = buildPlanSnapshot({
+    plan: 'free',
+    queryPacks: 0,
+    queryIds: queries.map((q) => q.id),
+    detectorVersion: DETECTOR_VERSION,
+  })
+  const items = buildFanout(snapshot, queries)
 
-  if (run?.status === 'FAILED' || run?.status === 'CRASHED') {
-    return (
-      <div className="mx-auto max-w-md py-24 text-center">
-        <h1 className="text-xl font-semibold">진단에 실패했습니다</h1>
-        <p className="mt-2 text-muted-foreground">
-          잠시 후 다시 시도해 주세요. 문제가 계속되면 알려주세요.
-        </p>
-      </div>
+  // 3. 수집
+  const collected = await runCollection(items, {
+    ...(deps.runOne ? { runOne: deps.runOne } : {}),
+    ...(deps.onProgress ? { onProgress: deps.onProgress } : {}),
+  })
+
+  if (collected.answers.length === 0) {
+    // 답변 0건으로 만든 리포트는 "언급 0%"처럼 보인다.
+    // 측정 실패를 측정 결과로 배송하면 안 된다.
+    throw new Error(
+      `수집이 전부 실패했습니다 (${collected.outcomes.length}회 시도). 재실행하세요.`,
     )
   }
 
-  return (
-    <div className="mx-auto max-w-md py-24 text-center">
-      <h1 className="text-xl font-semibold tracking-tight">AI에게 물어보는 중입니다</h1>
-      <p className="mt-2 h-6 text-muted-foreground" aria-live="polite">
-        {progress?.label ?? '준비 중…'}
-      </p>
-      <div
-        className="mt-8 h-2 overflow-hidden rounded-full bg-muted"
-        role="progressbar"
-        aria-valuenow={Math.round(pct)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      >
-        <div
-          className="h-full rounded-full bg-foreground transition-[width] duration-500"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <p className="mt-3 text-sm text-muted-foreground">
-        {progress ? `${progress.done} / ${progress.total}` : ''}
-      </p>
-    </div>
+  // 4. 판정·집계. 2차가 실패해도 리포트는 만든다 — 이미 돈을 쓴 데이터다.
+  const detection = await runDetection(
+    {
+      answers: collected.answers,
+      self: { canonical: subject.brandName, aliases: [], ambiguous: false },
+      competitors: subject.competitors.map((name) => ({
+        canonical: name,
+        aliases: [],
+        ambiguous: false,
+      })),
+    },
+    deps.judge,
   )
+
+  return buildAuditResult({
+    brandName: subject.brandName,
+    category: subject.category,
+    competitors: subject.competitors,
+    engines: [...PLANS.free.engines],
+    measuredAt: now().toISOString(),
+    metrics: detection.metrics,
+    answers: collected.answers.map(toResultAnswer),
+    detections: [...detection.detections.values()].flat().map((d) => ({
+      answerId: d.answerId,
+      subject: d.subject,
+      mentioned: d.mentioned,
+      position: d.position,
+      context: d.context,
+      sentiment: d.sentiment,
+      unresolved: d.unresolved,
+    })),
+    unresolved: detection.unresolved,
+  })
+}
+
+/** 답변 식별자는 질의·엔진·샘플의 조합이다 (무료 진단은 DB id가 없다). */
+export function answerId(a: CollectedAnswer): string {
+  return `${a.queryId}:${a.engineId}:${a.sampleIndex}`
+}
+
+function toResultAnswer(a: CollectedAnswer) {
+  return { id: answerId(a), queryText: a.queryText, engineId: a.engineId, text: a.text }
 }
 ```
 
-- [ ] **Step 5: 결과 화면 — C → B → A**
+> `runDetection`이 돌려주는 `DetectionResult`에 `answerId`가 없다면
+> `detections` Map의 키가 곧 `answerId`이므로 `[...map.entries()].flatMap(([id, rows]) =>
+> rows.map((r) => ({ ...r, answerId: id })))`로 만든다. Task 3에서 어느 쪽으로
+> 정했는지 확인하고 맞춘다.
 
-`src/components/audit/result-view.tsx`:
+- [ ] **Step 4: 통과 확인**
 
-```tsx
-'use client'
+```bash
+pnpm vitest run src/lib/audit/execute.test.ts
+```
 
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+Expected: PASS (7 passed)
+
+- [ ] **Step 5: 리포트 메일 실패 테스트**
+
+`src/lib/email/audit-report.test.ts`:
+
+```ts
+import { describe, expect, it } from 'vitest'
+import { auditReportEmail } from '@/lib/email/templates'
+import { wilsonInterval } from '@/lib/stats/wilson'
+
+const result = {
+  version: 1,
+  brandName: '무신사',
+  category: '패션',
+  competitors: ['29CM'],
+  engines: ['gemini'],
+  measuredAt: '2026-07-30T02:00:00.000Z',
+  totalAnswers: 3,
+  citedRate: wilsonInterval(1, 3),
+  shareOfVoice: wilsonInterval(1, 3),
+  ranking: [
+    { name: '29CM', mentions: 2, isSelf: false },
+    { name: '무신사', mentions: 1, isSelf: true },
+  ],
+  evidence: [
+    { query: '러닝화 추천', engineId: 'gemini', text: '무신사가 좋습니다.', mentioned: true, context: '첫 번째로 언급', sentiment: 'recommended' as const },
+  ],
+  byEngine: { gemini: wilsonInterval(1, 3) },
+  byQuery: [{ queryText: '러닝화 추천', interval: wilsonInterval(0, 1) }],
+  unresolved: 0,
+}
+
+const url = 'https://cited.co.kr/audit/aud_1'
+
+describe('auditReportEmail', () => {
+  it('제목에 브랜드명과 언급률을 담는다', () => {
+    const mail = auditReportEmail({ result, url })
+    expect(mail.subject).toContain('무신사')
+    expect(mail.subject).toMatch(/\d+%/)
+  })
+
+  it('신뢰구간을 숫자와 함께 보여준다', () => {
+    // ★ 33%만 쓰면 거짓말이다. 3회 측정 1건이면 구간이 [2%, 87%]다.
+    //   이 넓이를 숨기면 첫 유료 리포트에서 숫자가 달라졌을 때 답할 수 없다.
+    const mail = auditReportEmail({ result, url })
+    expect(mail.html).toContain('33%')
+    expect(mail.html).toMatch(/\d+%\s*~\s*\d+%/)
+  })
+
+  it('측정 횟수가 적다는 사실과 유료의 차이를 말한다', () => {
+    const mail = auditReportEmail({ result, url })
+    expect(mail.html).toMatch(/1회|3회 측정|주 3회/)
+  })
+
+  it('전체 리포트 링크를 담는다', () => {
+    expect(auditReportEmail({ result, url }).html).toContain(url)
+  })
+
+  it('증거 원문을 담는다', () => {
+    expect(auditReportEmail({ result, url }).html).toContain('무신사가 좋습니다.')
+  })
+
+  it('경쟁사가 없으면 Share of Voice를 아예 쓰지 않는다', () => {
+    // n=0은 "측정 없음"이다. 0%로 보이면 안 된다.
+    const noCompetitors = {
+      ...result,
+      competitors: [],
+      shareOfVoice: wilsonInterval(0, 0),
+      ranking: [{ name: '무신사', mentions: 1, isSelf: true }],
+    }
+    const mail = auditReportEmail({ result: noCompetitors, url })
+    expect(mail.html).not.toContain('Share of Voice')
+    expect(mail.html).not.toContain('점유율')
+  })
+
+  it('미판정이 있으면 표시한다', () => {
+    const mail = auditReportEmail({ result: { ...result, unresolved: 2 }, url })
+    expect(mail.html).toMatch(/미판정|판정하지 못/)
+  })
+
+  it('HTML을 이스케이프한다', () => {
+    const mail = auditReportEmail({
+      result: { ...result, brandName: '<img src=x onerror=alert(1)>' },
+      url,
+    })
+    expect(mail.html).not.toContain('<img src=x')
+  })
+})
+```
+
+- [ ] **Step 6: 실패 확인 후 리포트 메일 구현**
+
+```bash
+pnpm vitest run src/lib/email/audit-report.test.ts
+```
+
+Expected: FAIL — `auditReportEmail`이 export되지 않음
+
+`src/lib/email/templates.ts`에 추가한다:
+
+```ts
 import type { AuditResult } from '@/lib/audit/result'
 import { formatInterval, formatPercent } from '@/lib/stats/wilson'
 
-const ENGINE_LABEL: Record<string, string> = {
-  chatgpt: 'ChatGPT',
-  gemini: 'Gemini',
-  naver: '네이버 AI 브리핑',
-  google_aio: 'Google AI Overviews',
-}
+export function auditReportEmail(params: { result: AuditResult; url: string }): EmailContent {
+  const { result, url } = params
+  const brand = escapeHtml(result.brandName)
+  const rate = formatPercent(result.citedRate.point)
 
-export function AuditResultView({
-  auditId,
-  result,
-  variant,
-  emailCaptured,
-}: {
-  auditId: string
-  result: AuditResult
-  variant: string
-  emailCaptured: boolean
-}) {
-  const [unlocked, setUnlocked] = useState(emailCaptured)
-
-  const evidence = (
-    <section>
-      <h2 className="text-sm font-medium text-muted-foreground">실제 AI 답변</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        직접 ChatGPT를 열어 같은 질문을 해보세요. 우리가 받은 답변과 비교할 수 있습니다.
-      </p>
-      <div className="mt-4 space-y-3">
-        {result.evidence.map((e, i) => (
-          <Card key={i} className="p-5">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">
-                {ENGINE_LABEL[e.engineId] ?? e.engineId}
-              </span>
-              <span>·</span>
-              <span>&ldquo;{e.query}&rdquo;</span>
-              {e.mentioned ? (
-                <span className="ml-auto rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">
-                  언급됨
-                </span>
-              ) : (
-                <span className="ml-auto rounded-full bg-muted px-2 py-0.5">미언급</span>
-              )}
-            </div>
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{e.text}</p>
-          </Card>
-        ))}
-      </div>
-    </section>
-  )
-
-  const ranking = (
-    <section>
-      <h2 className="text-sm font-medium text-muted-foreground">이번 측정 결과</h2>
-      <Card className="mt-4 p-6">
-        <div className="text-3xl font-bold tracking-tight">
-          {formatPercent(result.citedRate.point)}
+  const evidence = result.evidence
+    .map(
+      (e) => `
+      <div style="margin:0 0 16px;padding:14px;border:1px solid #e5e5e5;border-radius:8px">
+        <div style="margin:0 0 6px;font-size:13px;color:#666">
+          질문: ${escapeHtml(e.query)} · ${escapeHtml(e.engineId)}
+          ${e.mentioned ? '<span style="color:#0a7">· 언급됨</span>' : '<span style="color:#999">· 언급 없음</span>'}
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {result.totalAnswers}번 물어봤을 때 {result.ranking[0]?.mentions ?? 0}번 언급되었습니다
-        </p>
-      </Card>
-    </section>
-  )
+        <div style="white-space:pre-wrap;line-height:1.6">${escapeHtml(e.text)}</div>
+      </div>`,
+    )
+    .join('')
 
-  const fullMetrics = unlocked ? (
-    <section>
-      <h2 className="text-sm font-medium text-muted-foreground">전체 지표</h2>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <Card className="p-5">
-          <h3 className="text-sm font-medium">엔진별</h3>
-          <dl className="mt-3 space-y-1.5 text-sm">
-            {Object.entries(result.byEngine).map(([id, ci]) => (
-              <div key={id} className="flex justify-between">
-                <dt className="text-muted-foreground">{ENGINE_LABEL[id] ?? id}</dt>
-                <dd className="font-medium tabular-nums">{formatPercent(ci.point)}</dd>
-              </div>
-            ))}
-          </dl>
-        </Card>
-        <Card className="p-5">
-          <h3 className="text-sm font-medium">질의별</h3>
-          <dl className="mt-3 space-y-1.5 text-sm">
-            {result.byQuery.map((q) => (
-              <div key={q.queryText} className="flex justify-between gap-3">
-                <dt className="truncate text-muted-foreground">{q.queryText}</dt>
-                <dd className="shrink-0 font-medium tabular-nums">
-                  {q.interval.k}/{q.interval.n}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </Card>
-      </div>
-      <Card className="mt-4 p-5">
-        <p className="text-sm text-muted-foreground">
-          이 진단은 {result.totalAnswers}회 측정 기준이라 신뢰구간이 넓습니다
-          ({formatInterval(result.citedRate)}). 유료 플랜은 매주 약 100~300회를
-          측정하므로 훨씬 정밀한 추세를 볼 수 있습니다.
-        </p>
-        <Button asChild className="mt-4">
-          <a href="/pricing">매주 자동 추적 시작하기</a>
-        </Button>
-      </Card>
-    </section>
-  ) : (
-    <EmailGate auditId={auditId} onUnlock={() => setUnlocked(true)} />
-  )
+  const ranking = result.ranking
+    .map(
+      (r) => `<tr>
+        <td style="padding:6px 12px 6px 0">${r.isSelf ? `<strong>${escapeHtml(r.name)}</strong>` : escapeHtml(r.name)}</td>
+        <td style="padding:6px 0">${r.mentions}회 / ${result.totalAnswers}개 답변</td>
+      </tr>`,
+    )
+    .join('')
 
-  // 노출 순서는 가설이다. variant로 실험하고 전환 결과를 함께 기록한다.
-  const order = variant === 'abc' ? [fullMetrics, ranking, evidence] : [evidence, ranking, fullMetrics]
+  // ★ 경쟁사가 없으면 Share of Voice를 통째로 뺀다. n=0은 "측정 없음"이고,
+  //   0%로 보이면 거짓 정보가 된다.
+  const sov =
+    result.shareOfVoice.n > 0
+      ? `<p style="margin:0 0 24px">
+           <strong>Share of Voice ${formatPercent(result.shareOfVoice.point)}</strong>
+           — 등록한 경쟁사(${escapeHtml(result.competitors.join(', '))}) 대비 언급 점유율입니다.
+         </p>`
+      : ''
 
-  return (
-    <main className="mx-auto w-full max-w-2xl space-y-12 px-6 py-14">
-      <header>
-        <h1 className="text-xl font-semibold tracking-tight">
-          {result.brandName} · Cited Rate {formatPercent(result.citedRate.point)}
-        </h1>
-      </header>
-      {order.map((block, i) => (
-        <div key={i}>{block}</div>
-      ))}
-    </main>
-  )
-}
+  const unresolved =
+    result.unresolved > 0
+      ? `<p style="margin:0 0 16px;color:#a60">${result.unresolved}건은 판정하지 못해 결과에서 제외했습니다.</p>`
+      : ''
 
-function EmailGate({ auditId, onUnlock }: { auditId: string; onUnlock: () => void }) {
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  async function onSubmit(formData: FormData) {
-    setPending(true)
-    setError(null)
-    const res = await fetch(`/api/audit/${auditId}/email`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: String(formData.get('email')) }),
-    })
-    setPending(false)
-    if (!res.ok) {
-      setError('등록에 실패했습니다. 다시 시도해 주세요.')
-      return
-    }
-    onUnlock()
-  }
-
-  return (
-    <Card className="border-dashed p-6">
-      <h2 className="font-semibold">엔진별 · 질의별 전체 지표 보기</h2>
-      <p className="mt-1.5 text-sm text-muted-foreground">
-        어떤 엔진에서 약한지, 어떤 질문에서 아예 안 나오는지 확인하세요.
-        이메일로 리포트도 함께 보내드립니다.
+  return {
+    subject: `[Cited] ${result.brandName} AI 언급률 ${rate} — 진단 리포트`,
+    html: layout(`
+      <h1 style="margin:0 0 8px;font-size:22px">${brand} 진단 리포트</h1>
+      <p style="margin:0 0 24px;color:#666;font-size:14px">
+        ${escapeHtml(result.category)} 카테고리 · ${escapeHtml(result.engines.join(', '))} ·
+        ${escapeHtml(result.measuredAt.slice(0, 10))} 측정
       </p>
-      <form action={onSubmit} className="mt-4 flex gap-2">
-        <Input name="email" type="email" required placeholder="you@company.com" />
-        <Button type="submit" disabled={pending}>
-          {pending ? '…' : '전체 보기'}
-        </Button>
-      </form>
-      {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
-    </Card>
-  )
+
+      <div style="margin:0 0 24px;padding:20px;background:#fafafa;border-radius:10px">
+        <div style="font-size:34px;font-weight:700;line-height:1.1">${rate}</div>
+        <div style="margin-top:6px;color:#555">
+          답변 ${result.totalAnswers}개 중 ${result.citedRate.k}개에서 언급 ·
+          신뢰구간 ${formatInterval(result.citedRate)}
+        </div>
+      </div>
+
+      <p style="margin:0 0 24px;padding:14px;border-left:3px solid #ddd;color:#555;font-size:14px">
+        무료 진단은 <strong>질의 3개를 1회</strong> 측정합니다. 그래서 신뢰구간이
+        ${formatInterval(result.citedRate)}로 넓습니다 — 이 범위 안 어디든 될 수 있다는 뜻입니다.
+        유료 플랜은 <strong>주 3회</strong> 측정해 이 구간을 좁히고, 주간 변화를 판정합니다.
+        1회 측정으로는 변화를 알 수 없습니다.
+      </p>
+
+      ${sov}
+      ${unresolved}
+
+      <h2 style="margin:0 0 12px;font-size:17px">브랜드별 언급 횟수</h2>
+      <table style="border-collapse:collapse;margin:0 0 28px">${ranking}</table>
+
+      <h2 style="margin:0 0 12px;font-size:17px">실제 AI 답변</h2>
+      <p style="margin:0 0 14px;color:#666;font-size:14px">
+        같은 질문을 직접 물어보시면 비슷한 답을 확인하실 수 있습니다.
+      </p>
+      ${evidence}
+
+      <p style="margin:24px 0 0">
+        <a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 20px;border-radius:8px;background:#111;color:#fff;text-decoration:none">전체 리포트 보기</a>
+      </p>
+    `),
+  }
 }
 ```
 
-- [ ] **Step 6: 진단 페이지와 이메일 게이트 API**
+- [ ] **Step 7: 통과 확인**
+
+```bash
+pnpm vitest run src/lib/email/audit-report.test.ts
+```
+
+Expected: PASS (8 passed)
+
+- [ ] **Step 8: CLI 두 개 작성**
+
+`scripts/audit-list.mts`:
+
+```ts
+/**
+ * 실행 대기 중인 진단 신청 목록.
+ *
+ *   pnpm audit:list
+ */
+import { listPendingAudits, listRecentAudits } from '@/lib/audit/repository'
+import { maskEmail } from '@/lib/email/send'
+
+const pending = await listPendingAudits()
+const recent = await listRecentAudits(10)
+
+if (pending.length === 0) {
+  console.log('대기 중인 진단이 없습니다.')
+} else {
+  console.log(`대기 ${pending.length}건 (오래된 순)\n`)
+  for (const a of pending) {
+    const waited = Math.round((Date.now() - a.createdAt.getTime()) / 3_600_000)
+    const flag = a.status === 'failed' ? ' [실패·재실행 필요]' : ''
+    console.log(`  ${a.id}`)
+    console.log(
+      `    ${a.brandName} · ${a.category} · 경쟁사 ${a.competitors.length}개 · ` +
+        `${maskEmail(a.email)} · ${waited}시간 경과${flag}`,
+    )
+    if (a.failureReason) console.log(`    사유: ${a.failureReason}`)
+    console.log(`    실행: pnpm audit:run ${a.id}`)
+  }
+}
+
+console.log('\n최근 10건:')
+for (const a of recent) {
+  console.log(`  ${a.status.padEnd(9)} ${a.brandName.padEnd(16)} ${a.createdAt.toISOString().slice(0, 16)}`)
+}
+
+// ★ 24시간을 넘긴 대기 건은 약속 위반이다. 눈에 띄게 경고한다.
+const overdue = pending.filter((a) => Date.now() - a.createdAt.getTime() > 24 * 3_600_000)
+if (overdue.length > 0) {
+  console.warn(`\n⚠ 24시간을 넘긴 신청이 ${overdue.length}건 있습니다. '영업일 1일 이내'를 약속했습니다.`)
+}
+```
+
+`scripts/audit-run.mts`:
+
+```ts
+/**
+ * 진단 1건을 실행하고 리포트를 메일로 보낸다.
+ *
+ *   pnpm audit:run aud_xxx          실행 후 발송
+ *   pnpm audit:run aud_xxx --dry    실행만 하고 발송하지 않는다 (결과 확인용)
+ *
+ * ★ --dry를 먼저 써라. 초기에는 리포트를 눈으로 보고 나서 보내야 한다.
+ *   자동 공개로 넘어가는 기준이 "손으로 고칠 게 없어진 시점"이다.
+ */
+import { executeAudit } from '@/lib/audit/execute'
+import { getAudit, markFailed, markRunning, markSent } from '@/lib/audit/repository'
+import { claudeJudge } from '@/lib/judge/claude'
+import { sendEmail } from '@/lib/email/send'
+import { auditReportEmail } from '@/lib/email/templates'
+import { env } from '@/lib/env'
+import { formatInterval, formatPercent } from '@/lib/stats/wilson'
+
+const [auditId, ...flags] = process.argv.slice(2)
+const dry = flags.includes('--dry')
+
+if (!auditId) {
+  console.error('사용법: pnpm audit:run <auditId> [--dry]')
+  process.exit(1)
+}
+
+const audit = await getAudit(auditId)
+if (!audit) {
+  console.error(`신청을 찾을 수 없습니다: ${auditId}`)
+  process.exit(1)
+}
+if (!audit.emailVerified) {
+  // ★ 인증 전에는 절대 실행하지 않는다. 이 게이트가 유일한 방어선이다.
+  console.error(`이메일이 인증되지 않았습니다 (status=${audit.status}). 실행하지 않습니다.`)
+  process.exit(1)
+}
+if (audit.status === 'sent' && !dry) {
+  console.error(`이미 발송된 진단입니다 (${audit.sentAt?.toISOString()}). 다시 보내려면 --dry로 확인 후 수동 처리하세요.`)
+  process.exit(1)
+}
+
+console.log(`실행: ${audit.brandName} (${audit.category})`)
+console.log(`경쟁사: ${audit.competitors.join(', ') || '없음'}`)
+
+if (!dry) await markRunning(audit.id)
+
+const started = Date.now()
+let result
+try {
+  result = await executeAudit(
+    {
+      id: audit.id,
+      brandName: audit.brandName,
+      category: audit.category,
+      competitors: audit.competitors,
+    },
+    {
+      judge: claudeJudge,
+      onProgress: (done, total) => process.stdout.write(`\r  수집 ${done}/${total}`),
+    },
+  )
+  process.stdout.write('\n')
+} catch (error) {
+  const reason = error instanceof Error ? error.message : String(error)
+  console.error(`\n실패: ${reason}`)
+  if (!dry) await markFailed(audit.id, reason)
+  process.exit(1)
+}
+
+console.log(`\n소요 ${Math.round((Date.now() - started) / 1000)}초`)
+console.log(`언급률 ${formatPercent(result.citedRate.point)} (${formatInterval(result.citedRate)})`)
+console.log(`답변 ${result.totalAnswers}개 · 미판정 ${result.unresolved}건`)
+console.log('\n순위:')
+for (const r of result.ranking) {
+  console.log(`  ${r.isSelf ? '▶' : ' '} ${r.name.padEnd(16)} ${r.mentions}회`)
+}
+console.log('\n증거:')
+for (const e of result.evidence) {
+  console.log(`  [${e.mentioned ? '언급' : '미언급'}] ${e.query}`)
+  console.log(`    ${e.text.slice(0, 120)}…`)
+}
+
+if (dry) {
+  console.log('\n--dry 모드입니다. 저장·발송하지 않았습니다.')
+  process.exit(0)
+}
+
+const url = `${env.NEXT_PUBLIC_APP_URL}/audit/${audit.id}`
+await markSent(audit.id, result)
+
+const sent = await sendEmail({ to: audit.email, content: auditReportEmail({ result, url }) })
+if (!sent.ok) {
+  // 결과는 이미 저장됐다. 메일만 실패했으므로 링크를 직접 전달할 수 있다.
+  console.error(`\n리포트는 저장했지만 메일 발송에 실패했습니다: ${sent.reason}`)
+  console.error(`수동 전달용 링크: ${url}`)
+  process.exit(1)
+}
+
+console.log(`\n발송 완료 → ${url}`)
+```
+
+`package.json`의 `scripts`에 추가한다:
+
+```json
+    "audit:list": "tsx --env-file=.env.local scripts/audit-list.mts",
+    "audit:run": "tsx --env-file=.env.local scripts/audit-run.mts"
+```
+
+- [ ] **Step 9: 실제 1건 실행 (dry)**
+
+DB에 인증된 신청이 있어야 한다. Task 5의 통합 테스트가 만든 건을 쓰거나,
+로컬 개발 서버에서 직접 신청하고 인증 링크를 눌러 만든다.
+
+```bash
+pnpm audit:list
+pnpm audit:run <id> --dry
+```
+
+Expected: 3회 수집, 언급률과 증거가 출력되고 **저장·발송하지 않는다.**
+
+**이때 반드시 눈으로 확인할 것:**
+
+- 질의 3개에 브랜드명이 들어가지 않았는가
+- 증거 원문이 실제 한국어 답변인가 (영어로 답했다면 systemInstruction 문제)
+- 언급 판정이 눈으로 봐도 맞는가 — **틀렸다면 2단계 판정 로직을 고쳐야 한다.
+  이것이 수동 배송을 택한 이유다**
+- 소요 시간을 기록한다. 자동화 시점을 결정할 숫자다
+
+- [ ] **Step 10: 커밋**
+
+```bash
+git add src/lib/audit/execute.ts src/lib/audit/execute.test.ts src/lib/email scripts package.json
+git commit -m "feat(audit): 운영자 CLI와 리포트 메일
+
+무료 진단은 자동 트리거가 없다. audit:list로 대기 목록을 보고 audit:run으로
+실행한다. --dry는 저장·발송 없이 결과만 보여준다 — 초기에는 반드시 이걸로
+눈으로 확인하고 보낸다. 자동 공개로 넘어가는 기준은 '손으로 고칠 게 없어진
+시점'이다.
+
+executeAudit은 DB에 쓰지 않는다. 저장은 CLI 책임이고 이 함수는 신청→리포트만
+한다. 그래야 실제 API 없이 테스트할 수 있다.
+
+수집이 전부 실패하면 던진다. 답변 0건으로 만든 리포트는 '언급 0%'처럼 보이고,
+측정 실패를 측정 결과로 배송하면 안 된다. 2차 판정 실패는 던지지 않고
+unresolved로 세어 리포트에 표시한다 — 이미 돈을 쓴 수집 데이터다.
+
+리포트 메일은 신뢰구간을 숫자와 함께 보여준다. 33%만 쓰면 거짓말이고,
+3회 측정 1건의 구간은 [2%, 87%]다. 이 넓이가 곧 유료 전환의 근거다."
+```
+
+---
+
+### Task 8: 랜딩 · 신청 폼 · 리포트 화면
+
+**Files:**
+- Create: `src/app/(marketing)/page.tsx`, `src/app/(marketing)/pricing/page.tsx`,
+  `src/components/audit/request-form.tsx`,
+  `src/components/audit/result-view.tsx`,
+  `src/app/audit/requested/page.tsx`, `src/app/audit/[id]/page.tsx`
+- Test: `src/components/audit/result-view.test.tsx`
+
+**Interfaces:**
+- Consumes: `POST /api/audit/request` (Task 5), `AuditResult` (Task 6),
+  `KNOWN_CATEGORIES`·`MAX_COMPETITORS` (Task 4·5), `PLANS` (1단계)
+- Produces: 전환 퍼널 전체. 4단계 온보딩이 `free_audits.result`를 재사용한다.
+
+> **UI 작업 지침:** 이 태스크 착수 전에 `frontend-design` 스킬을 호출한다.
+> 랜딩과 리포트는 **이 제품에서 전환이 일어나는 두 화면**이다. 템플릿처럼
+> 보이면 "이거 진짜야?"라는 첫 질문에 답하지 못한다.
+
+**최초 계획에서 사라진 것:** 진행률 화면(`progress.tsx`)과 Realtime 구독.
+진단이 즉시 실행되지 않으므로 보여줄 진행률이 없다. `@trigger.dev/react-hooks`도
+설치하지 않는다.
+
+**대신 반드시 있어야 하는 것:** 신청 → 인증 → 대기 사이에서 사용자가 **지금
+무슨 상태인지** 알 수 있어야 한다. 즉시 결과를 포기했으므로 이 안내가 부실하면
+그대로 이탈한다.
+
+- [ ] **Step 1: 신청 폼**
+
+`src/components/audit/request-form.tsx` — 클라이언트 컴포넌트.
+
+핵심 요구사항 (구현 시 반드시 지킬 것):
+
+1. 필드는 **브랜드명 · 카테고리 · 경쟁사(선택, 최대 3) · 이메일** 넷.
+   카테고리는 `KNOWN_CATEGORIES`를 datalist로 제안하되 자유 입력을 막지 않는다.
+2. **경쟁사 입력란을 눈에 띄게 둔다.** 경쟁사를 넣으면 Share of Voice가 나오고
+   그것이 가장 강한 후킹인데, 넣지 않으면 `n=0`이라 아예 표시되지 않는다.
+   "경쟁사를 넣으면 점유율 비교를 함께 보내드립니다"라고 명시한다.
+3. **네트워크 예외를 반드시 잡는다.** 1단계 인증 폼에서 겪은 것과 같은 문제다 —
+   오프라인·DNS 실패에서 `fetch`는 `{ error }`를 돌려주지 않고 **던진다**:
+
+```tsx
+    let res: Response
+    try {
+      res = await fetch('/api/audit/request', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(values),
+      })
+    } catch {
+      setError('요청을 보내지 못했습니다. 연결을 확인하고 다시 시도해 주세요.')
+      setPending(false)
+      return
+    }
+
+    const data: unknown = await res.json().catch(() => null)
+    if (!res.ok) {
+      const message =
+        typeof data === 'object' && data !== null && 'error' in data
+          ? String((data as { error: unknown }).error)
+          : '신청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+      setError(message)
+      setPending(false)
+      return
+    }
+    router.push('/audit/requested?state=sent')
+```
+
+4. **제출 버튼 문구가 기대를 설정한다.** "무료로 진단받기"가 아니라
+   **"무료 진단 신청하기"**다. 즉시 결과가 아니라는 것을 버튼에서부터 알린다.
+5. 버튼 아래에 작게: **"확인 메일을 보내드립니다. 확인 후 영업일 1일 이내에
+   리포트를 메일로 보내드립니다."**
+
+- [ ] **Step 2: 안내 화면**
+
+`src/app/audit/requested/page.tsx` — `?state=` 쿼리로 네 가지를 보여준다.
+서버 컴포넌트로 충분하다.
+
+| state | 화면 |
+| --- | --- |
+| `sent` | "메일함을 확인해 주세요" + 스팸함 안내 + 재신청 링크 |
+| `verified` | "확인됐습니다. 영업일 1일 이내에 리포트를 보내드립니다" |
+| `already` | "이미 확인된 신청입니다. 리포트를 준비 중입니다" |
+| `invalid` | "링크가 만료되었거나 올바르지 않습니다" + 다시 신청 링크 |
+
+`already`를 **오류로 보여주지 않는 것이 중요하다.** 메일 링크를 두 번 누르는
+것은 흔하고, 그게 오류처럼 보이면 사용자는 무언가 잘못됐다고 믿는다.
+
+- [ ] **Step 3: 리포트 화면 실패 테스트**
+
+`src/components/audit/result-view.test.tsx`:
+
+```tsx
+import { render, screen } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+import { ResultView } from '@/components/audit/result-view'
+import { wilsonInterval } from '@/lib/stats/wilson'
+
+const base = {
+  version: 1,
+  brandName: '무신사',
+  category: '패션',
+  competitors: ['29CM'],
+  engines: ['gemini'],
+  measuredAt: '2026-07-30T02:00:00.000Z',
+  totalAnswers: 3,
+  citedRate: wilsonInterval(1, 3),
+  shareOfVoice: wilsonInterval(1, 3),
+  ranking: [
+    { name: '29CM', mentions: 2, isSelf: false },
+    { name: '무신사', mentions: 1, isSelf: true },
+  ],
+  evidence: [
+    { query: '러닝화 추천', engineId: 'gemini', text: '무신사가 좋습니다.', mentioned: true, context: '첫 번째로 언급', sentiment: 'recommended' as const },
+  ],
+  byEngine: { gemini: wilsonInterval(1, 3) },
+  byQuery: [{ queryText: '러닝화 추천', interval: wilsonInterval(0, 1) }],
+  unresolved: 0,
+}
+
+describe('ResultView', () => {
+  it('언급률과 신뢰구간을 함께 보여준다', () => {
+    render(<ResultView result={base} />)
+    expect(screen.getByText('33%')).toBeInTheDocument()
+    expect(screen.getByText(/2%\s*~\s*87%/)).toBeInTheDocument()
+  })
+
+  it('측정 조건(엔진·경쟁사·시각)을 보여준다', () => {
+    render(<ResultView result={base} />)
+    expect(screen.getByText(/gemini/)).toBeInTheDocument()
+    expect(screen.getByText(/29CM/)).toBeInTheDocument()
+  })
+
+  it('경쟁사가 없으면 Share of Voice 영역을 아예 그리지 않는다', () => {
+    render(<ResultView result={{ ...base, competitors: [], shareOfVoice: wilsonInterval(0, 0) }} />)
+    expect(screen.queryByText(/점유율|Share of Voice/)).not.toBeInTheDocument()
+  })
+
+  it('미판정이 있으면 표시한다', () => {
+    render(<ResultView result={{ ...base, unresolved: 2 }} />)
+    expect(screen.getByText(/판정하지 못/)).toBeInTheDocument()
+  })
+
+  it('언급이 0건이어도 증거를 보여준다', () => {
+    render(
+      <ResultView
+        result={{
+          ...base,
+          citedRate: wilsonInterval(0, 3),
+          evidence: [{ ...base.evidence[0]!, mentioned: false, context: null, sentiment: null }],
+        }}
+      />,
+    )
+    expect(screen.getByText(/무신사가 좋습니다/)).toBeInTheDocument()
+  })
+})
+```
+
+`@testing-library/react`·`@testing-library/jest-dom`·`jsdom`이 없으면 설치한다:
+
+```bash
+pnpm add -D @testing-library/react @testing-library/jest-dom jsdom
+```
+
+`vitest.config.ts`에 `.tsx` 테스트만 jsdom을 쓰도록 `environmentMatchGlobs`
+(또는 파일 상단 `// @vitest-environment jsdom`)를 추가한다. 다른 테스트는
+`node` 환경을 유지한다 — 전부 jsdom으로 바꾸면 DB 테스트가 느려진다.
+
+- [ ] **Step 4: 리포트 화면 구현**
+
+`src/components/audit/result-view.tsx` — **서버 컴포넌트로 만든다.**
+상태가 없고, 메일 템플릿과 같은 데이터를 그린다.
+
+지켜야 할 것:
+
+1. **큰 숫자 옆에 반드시 구간을 함께 둔다.** `33%` 단독 노출 금지.
+2. **`shareOfVoice.n === 0`이면 그 블록을 렌더링하지 않는다.** `0%`도,
+   `측정 없음`도 아니라 **아예 없다.** 없는 것을 설명하려 들면 혼란만 준다.
+3. **경쟁사 목록을 Share of Voice 옆에 항상 함께 표시한다.**
+   2단계 `metrics.ts` 주석 그대로 — 분모를 모르면 이 숫자는 오해를 만든다.
+4. `byQuery`는 **언급률이 낮은 순** 그대로 그린다. "이 질문에서 안 나온다"가
+   위로 와야 행동으로 이어진다.
+5. 하단에 유료 전환 블록: **"이 리포트는 1회 측정입니다"** → 구간 넓이 →
+   "주 3회 측정하면 구간이 좁아지고 주간 변화를 판정할 수 있습니다" → 요금제 링크.
 
 `src/app/audit/[id]/page.tsx`:
 
 ```tsx
 import { notFound } from 'next/navigation'
-import { AuditProgress } from '@/components/audit/progress'
-import { AuditResultView } from '@/components/audit/result-view'
 import { getAudit } from '@/lib/audit/repository'
+import { ResultView } from '@/components/audit/result-view'
 import type { AuditResult } from '@/lib/audit/result'
 
-export default async function AuditPage({
+export const dynamic = 'force-dynamic'
+
+export default async function AuditReportPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ run?: string; token?: string; waitlisted?: string }>
 }) {
   const { id } = await params
-  const sp = await searchParams
-
   const audit = await getAudit(id)
-  if (!audit) notFound()
 
-  if (audit.status === 'waitlisted') {
-    return (
-      <main className="mx-auto max-w-md py-24 text-center">
-        <h1 className="text-xl font-semibold">오늘 진단이 마감되었습니다</h1>
-        <p className="mt-2 text-muted-foreground">
-          이메일을 남겨주시면 내일 결과를 보내드립니다.
-        </p>
-      </main>
-    )
-  }
+  // ★ 발송 전 리포트를 노출하지 않는다. 링크를 미리 알아내도 볼 것이 없어야 한다.
+  if (!audit || audit.status !== 'sent' || !audit.result) notFound()
 
-  if (audit.status === 'succeeded' && audit.result) {
-    return (
-      <AuditResultView
-        auditId={audit.id}
-        result={audit.result as AuditResult}
-        variant={audit.variant}
-        emailCaptured={Boolean(audit.email)}
-      />
-    )
-  }
-
-  if (audit.status === 'failed') {
-    return (
-      <main className="mx-auto max-w-md py-24 text-center">
-        <h1 className="text-xl font-semibold">진단에 실패했습니다</h1>
-        <p className="mt-2 text-muted-foreground">잠시 후 다시 시도해 주세요.</p>
-      </main>
-    )
-  }
-
-  if (!sp.run || !sp.token) {
-    return (
-      <main className="mx-auto max-w-md py-24 text-center">
-        <h1 className="text-xl font-semibold">진단이 진행 중입니다</h1>
-        <p className="mt-2 text-muted-foreground">잠시 후 새로고침해 주세요.</p>
-      </main>
-    )
-  }
-
-  return <AuditProgress runId={sp.run} accessToken={sp.token} auditId={id} />
+  return <ResultView result={audit.result as AuditResult} />
 }
 ```
 
-`src/app/api/audit/[id]/email/route.ts`:
-
-```ts
-import { NextResponse } from 'next/server'
-import { z } from 'zod'
-import { getAudit, updateAudit } from '@/lib/audit/repository'
-import { db } from '@/lib/db'
-import { freeAudits } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
-
-const schema = z.object({ email: z.string().email() })
-
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params
-  const body: unknown = await request.json().catch(() => null)
-  const parsed = schema.safeParse(body)
-  if (!parsed.success) {
-    return NextResponse.json({ error: '이메일 형식이 올바르지 않습니다.' }, { status: 400 })
-  }
-
-  const audit = await getAudit(id)
-  if (!audit) return NextResponse.json({ error: '없는 진단입니다.' }, { status: 404 })
-
-  await db
-    .update(freeAudits)
-    .set({ email: parsed.data.email, convertedEmailAt: new Date() })
-    .where(eq(freeAudits.id, id))
-
-  return NextResponse.json({ ok: true })
-}
-```
-
-- [ ] **Step 7: 이메일 인증 — 리드 품질 장치 (비용 방어가 아니다)**
-
-> ★ 2026-07-29 정정. 이 단계를 "남용 방지의 세 번째 축"이라고 불렀던 것은
-> 틀렸다. **기본 플로우(`AUDIT_EMAIL_GATE=after`)에서 이메일은 잡이 끝난 뒤에
-> 받는다 — 이미 돈이 나갔다.** 비용은 Task 6의 Turnstile·캐시·예산 킬스위치가
-> 막고, 이 단계가 지키는 것은 **리드 목록의 품질**이다.
+> **이 페이지는 인증하지 않는다.** `aud_` + 16바이트 난수 ID가 곧 비공개
+> 링크다(Task 4). 로그인 벽을 세우면 리포트를 받은 사람이 못 본다.
+> 대신 **`noindex`를 반드시 건다** — 검색엔진에 남으면 비공개가 아니다:
 >
-> `AUDIT_EMAIL_GATE=before`로 전환하면 이 검증이 잡 **앞으로** 이동하고,
-> 그때 비로소 비용 방어 역할을 겸한다. 구현할 때 두 위치 모두에서 호출될 수
-> 있도록 **잡 실행과 결합하지 말고 독립 함수로** 만들 것.
+> ```tsx
+> export const metadata = { robots: { index: false, follow: false } }
+> ```
 
-인증 없이 이메일만 받으면 가짜 주소가 리드 목록을 오염시키고, 나중에 이
-목록으로 마케팅을 할 때 반송률이 올라간다.
+- [ ] **Step 5: 랜딩과 요금제**
 
-`src/lib/audit/verify.ts`:
+`src/app/(marketing)/page.tsx` — 최초 계획의 카피를 그대로 쓰되 **CTA만
+바꾼다.** 폼 자리에 `<RequestForm />`을 둔다.
 
-```ts
-import { createHmac, timingSafeEqual } from 'node:crypto'
+랜딩에서 **반드시 정직하게 쓸 것:** 히어로 아래에 "AI에게 직접 물어보고
+기록합니다. 무료 진단은 질의 3개를 1회 측정해 **영업일 1일 이내** 메일로
+보내드립니다." — 즉시 결과를 기대하게 만들면 안 된다.
 
-/** 진단 ID + 이메일에 서명한 토큰. DB에 별도 테이블을 만들지 않는다. */
-export function signAuditEmail(auditId: string, email: string, secret: string): string {
-  return createHmac('sha256', secret).update(`${auditId}:${email.toLowerCase()}`).digest('hex')
-}
+`src/app/(marketing)/pricing/page.tsx` — `PLANS`에서 값을 읽어 그린다.
+숫자를 하드코딩하지 않는다. 무료/Starter/Business 열에 **질의 수 · 측정 횟수 ·
+엔진 · 이력**을 나란히 놓아 무료의 한계가 눈에 보이게 한다.
 
-export function verifyAuditEmail(
-  auditId: string,
-  email: string,
-  token: string,
-  secret: string,
-): boolean {
-  const expected = signAuditEmail(auditId, email, secret)
-  if (expected.length !== token.length) return false
-  try {
-    return timingSafeEqual(Buffer.from(expected), Buffer.from(token))
-  } catch {
-    return false
-  }
-}
-```
-
-`src/lib/audit/verify.test.ts`:
-
-```ts
-import { describe, expect, it } from 'vitest'
-import { signAuditEmail, verifyAuditEmail } from '@/lib/audit/verify'
-
-const secret = 'test-secret'
-
-describe('진단 이메일 인증 토큰', () => {
-  it('서명한 토큰이 검증된다', () => {
-    const t = signAuditEmail('a1', 'x@example.com', secret)
-    expect(verifyAuditEmail('a1', 'x@example.com', t, secret)).toBe(true)
-  })
-
-  it('대소문자가 달라도 같은 이메일로 본다', () => {
-    const t = signAuditEmail('a1', 'X@Example.com', secret)
-    expect(verifyAuditEmail('a1', 'x@example.com', t, secret)).toBe(true)
-  })
-
-  it('다른 진단 ID로는 검증되지 않는다', () => {
-    const t = signAuditEmail('a1', 'x@example.com', secret)
-    expect(verifyAuditEmail('a2', 'x@example.com', t, secret)).toBe(false)
-  })
-
-  it('다른 이메일로는 검증되지 않는다', () => {
-    const t = signAuditEmail('a1', 'x@example.com', secret)
-    expect(verifyAuditEmail('a1', 'y@example.com', t, secret)).toBe(false)
-  })
-
-  it('길이가 다른 토큰을 받아도 던지지 않는다', () => {
-    expect(verifyAuditEmail('a1', 'x@example.com', 'short', secret)).toBe(false)
-  })
-
-  it('빈 토큰을 거부한다', () => {
-    expect(verifyAuditEmail('a1', 'x@example.com', '', secret)).toBe(false)
-  })
-})
-```
+- [ ] **Step 6: 통과 확인과 커밋**
 
 ```bash
-pnpm vitest run src/lib/audit/verify.test.ts
-```
+pnpm vitest run src/components/audit/result-view.test.tsx
+pnpm typecheck && pnpm lint && pnpm build
+git add src/app src/components vitest.config.ts package.json
+git commit -m "feat(marketing): 랜딩 · 진단 신청 폼 · 리포트 화면
 
-Expected: 처음엔 FAIL(모듈 없음) → 구현 후 PASS (6 passed)
+진행률 화면과 Realtime 구독을 만들지 않는다. 즉시 실행이 아니므로 보여줄
+진행률이 없다. 대신 신청→인증→대기 각 단계에서 지금 무슨 상태인지 알려주는
+안내 화면을 둔다 — 즉시 결과를 포기했으므로 이 안내가 부실하면 그대로 이탈한다.
 
-`src/lib/email/templates.ts`에 진단 리포트 메일을 추가한다:
+인증 링크를 두 번 눌러도 오류 화면을 보여주지 않는다(state=already).
 
-```ts
-export function auditReportEmail(params: {
-  brandName: string
-  citedRate: number
-  resultUrl: string
-  verifyUrl: string
-}): EmailContent {
-  return {
-    subject: `[Cited] ${params.brandName} AI 인용 진단 결과`,
-    html: layout(
-      `<p><strong>${escapeHtml(params.brandName)}</strong>의 진단 결과입니다.</p>
-<div style="margin:24px 0;padding:20px;background:#faf9f7;border-radius:8px">
-  <div style="font-size:13px;color:#8a8580;margin-bottom:4px">Cited Rate</div>
-  <div style="font-size:32px;font-weight:700">${Math.round(params.citedRate * 100)}%</div>
-</div>
-<p style="margin:24px 0"><a href="${escapeHtml(params.verifyUrl)}" style="display:inline-block;background:#1a1a1a;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">이메일 확인하고 전체 리포트 보기</a></p>
-<p style="font-size:13px;color:#8a8580">이 진단은 6회 측정 기준이라 신뢰구간이 넓습니다. 매주 자동 추적하면 약 100~300회를 측정합니다.</p>`,
-    ),
-  }
-}
-```
+리포트 페이지는 인증하지 않는다. 난수 ID가 곧 비공개 링크다. 대신 noindex를
+걸어 검색엔진에 남지 않게 한다.
 
-`src/app/api/audit/[id]/email/route.ts`를 수정한다 — 이메일을 저장하되
-`emailVerified`는 false로 두고, 인증 링크가 담긴 리포트 메일을 보낸다.
-화면의 전체 지표는 즉시 열어준다 (인증을 기다리게 하면 전환이 죽는다).
-인증은 **리드 품질**을 위한 것이지 게이트가 아니다.
-
-```ts
-  await db
-    .update(freeAudits)
-    .set({ email: parsed.data.email, convertedEmailAt: new Date() })
-    .where(eq(freeAudits.id, id))
-
-  const token = signAuditEmail(id, parsed.data.email, env.AUDIT_IP_SALT)
-  await sendEmail({
-    to: parsed.data.email,
-    content: auditReportEmail({
-      brandName: audit.brandName,
-      citedRate: (audit.result as AuditResult | null)?.citedRate.point ?? 0,
-      resultUrl: `${env.NEXT_PUBLIC_APP_URL}/audit/${id}`,
-      verifyUrl: `${env.NEXT_PUBLIC_APP_URL}/audit/${id}/verify?token=${token}&email=${encodeURIComponent(parsed.data.email)}`,
-    }),
-  })
-
-  return NextResponse.json({ ok: true })
-```
-
-`src/app/audit/[id]/verify/route.ts` — 링크를 누르면 `emailVerified=true`로
-바꾸고 결과 페이지로 리다이렉트한다.
-
-```ts
-import { redirect } from 'next/navigation'
-import { eq } from 'drizzle-orm'
-import { verifyAuditEmail } from '@/lib/audit/verify'
-import { db } from '@/lib/db'
-import { freeAudits } from '@/lib/db/schema'
-import { env } from '@/lib/env'
-
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params
-  const url = new URL(request.url)
-  const token = url.searchParams.get('token') ?? ''
-  const email = url.searchParams.get('email') ?? ''
-
-  if (verifyAuditEmail(id, email, token, env.AUDIT_IP_SALT)) {
-    await db.update(freeAudits).set({ emailVerified: true }).where(eq(freeAudits.id, id))
-  }
-  redirect(`/audit/${id}`)
-}
-```
-
-- [ ] **Step 8: 대기 등록 후속 처리**
-
-상한 소진 시 `waitlisted`로 받은 진단을 다음 날 처리한다. 리드를 확보해놓고
-방치하면 "이메일을 남겼는데 아무것도 안 왔다"가 되어 오히려 손해다.
-
-`src/trigger/audit-waitlist.ts`:
-
-```ts
-import { logger, schedules } from '@trigger.dev/sdk'
-import { and, asc, eq, isNotNull } from 'drizzle-orm'
-import { DAILY_GLOBAL_LIMIT } from '@/lib/audit/limits'
-import { db } from '@/lib/db'
-import { freeAudits } from '@/lib/db/schema'
-import { freeAudit } from './free-audit'
-
-/**
- * 대기 등록된 진단을 처리한다.
- *
- * daily-scheduler와 같은 시각에 돌지 않게 시간을 벌린다 — 무료 진단과
- * 유료 수집이 동시에 엔진을 때리면 rate limit에 걸린다.
- */
-export const auditWaitlist = schedules.task({
-  id: 'audit-waitlist',
-  cron: { pattern: '0 5 * * *', timezone: 'Asia/Seoul' }, // KST 오후 2시
-  maxDuration: 900,
-  run: async () => {
-    // 이메일을 남긴 대기 건만 처리한다. 남기지 않았으면 결과를 보낼 곳이 없다.
-    const pending = await db
-      .select({ id: freeAudits.id, brandName: freeAudits.brandName, category: freeAudits.category })
-      .from(freeAudits)
-      .where(and(eq(freeAudits.status, 'waitlisted'), isNotNull(freeAudits.email)))
-      .orderBy(asc(freeAudits.createdAt))
-      // 오늘 상한의 절반까지만. 나머지는 신규 방문자를 위해 남긴다.
-      .limit(Math.floor(DAILY_GLOBAL_LIMIT / 2))
-
-    logger.info('audit-waitlist.start', { pending: pending.length })
-
-    for (const a of pending) {
-      await freeAudit.trigger({
-        auditId: a.id,
-        brandName: a.brandName,
-        category: a.category,
-      })
-    }
-
-    return { triggered: pending.length }
-  },
-})
-```
-
-> **스케줄이 3개가 됐다.** `daily-scheduler`, `audit-waitlist`, 그리고 4단계의
-> `billing-cycle`. 무료 티어 한도 10개 대비 여유가 있다. 새 스케줄을 추가할
-> 때마다 "기존 잡으로 흡수할 수 있는가"를 먼저 묻는다.
-
-대기 등록 화면(`/audit/[id]`의 `waitlisted` 분기)에 이메일 입력 폼을 붙여
-`/api/audit/[id]/email`을 호출하게 한다. 폼이 없으면 이 잡이 처리할 대상이
-영원히 생기지 않는다.
-
-- [ ] **Step 9: 요금제 페이지**
-
-`src/app/(marketing)/pricing/page.tsx` — 설계 문서의 요금표를 그대로 옮긴다.
-**"추적 질문"은 사용 횟수가 아니라 상시 감시 대상이라는 점을 화면에 표기한다.**
-
-```tsx
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { PLANS, QUERY_PACK_PRICE_KRW, QUERY_PACK_SIZE, expectedCallsPerRun, WEEKS_PER_MONTH } from '@/lib/plans'
-
-export const metadata = { title: '요금제' }
-
-function monthlyMeasurements(plan: 'starter' | 'business'): number {
-  return Math.round(expectedCallsPerRun(plan, PLANS[plan].maxQueries) * WEEKS_PER_MONTH)
-}
-
-export default function PricingPage() {
-  const tiers = [
-    {
-      id: 'starter' as const,
-      name: 'Starter',
-      tagline: '내 브랜드 하나를 본다',
-      cta: '시작하기',
-    },
-    {
-      id: 'business' as const,
-      name: 'Business',
-      tagline: '여러 브랜드를 책임진다 — 대행사, 여러 라인을 가진 회사',
-      cta: '시작하기',
-      featured: true,
-    },
-  ]
-
-  return (
-    <main className="mx-auto w-full max-w-4xl px-6 py-16">
-      <h1 className="text-center text-3xl font-bold tracking-tight">요금제</h1>
-      <p className="mx-auto mt-3 max-w-xl text-center text-muted-foreground">
-        국내 GEO 컨설팅은 월 400만원부터 시작합니다. Cited는 같은 데이터를
-        공개된 가격에, 상담 없이 제공합니다.
-      </p>
-
-      <div className="mt-12 grid gap-6 sm:grid-cols-2">
-        {tiers.map((t) => {
-          const p = PLANS[t.id]
-          return (
-            <Card key={t.id} className={t.featured ? 'border-foreground p-7' : 'p-7'}>
-              <h2 className="font-semibold">{t.name}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{t.tagline}</p>
-              <p className="mt-5 text-3xl font-bold tracking-tight">
-                {p.priceKrw.toLocaleString('ko-KR')}원
-                <span className="text-base font-normal text-muted-foreground"> / 월</span>
-              </p>
-
-              <ul className="mt-6 space-y-2 text-sm">
-                <li>브랜드 {p.maxBrands}개</li>
-                <li>
-                  <strong>추적 질문 {p.maxQueries}개 · 매주 자동 측정</strong>
-                  <br />
-                  <span className="text-muted-foreground">
-                    (월 약 {monthlyMeasurements(t.id).toLocaleString('ko-KR')}회 측정)
-                  </span>
-                </li>
-                <li>엔진 4종 — ChatGPT · Gemini · 네이버 AI 브리핑 · Google AI Overviews</li>
-                <li>경쟁사 {p.maxCompetitors}개</li>
-                <li>히스토리 {p.historyMonths === null ? '무제한' : `${p.historyMonths}개월`}</li>
-                {p.csvExport ? <li>CSV 내보내기</li> : null}
-                {t.id === 'business' ? (
-                  <li className="text-muted-foreground">
-                    질의 팩 +{QUERY_PACK_SIZE}개 = 월 {QUERY_PACK_PRICE_KRW.toLocaleString('ko-KR')}원
-                  </li>
-                ) : null}
-              </ul>
-
-              <Button asChild className="mt-7 w-full" variant={t.featured ? 'default' : 'outline'}>
-                <a href="/sign-up">{t.cta}</a>
-              </Button>
-            </Card>
-          )
-        })}
-      </div>
-
-      <p className="mt-10 rounded-lg bg-muted/40 p-5 text-sm text-muted-foreground">
-        <strong className="text-foreground">&ldquo;추적 질문&rdquo;은 사용 횟수가 아니라 상시 감시 대상입니다.</strong>{' '}
-        한 번 등록하면 매주 자동으로 다시 물어봅니다. Starter의 질문 10개는
-        &ldquo;월 10번&rdquo;이 아니라 월 약 {monthlyMeasurements('starter')}회 측정입니다.
-      </p>
-    </main>
-  )
-}
-```
-
-- [ ] **Step 10: 브라우저 수동 검증**
-
-```bash
-pnpm dev
-```
-
-전체 퍼널을 직접 걸어본다:
-1. `/` 에서 브랜드명·업종 입력 → 제출
-2. 진행 화면에서 "ChatGPT에 물어보는 중… (2/6)" 같은 문구가 **실제로 바뀌는지**
-3. 20초 안팎에 결과 화면으로 전환되는지
-4. 증거(C) → 순위(B) → 이메일 게이트 순서인지
-5. 이메일 입력 후 전체 지표(A)가 열리는지
-6. `pnpm db:studio`에서 `free_audits.email`과 `convertedEmailAt`이 채워졌는지
-
-7. 이메일 입력 후 **리포트 메일이 실제로 도착하는지**
-8. 메일의 인증 링크를 눌렀을 때 `free_audits.email_verified`가 true가 되는지
-
-Expected: 8개 모두 통과. 진행 문구가 안 바뀌면 Realtime 토큰 전달을 확인한다.
-
-- [ ] **Step 11: 커밋**
-
-```bash
-git add -A
-git commit -m "feat(audit): 랜딩 · 진행 화면 · C→B→A 결과 · 이메일 게이트/인증 · 대기 등록 처리
-
-결과 화면 순서는 가설이므로 variant로 기록하고 전환과 함께 측정한다.
-이메일 인증은 리드 품질 장치다. 비용 방어는 Task 6의 Turnstile·캐시·예산
-킬스위치가 담당한다 — 이 단계는 잡이 끝난 뒤에 돈다."
+shareOfVoice.n이 0이면 그 블록을 아예 그리지 않는다. 0%도 '측정 없음'도 아니라
+없는 것이다."
 ```
 
 ---
 
-### Task 9: E2E 테스트와 1차 배포
+### Task 9: E2E · 개인정보처리방침 갱신 · 1차 배포
 
 **Files:**
-- Create: `playwright.config.ts`, `tests/e2e/free-audit.spec.ts`
-- Modify: `.github/workflows/ci.yml`, `package.json`
+- Create: `tests/e2e/free-audit.spec.ts`,
+  `docs/superpowers/notes/YYYY-MM-DD-first-deploy.md`
+- Modify: `src/app/legal/privacy/page.tsx`
 
 **Interfaces:**
-- Consumes: 이 단계 전부
-- Produces: **1차 배포 완료** — 무료 진단이 프로덕션에서 동작한다
+- Consumes: 앞의 모든 태스크
 
-설계 ⑤: E2E는 최소한만. 무료 진단 플로우 1개, 결제 플로우 1개(4단계).
-그 이상은 유지보수 비용이 이득을 넘는다.
+- [ ] **Step 1: 개인정보처리방침 갱신 — 법정 고지사항이다**
 
-- [ ] **Step 1: Playwright 설치**
+Task 2에서 만든 수집 코어가 **이용자의 브랜드명·질의문을 Google·Anthropic에
+처음으로 실제 전송하는 코드**다. 그 순간 이들은 새 수탁자가 된다.
 
-```bash
-pnpm dlx playwright@latest install --with-deps chromium
-pnpm add -D @playwright/test
-```
+`src/app/legal/privacy/page.tsx`의 두 표를 갱신한다:
 
-`playwright.config.ts`:
+- **§7 개인정보 처리 위탁** — Google LLC(Gemini API, AI 답변 생성),
+  Anthropic PBC(Claude API, 언급 판정)를 추가한다. 위탁 업무 내용에
+  **"이용자가 입력한 브랜드명·카테고리는 전송되지 않으며, 시스템이 생성한
+  일반 소비자 질의문만 전송된다"**를 명시한다 (Task 4 `queries.ts`가 실제로
+  그렇게 동작한다 — 사실과 다르게 쓰면 안 된다).
+- **§8 국외 이전** — 개인정보보호법 제28조의8 제2항의 법정 고지사항이다.
+  이전받는 자 · 국가 · 시점 · 방법 · 항목 · 보유기간을 채운다.
+  국가는 **실제로 데이터가 있는 곳**을 쓴다(미국). §8 말미의 "측정 기능이
+  도입되면… 이 항을 갱신"이라는 기존 문장이 가리키는 시점이 바로 지금이다.
 
-```ts
-import { defineConfig, devices } from '@playwright/test'
+> **판정용 답변 원문에 개인정보가 섞일 수 있다.** AI 답변은 우리가 만든 것이
+> 아니고 무엇이 들어 있을지 모른다. 그것을 Anthropic에 판정용으로 보낸다.
+> 이 사실을 §7에 적는다.
 
-export default defineConfig({
-  testDir: './tests/e2e',
-  timeout: 120_000,
-  expect: { timeout: 30_000 },
-  fullyParallel: false,
-  forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 1 : 0,
-  workers: 1,
-  reporter: process.env.CI ? 'github' : 'list',
-  use: {
-    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3000',
-    trace: 'retain-on-failure',
-    screenshot: 'only-on-failure',
-  },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  webServer: process.env.E2E_BASE_URL
-    ? undefined
-    : {
-        command: 'pnpm build && pnpm start',
-        url: 'http://localhost:3000',
-        reuseExistingServer: !process.env.CI,
-        timeout: 180_000,
-      },
-})
-```
+`pnpm test`에 방침 페이지 관련 테스트가 있으면 함께 갱신한다.
 
-- [ ] **Step 2: E2E 테스트 작성**
+- [ ] **Step 2: E2E 테스트**
 
-`tests/e2e/free-audit.spec.ts`:
+`tests/e2e/free-audit.spec.ts` — **실제 API를 부르지 않는다.** 진단 실행은
+수동이므로 E2E가 검증할 것은 **신청 → 인증 안내까지**다.
 
 ```ts
 import { expect, test } from '@playwright/test'
 
-test.describe('무료 진단 전환 퍼널', () => {
-  test('랜딩에서 진단을 시작해 결과와 이메일 게이트까지 도달한다', async ({ page }) => {
-    await page.goto('/')
+test('랜딩에서 진단을 신청하면 확인 안내로 이동한다', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 
-    // 랜딩
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('AI')
+  // 즉시 결과를 약속하지 않는다
+  await expect(page.getByText(/영업일 1일|메일로 보내/)).toBeVisible()
 
-    // 진단 시작
-    const brand = `E2E테스트${Date.now()}`
-    await page.getByPlaceholder(/브랜드명/).fill(brand)
-    await page.getByRole('combobox').selectOption('패션')
-    await page.getByRole('button', { name: /무료로 진단하기/ }).click()
+  await page.getByLabel('브랜드명').fill('E2E테스트브랜드')
+  await page.getByLabel('카테고리').fill('패션')
+  await page.getByLabel('이메일').fill(`e2e-${Date.now()}@cited-smoke.invalid`)
+  await page.getByRole('button', { name: /신청/ }).click()
 
-    // 진행 화면 — 진행 문구가 실제로 나타난다
-    await expect(page.getByRole('progressbar')).toBeVisible({ timeout: 15_000 })
-    await expect(page.getByText(/물어보는 중|준비 중|정리하는 중/)).toBeVisible()
+  await expect(page).toHaveURL(/\/audit\/requested/)
+  await expect(page.getByText(/메일함/)).toBeVisible()
+})
 
-    // 결과 화면 — 증거가 먼저 나온다 (C → B → A)
-    await expect(page.getByText('실제 AI 답변')).toBeVisible({ timeout: 90_000 })
-    await expect(page.getByText(brand)).toBeVisible()
+test('잘못된 이메일은 제출되지 않는다', async ({ page }) => {
+  await page.goto('/')
+  await page.getByLabel('브랜드명').fill('E2E테스트브랜드')
+  await page.getByLabel('카테고리').fill('패션')
+  await page.getByLabel('이메일').fill('not-an-email')
+  await page.getByRole('button', { name: /신청/ }).click()
+  await expect(page).not.toHaveURL(/\/audit\/requested/)
+})
 
-    // 이메일 게이트가 전체 지표를 막고 있다
-    await expect(page.getByText('엔진별 · 질의별 전체 지표 보기')).toBeVisible()
-    await expect(page.getByText('엔진별', { exact: true })).not.toBeVisible()
+test('만료·위조 인증 링크는 안내 화면으로 보낸다', async ({ page }) => {
+  await page.goto('/api/audit/verify?token=forged.signature')
+  await expect(page).toHaveURL(/state=invalid/)
+  await expect(page.getByText(/만료|올바르지/)).toBeVisible()
+})
 
-    // 이메일 입력 → 전체 지표 해제
-    await page.getByPlaceholder('you@company.com').fill(`e2e+${Date.now()}@example.com`)
-    await page.getByRole('button', { name: '전체 보기' }).click()
-    await expect(page.getByText('전체 지표')).toBeVisible({ timeout: 15_000 })
-  })
+test('발송되지 않은 리포트 링크는 404다', async ({ page }) => {
+  const res = await page.goto('/audit/aud_does_not_exist')
+  expect(res?.status()).toBe(404)
+})
 
-  test('같은 브랜드를 두 번 진단하면 막힌다 (비용 통제)', async ({ page, request }) => {
-    const brand = `중복${Date.now()}`
-    const body = { brandName: brand, category: '패션' }
-
-    const first = await request.post('/api/audit', { data: body })
-    expect(first.ok()).toBeTruthy()
-
-    const second = await request.post('/api/audit', { data: body })
-    expect(second.status()).toBe(429)
-  })
-
-  test('법적 페이지가 접근 가능하다', async ({ page }) => {
-    await page.goto('/legal/terms')
-    await expect(page.getByRole('heading', { name: '이용약관' })).toBeVisible()
-    // 설계 문서가 요구한 제3자 플랫폼 의존성 조항
-    await expect(page.getByText(/제3자 플랫폼/)).toBeVisible()
-
-    await page.goto('/legal/privacy')
-    await expect(page.getByRole('heading', { name: '개인정보처리방침' })).toBeVisible()
-  })
+test('요금제 화면이 무료의 한계를 보여준다', async ({ page }) => {
+  await page.goto('/pricing')
+  await expect(page.getByText(/99,000/)).toBeVisible()
+  await expect(page.getByText(/290,000/)).toBeVisible()
 })
 ```
-
-- [ ] **Step 3: 로컬에서 E2E 실행**
 
 ```bash
 pnpm test:e2e
 ```
 
-Expected: 3 passed. 진단 완료 대기 타임아웃(90초)이 부족하면 늘린다 —
-실제 API 호출이 6회 들어간다.
+Expected: 5 passed
 
-- [ ] **Step 4: CI에 E2E 추가 (별도 job)**
+- [ ] **Step 3: Vercel 환경변수 추가**
 
-`.github/workflows/ci.yml`에 job 추가:
-
-```yaml
-  e2e:
-    runs-on: ubuntu-latest
-    needs: verify
-    if: github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: 10 }
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm dlx playwright install --with-deps chromium
-      - run: pnpm test:e2e
-        env:
-          DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
-          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-          BETTER_AUTH_URL: http://localhost:3000
-          NEXT_PUBLIC_APP_URL: http://localhost:3000
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          EMAIL_FROM: Cited <noreply@example.com>
-          AUDIT_IP_SALT: ${{ secrets.AUDIT_IP_SALT }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          TRIGGER_SECRET_KEY: ${{ secrets.TRIGGER_SECRET_KEY }}
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-report
-          path: playwright-report/
-```
-
-E2E는 실제 API 비용이 들므로 `push`에서만 돌린다. PR마다 돌리면 진단 1회당
-약 100원이 계속 나간다.
-
-- [ ] **Step 5: 프로덕션 배포**
-
-Vercel 환경변수에 이 단계에서 추가된 키를 전부 등록한다:
-`AUDIT_IP_SALT`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`,
-`TRIGGER_SECRET_KEY`, `TRIGGER_PROJECT_REF`.
+프로덕션·프리뷰·개발 세 환경에 `OPERATOR_EMAIL`을 넣는다.
+넣지 않으면 `env.ts`의 `superRefine`이 **빌드를 실패시킨다** (의도된 것이다 —
+알림이 안 가면 신청이 방치된다).
 
 ```bash
-pnpm dlx trigger.dev@latest deploy
-pnpm dlx vercel@latest --prod
+vercel env add OPERATOR_EMAIL production
+vercel env add OPERATOR_EMAIL preview
+vercel env add OPERATOR_EMAIL development
 ```
 
-- [ ] **Step 6: 프로덕션 검증**
+- [ ] **Step 4: 배포와 실사용 확인**
 
 ```bash
-DOMAIN=<실제 도메인>
-
-# 헬스체크
-curl -s https://$DOMAIN/api/health | grep '"ok":true'
-
-# 진단 시작
-curl -s -X POST https://$DOMAIN/api/audit \
-  -H 'content-type: application/json' \
-  -d '{"brandName":"프로덕션검증","category":"패션"}' | tee /tmp/audit.json
-
-# 상한 검증 — 같은 브랜드 두 번째는 429
-curl -s -o /dev/null -w '%{http_code}\n' -X POST https://$DOMAIN/api/audit \
-  -H 'content-type: application/json' \
-  -d '{"brandName":"프로덕션검증","category":"패션"}'
+git push
 ```
 
-Expected: 헬스체크 ok, 첫 진단 200, 두 번째 429
-
-브라우저에서 실제 퍼널을 한 번 더 걸어본다. Trigger.dev 대시보드에서
-`free-audit` 실행이 성공했는지, 소요 시간이 20초 안팎인지 확인한다.
-
-- [ ] **Step 7: 프로덕션 E2E**
+배포 후 **실제 프로덕션에서 본인 이메일로 1건 신청해 끝까지 돌려본다.**
 
 ```bash
-E2E_BASE_URL=https://$DOMAIN pnpm test:e2e
+# 1. https://cited.co.kr 에서 신청
+# 2. 확인 메일 수신 → 링크 클릭 → state=verified 화면
+# 3. 운영자 알림 메일 수신 확인
+pnpm audit:list                 # 대기 1건이 보여야 한다
+pnpm audit:run <id> --dry       # 결과를 눈으로 확인
+pnpm audit:run <id>             # 발송
+# 4. 리포트 메일 수신 → 링크 → /audit/<id> 화면
 ```
 
-Expected: 3 passed
+**확인할 것:**
 
-- [ ] **Step 8: 1차 배포 완료 기록과 커밋**
+- 확인 메일이 스팸함으로 가지 않는가 (1단계에서 SPF·DKIM·DMARC를 세웠다)
+- 질의 3개에 브랜드명이 없는가
+- 언급 판정이 눈으로 봐도 맞는가
+- 리포트 화면의 신뢰구간이 메일과 같은가
+- `/audit/<id>`가 `noindex`인가 (`curl -sI` 또는 페이지 소스)
 
-`docs/superpowers/notes/2026-07-28-launch-1.md`:
+- [ ] **Step 5: 배포 기록**
 
-```markdown
-# 1차 배포 (무료 진단) — 2026-__-__
+`docs/superpowers/notes/YYYY-MM-DD-first-deploy.md`에 남긴다:
 
-## 배포 내용
-- 랜딩 + 무료 진단 + 이메일 게이트 + 요금제 + 법적 페이지
-- SerpApi 미가입 (2차 배포 시 가입)
+- 배포 내용과 커밋 해시
+- **진단 1건 실행에 걸린 시간** (운영자 시간 — 자동화 시점을 결정할 숫자다)
+- 실제 원가 (CLI가 출력한 값 × 1건)
+- 확인한 항목 체크리스트
+- 다음에 볼 지표: 신청 수, 인증률, 리포트 발송까지 걸린 시간, 가입 전환
 
-## 확인한 것
-- [ ] 프로덕션 진단 성공, 소요 __초
-- [ ] IP 일일 상한 3회 작동 확인
-- [ ] 브랜드 월 1회 상한 작동 확인
-- [ ] 전체 일일 상한 100회 설정됨
-- [ ] 진단 1건 실제 원가 __원 (Trigger.dev 실행시간 포함)
-
-## 월 고정비
-| 항목 | 금액 |
-| --- | --- |
-| Vercel Pro | 28,000원 |
-| 도메인 | 1,700원 |
-| 통신판매업 등록면허세 | 3,400원 |
-| Trigger.dev | __원 |
-| **합계** | **__원** |
-
-## 다음에 볼 지표
-- 일일 진단 건수 (상한 100 대비)
-- 이메일 게이트 전환율 (variant별)
-- 진단 → 가입 전환율
-```
+- [ ] **Step 6: 커밋**
 
 ```bash
-git add -A
-git commit -m "feat: 무료 진단 E2E 테스트와 1차 배포
-
-1차 배포 완료: 랜딩에서 진단을 시작해 이메일을 남기는 퍼널이 프로덕션에서 동작한다."
-git tag phase-3-complete
+git add tests/e2e src/app/legal docs/superpowers/notes
+git commit -m "test(e2e): 진단 신청 플로우 · 방침 갱신 · 1차 배포 기록"
 ```
 
 ---
 
 ## 3단계 완료 조건 (= 1차 배포 게이트)
 
-- [ ] `pnpm typecheck && pnpm lint && pnpm test && pnpm build` 전부 통과
-- [ ] `pnpm test:e2e`가 프로덕션 URL에 대해 통과
-- [ ] 프로덕션에서 무료 진단이 20초 안팎에 완료된다
-- [ ] **IP 일일 상한, 브랜드 월 1회, 전체 일일 상한이 실제로 작동한다** (curl로 검증됨)
-- [ ] **Turnstile 토큰 없이 진단 API를 호출하면 잡이 시작되지 않는다** (curl로 검증됨).
-      자동화 방어의 핵심이며, 이것이 뚫리면 나머지 상한은 프록시로 우회된다
-- [ ] **같은 (브랜드, 카테고리)를 7일 안에 다시 요청하면 API를 태우지 않고
-      캐시 결과를 돌려준다** — 실제로 엔진 호출 수가 0인지 `collection_runs`로 확인
-- [ ] **월 예산 킬스위치가 작동한다** — `MONTHLY_BUDGET_KRW`를 임시로 0에 가깝게
-      낮춰 차단되는지 확인하고 원복. 80% 알림도 함께 확인.
-      **건수 상한이 아니라 이것이 10만원을 보장한다**
-- [ ] **누적 원가가 `FREE_AUDIT_PRICING`(저가 모델 단가)으로 계산된다** —
-      유료 측정용 `PRICING`을 쓰면 실제보다 비싸게 잡혀 조기에 막힌다
-- [ ] **`DAILY_GLOBAL_LIMIT`이 2단계 실측 원가와 월 예산에서 역산한 값이다.**
-      2단계 `cost-actuals.md`의 실측 `tokensIn`이 설계 문서 가정(8,000)과 2배 이상
-      다르면, 설계 문서 "비용 구조" 절과 이 상수를 **같은 커밋에서** 갱신했는지 확인
-- [ ] **진단 질의 3개가 서로 다른 의도 축이다** (일반 추천 / 속성 한정 / 비교형).
-      유사 질의 3개면 데이터 포인트가 1개짜리가 된다 — 테스트가 축을 검사한다
-- [ ] 진단 이메일 인증 링크가 동작한다 (`free_audits.email_verified`)
-- [ ] **`AUDIT_EMAIL_GATE` 플래그가 `before`/`after` 양쪽에서 동작한다** —
-      이메일 인증이 잡 실행과 결합돼 있지 않아야 전환이 가능하다
-- [ ] Trigger.dev 스케줄이 `daily-scheduler`와 `audit-waitlist` **2개뿐**이다
-      (브랜드마다 스케줄을 만들지 않았다)
-- [ ] `collect-brand` 수동 실행 시 `answers.raw`가 채워지고 `detections`가 생긴다
-- [ ] `docs/superpowers/notes/2026-07-28-trigger-credits.md`에 크레딧 소진 실측이 기록됨
-- [ ] `docs/superpowers/notes/2026-07-28-launch-1.md`에 실제 고정비가 기록됨
-- [ ] `src/app/legal/privacy/page.tsx`의 **§7(개인정보 처리 위탁)**과 **§8(국외 이전)**
-      표가 갱신됨 — 이 단계에서 `collect-brand`/`judge-run` 잡이 프로덕션에서 처음으로
-      실제 이용자의 브랜드명·질의문을 OpenAI·Gemini·SerpApi·Anthropic에 전송하기
-      시작한다(2단계는 `*.smoke.test.ts`로만 호출해 CI 기본 실행에서 제외되므로 실제
-      위탁이 아니다 — 실제 위탁은 이 단계의 1차 배포부터다). §8 말미의 "측정 기능이
-      도입되면... 회사는 해당 기능 도입 시 이 항을 갱신"이라는 기존 문장이 가리키는
-      시점이 바로 이 커밋이다. 위탁 표 갱신을 **1차 배포 태그(`phase-3-complete`)와
-      같은 커밋 또는 그 이전 커밋**에서 끝낸다
+- [ ] `pnpm test` · `pnpm typecheck` · `pnpm lint` · `pnpm build` 전부 통과
+- [ ] `pnpm test:e2e` 5건 통과
+- [ ] **수집·판정 코어가 `@trigger.dev/*`를 import하지 않는다** (4단계가 감쌀 수 있어야 한다)
+- [ ] `pnpm audit:run <id> --dry`로 **실제 API에 1건 이상 돌려 결과를 눈으로 확인**했다
+- [ ] 프로덕션에서 신청→인증→발송→열람을 **본인 계정으로 끝까지** 돌렸다
+- [ ] 확인 메일과 리포트 메일이 스팸함으로 가지 않는다
+- [ ] 개인정보처리방침 §7·§8에 Google LLC·Anthropic PBC가 반영됐다
+- [ ] `OPERATOR_EMAIL`이 세 환경 모두에 있다
+- [ ] `/audit/<id>`에 `noindex`가 걸려 있고, 발송 전 리포트는 404다
+- [ ] 진단 1건 실행에 걸린 **운영자 시간**을 기록했다
 
 ## 다음 단계
 
-[4단계 — 결제와 온보딩](2026-07-28-cited-phase-4-billing-and-onboarding.md)
+**4단계(결제 + 온보딩)**로 간다. 이 단계에서 3단계가 넘긴 것을 이어받는다:
+
+- **Trigger.dev 초기화와 무료 크레딧 소진 실측** (최초 3단계 Task 1)
+- **`collect-brand`/`judge-run` 잡** — Task 2·3에서 만든 `runCollection`·
+  `runDetection`을 **감싸기만** 한다. 로직을 잡 안으로 되돌리지 마라
+- **`selectBrandsForToday`(요일 분산 선별)와 일일 스케줄러** — 3단계에서 뺐다
+- 토스 빌링키·구독 생애주기·온보딩 마법사
+
+**무료 진단 자동화는 4단계에도 넣지 않는다.** 판단 기준은 시간이 아니라
+**"리포트를 N건 보내는 동안 손으로 고친 것이 없어진 시점"**이다. 그때
+`executeAudit`을 잡으로 감싸고, 그 시점에 비로소 남용 방지(Turnstile·IP 상한·
+예산 킬스위치)가 필요해진다.

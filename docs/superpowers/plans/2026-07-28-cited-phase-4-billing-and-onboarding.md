@@ -2,8 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 토스페이먼츠 빌링키 정기결제, 구독 생애주기, 온보딩 마법사를 만들고
-**2차 배포**한다. 이 단계가 끝나면 고객이 새벽에 결제해도 그 순간 첫 수집이
+**Goal:** Trigger.dev 수집 자동화(3단계에서 이관), 토스페이먼츠 빌링키
+정기결제, 구독 생애주기, 온보딩 마법사를 만들고 **2차 배포**한다. 이 단계가 끝나면 고객이 새벽에 결제해도 그 순간 첫 수집이
 돌고 5~15분 뒤 완성된 대시보드를 본다.
 
 **Architecture:** 카드 정보는 우리 서버를 거치지 않는다 — 토스 SDK가 브라우저에서
@@ -67,6 +67,55 @@ Trigger.dev 잡이 `currentPeriodEnd`가 지난 구독을 찾아 실행한다. `
 | `src/lib/onboarding/generate.ts` | 별칭·질의·경쟁사 자동 생성 |
 | `src/app/(app)/billing/page.tsx` | 결제 관리 |
 | `tests/e2e/checkout.spec.ts` | 결제 E2E |
+
+---
+
+### Task 0: Trigger.dev 초기화와 수집 잡 (3단계에서 이관)
+
+> ### ★ 2026-07-30 — 이 태스크는 원래 3단계 Task 1·3·4·5였다
+>
+> 무료 진단이 수동 배송으로 바뀌면서 3단계에 자동 스케줄링을 쓸 곳이 없어졌다.
+> 스케줄러가 돌릴 대상 — **유료 고객의 주간 수집** — 은 이 단계에서 생긴다.
+>
+> **이 태스크에서 할 일:**
+>
+> 1. **Trigger.dev 초기화와 무료 크레딧($5) 소진 실측**
+>    — 3단계 계획 Task 1의 Step 전부를 그대로 수행한다. `trigger.config.ts`,
+>    엔진별 동시성 큐(`ENGINE_QUEUE_CONCURRENCY`), `creditProbe`.
+> 2. **`src/lib/collection/schedule.ts`** — `weekdayInSeoul`,
+>    `selectBrandsForToday`. 3단계에서 뺐다.
+> 3. **`src/trigger/collect-brand.ts`** — 3단계 Task 2가 만든
+>    `runCollection(items, deps)`를 **감싸기만** 한다:
+>
+> ```ts
+> export const collectBrand = task({
+>   id: 'collect-brand',
+>   maxDuration: 1800,
+>   run: async (payload: { brandId: string; trigger: RunTrigger }) => {
+>     const { items, runId, brandId } = await prepareRun(payload)  // DB 로드 + 팬아웃
+>     const result = await runCollection(items, {
+>       onProgress: (done, total) => metadata.set('progress', { done, total, runId }),
+>     })
+>     await finishRun({ runId, completeness: result.completeness, metrics: toMetrics(result) })
+>     if (result.answers.length > 0) await judgeRun.trigger({ runId, brandId })
+>     return { runId, answers: result.answers.length }
+>   },
+> })
+> ```
+>
+> 4. **`src/trigger/judge-run.ts`** — 같은 방식으로 `runDetection`을 감싼다.
+> 5. **`src/trigger/daily-scheduler.ts`** — 3단계 계획 Task 5 그대로.
+>    스케줄은 **전체 1개**다. 브랜드마다 만들면 Trigger.dev 무료 티어의
+>    스케줄 한도 10개에 막힌다.
+>
+> **★ 로직을 잡 안으로 되돌리지 마라.** 3단계가 코어를 프레임워크 밖에 둔 이유는
+> 테스트 때문이다. 잡 안에 로직이 있으면 로컬에서 검증할 수 없고, 그 상태로
+> 유료 고객의 주간 수집을 돌리게 된다.
+>
+> **★ 무료 진단은 여전히 자동화하지 않는다.** `executeAudit`을 잡으로 감싸는
+> 것은 이 단계의 일이 아니다. 기준은 **"리포트를 보내는 동안 손으로 고칠 것이
+> 없어진 시점"**이고, 그때 비로소 남용 방지(Turnstile·IP 상한·예산 킬스위치)가
+> 필요해진다.
 
 ---
 
