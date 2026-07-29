@@ -49,6 +49,28 @@ DNS 조회(`nslookup`) 결과:
   담당 태스크: **6단계 런치 체크리스트** 착수 전 사용자가 레지스트라 UI에서 `cited.co.kr`,
   `cited.kr` 등록 여부를 확인하고 최종 도메인을 확정한다.
 
+### 확정 (2026-07-29, 사용자 결정)
+
+**최종 도메인: `cited.co.kr`**
+
+DNS 재확인: `cited.co.kr`·`cited.kr` 둘 다 NS 레코드 없음(8.8.8.8 조회 시 Non-existent domain).
+미등록 가능성이 높으나 **NXDOMAIN이 구매 가능을 증명하지는 않는다** — 등록됐지만 네임서버를
+안 걸어둔 경우도 있다. 레지스트라 신청 화면에서 최종 확인 후 구매할 것.
+
+구매 시 확인: `.co.kr`이 개인 명의로 등록 가능한지. 사업자만 가능하다면 `.kr`로 간다.
+
+**도메인이 확정되면 연쇄로 처리해야 하는 것 (1단계 Task 9 배포 전):**
+
+1. **Resend 도메인 인증** — resend.com/domains에서 `cited.co.kr` 추가 → 대시보드가 주는
+   DNS 레코드(MX + SPF TXT on `send.`, DKIM TXT on `resend._domainkey.`, 선택적 DMARC)를
+   레지스트라 DNS 관리에 추가 → Verify.
+   **값은 반드시 대시보드에서 복사한다** — MX 대상과 DKIM 키는 선택한 region마다 다르다.
+   인증 완료 후 `EMAIL_FROM`을 `Cited <noreply@cited.co.kr>`로 교체.
+   그 전까지는 `onboarding@resend.dev`라 Resend 가입 계정 주소로만 발송된다.
+2. **Vercel 환경변수** — `BETTER_AUTH_URL`과 `NEXT_PUBLIC_APP_URL`을 **정확히 같은**
+   `https://cited.co.kr`로 설정. 다르거나 `http://`면 `src/lib/env.ts`가 부팅을 거부한다
+   (Task 5에서 세션 쿠키 `Secure` 플래그가 여기 걸려 있어 의도적으로 강제함).
+
 ## 미확정 항목과 해소 지점
 
 | 항목 | 해소 태스크 |
@@ -57,4 +79,5 @@ DNS 조회(`nslookup`) 결과:
 | 토스페이먼츠 수수료율 | 4단계 착수 전 계약 확인 |
 | OpenAI 웹검색 툴 단가 | 2단계 Task 2 |
 | SerpApi 네이버 AI 브리핑 커버리지 | 2단계 Task 4 |
-| `cited.co.kr` / `cited.kr` 실제 등록 여부(레지스트라 UI 확인) | 6단계 런치 체크리스트 착수 전 |
+| ~~`cited.co.kr` 등록 여부~~ → **cited.co.kr로 확정(2026-07-29)**. 남은 것은 실제 구매 | 1단계 Task 9 배포 전 |
+| Resend 도메인 인증(SPF·DKIM) + EMAIL_FROM 교체 | 1단계 Task 9 배포 전 |
