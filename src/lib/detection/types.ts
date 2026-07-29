@@ -29,6 +29,13 @@ export interface Stage2Verdict {
 }
 
 export interface DetectionResult {
+  /**
+   * 어느 답변에 대한 판정인가. 호출자가 결과를 원본 답변에 되붙이는 유일한
+   * 수단이다 — 배열 순서에 기대면 판정 경로(2차를 거쳤는지)에 따라 조용히
+   * 어긋난다.
+   */
+  answerId: string
+  /** 'self' 또는 `competitor:${canonical}` */
   subject: string
   mentioned: boolean
   position: number | null
