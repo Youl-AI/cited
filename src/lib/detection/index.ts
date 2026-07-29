@@ -89,18 +89,12 @@ export async function detectMentions(
       })),
     ]
 
-    // 이 답변에 걸린 주체들을 한 번만 계산해 재사용한다. 다른 브랜드가
-    // **실제로 이 답변에 나오면** 순서 판정이 필요하다 — 단순히 경쟁사가
-    // 등록돼 있다는 사실만으로는 2차를 부르지 않는다.
-    const hitsBySubject = subjects.map((s) => stage1Match(input.answerText, s.brand))
-    const presentCount = hitsBySubject.filter((h) => h.length > 0).length
-    const otherBrandsPresent = presentCount > 1
-
-    for (const [i, { subject, brand }] of subjects.entries()) {
+    for (const { subject, brand } of subjects) {
       stage1Candidates++
       const slot = results.length
+      const hits = stage1Match(input.answerText, brand)
 
-      if (hitsBySubject[i]!.length === 0) {
+      if (hits.length === 0) {
         results.push({
           answerId: input.answerId,
           subject,
@@ -114,24 +108,24 @@ export async function detectMentions(
       }
 
       stage1Passed++
-      // otherBrandsPresent가 needsStage2를 바꾸므로 여기서 다시 판정한다.
-      const hit = stage1Match(input.answerText, brand, { otherBrandsPresent })[0]!
+      const hit = hits[0]!
 
-      if (!hit.needsStage2) {
-        // 명백한 케이스는 2차를 건너뛴다 — 원가 절감의 핵심.
-        results.push({
-          answerId: input.answerId,
-          subject,
-          mentioned: true,
-          position: null,
-          sentiment: null,
-          context: null,
-          unresolved: false,
-        })
-        continue
-      }
-
-      // ★ 키에 슬롯 번호를 붙인다. `answerId:subject`만으로는 같은 answerId가
+      // ★ 1차에 걸리면 **예외 없이** 2차를 거친다. `hit.needsStage2`가
+      //   false여도 마찬가지다.
+      //
+      //   원래 계획은 "명백한 매칭은 2차를 건너뛴다"였다. 실측해 보니
+      //   그 최적화가 리포트를 망친다: 브랜드가 **단독으로** 언급된 답변,
+      //   즉 고객에게 가장 좋은 결과일수록 감성·순위·맥락이 전부 비어서
+      //   "언급됨"이라는 한 단어만 남는다.
+      //
+      //   그리고 아끼는 금액이 거의 없다 (2026-07-30 실측):
+      //     - 픽스처 2건 10주체 판정 = 9원. 건너뛰기로 아낀 것 1~2원.
+      //     - 유료 구독자 월 판정 원가 약 1,000원 — 엔진 원가 15,800원의 6%.
+      //   감성 한 줄이 그보다 비싸지 않다.
+      //
+      //   `needsStage2`는 1차 매칭의 확신도를 나타내는 신호로 남겨 둔다
+      //   (골드 라벨 분석용). 여기서 게이트로 쓰지 않을 뿐이다.
+      // 키에 슬롯 번호를 붙인다. `answerId:subject`만으로는 같은 answerId가
       //   두 번 들어올 때 두 입력이 키를 공유해 한쪽 판정이 다른 쪽에 조용히
       //   복사된다. 슬롯은 전역적으로 유일하다.
       const key = `${input.answerId}:${subject}#${slot}`

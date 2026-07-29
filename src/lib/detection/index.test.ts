@@ -51,11 +51,15 @@ describe('detectMentions', () => {
     expect(results[0]?.subject).toBe('self')
   })
 
-  it('명백한 매칭은 2차를 건너뛴다 (원가 절감)', async () => {
+  it('명백한 매칭도 2차를 거쳐 감성·순위·맥락을 채운다', async () => {
+    // 단독 언급(= 고객에게 가장 좋은 결과)일수록 리포트가 비는 문제를 막는다.
     const spy = vi.fn(alwaysYes)
     const results = await detectMentions([input()], spy)
-    expect(spy).not.toHaveBeenCalled()
+    expect(spy).toHaveBeenCalled()
     expect(results[0]?.mentioned).toBe(true)
+    expect(results[0]?.position).toBe(1)
+    expect(results[0]?.sentiment).toBe('recommended')
+    expect(results[0]?.context).toBe('추천됨')
   })
 
   it('ambiguous 브랜드는 2차를 거치고 결과를 따른다', async () => {
@@ -98,22 +102,8 @@ describe('detectMentions', () => {
     expect(results[0]?.sentiment).toBeNull()
   })
 
-  it('경쟁사가 함께 있으면 순서 판정을 위해 2차를 거친다', async () => {
-    const spy = vi.fn(alwaysYes)
-    await detectMentions(
-      [
-        input({
-          answerText: '무신사와 29CM를 추천합니다.',
-          competitors: [{ canonical: '29CM', aliases: [], ambiguous: false }],
-        }),
-      ],
-      spy,
-    )
-    expect(spy).toHaveBeenCalled()
-  })
-
-  it('경쟁사가 등록됐어도 답변에 없으면 2차를 부르지 않는다', async () => {
-    // otherBrandsPresent는 "등록됨"이 아니라 "이 답변에 실제로 나옴"이어야 한다.
+  it('답변에 없는 경쟁사는 2차 판정에 싣지 않는다', async () => {
+    // 1차에서 걸러진 주체까지 LLM에 보내면 원가만 늘고 판정은 같다.
     const spy = vi.fn(alwaysYes)
     await detectMentions(
       [
@@ -124,7 +114,8 @@ describe('detectMentions', () => {
       ],
       spy,
     )
-    expect(spy).not.toHaveBeenCalled()
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy.mock.calls[0]?.[0].map((r) => r.brand.canonical)).toEqual(['무신사'])
   })
 
   it('우리 브랜드와 경쟁사 각각에 대해 결과를 낸다', async () => {
@@ -162,6 +153,38 @@ describe('detectMentions', () => {
       'a1/competitor:29CM',
       'a2/self',
     ])
+  })
+
+  it('1차에서 실제로 걸린 별칭을 판정기에 넘긴다', async () => {
+    // 정식명이 아니라 걸린 표기를 넘겨야 판정기가 그 지점을 찾는다.
+    const spy = vi.fn(alwaysYes)
+    await detectMentions(
+      [
+        input({
+          answerText: 'MUSINSA에서 사는 게 저렴합니다.',
+          self: { canonical: '무신사', aliases: ['MUSINSA'], ambiguous: false },
+        }),
+      ],
+      spy,
+    )
+    expect(spy.mock.calls[0]?.[0][0]?.matchedAlias).toBe('MUSINSA')
+  })
+
+  it('맥락이 빈 문자열이면 null로 남긴다', async () => {
+    // 리포트가 `context ?? '기본 문구'`로 대체할 수 있어야 한다.
+    // 빈 문자열이 그대로 내려가면 리포트에 빈 줄이 찍힌다.
+    const emptyContext: JudgeFn = async (batch) =>
+      batch.map((b) => ({
+        id: b.id,
+        verdict: {
+          isBrandReference: true,
+          position: 1,
+          sentiment: 'neutral' as const,
+          context: '',
+        },
+      }))
+    const results = await detectMentions([input()], emptyContext)
+    expect(results[0]?.context).toBeNull()
   })
 
   it('결과에 answerId가 담겨 호출자가 매핑할 수 있다', async () => {
