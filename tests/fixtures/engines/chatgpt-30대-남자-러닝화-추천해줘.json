@@ -1,0 +1,189 @@
+{
+  "engineId": "chatgpt",
+  "query": "30대 남자 러닝화 추천해줘",
+  "capturedAt": "2026-07-29T19:43:48.225Z",
+  "elapsedMs": 27266,
+  "usage": {
+    "calls": 1,
+    "searches": 1,
+    "tokensIn": 9625,
+    "tokensOut": 372,
+    "tokensThinking": 1792
+  },
+  "raw": {
+    "id": "resp_01e28ece3a14ab73006a6a57d901fc8198b8aac3b9c0e95900",
+    "object": "response",
+    "created_at": 1785354201,
+    "status": "completed",
+    "background": false,
+    "billing": {
+      "payer": "developer"
+    },
+    "completed_at": 1785354227,
+    "error": null,
+    "frequency_penalty": 0,
+    "incomplete_details": null,
+    "instructions": "너는 일반 소비자의 질문에 답하는 어시스턴트다. 한국어로, 구체적인 브랜드나 제품명을 들어 간결하게 답하라.",
+    "max_output_tokens": null,
+    "max_tool_calls": null,
+    "model": "gpt-5-mini-2025-08-07",
+    "moderation": null,
+    "output": [
+      {
+        "id": "rs_01e28ece3a14ab73006a6a57d9ad74819890c2b40d0d8a6111",
+        "type": "reasoning",
+        "content": [],
+        "encrypted_content": "gAAAAABqalfzz5Ve2See2YNDytxbD0DpeiQfRJYdiAQPczomV9oN7R0ysugvp9m1bizFdyyAkXwoK9w2XU_40TrW9uwikipo0KXfUIqBceYuBKiNHN5XotAeoIY24KjkVbhkCVaBGWFUorJuSWEFWU8jEjTpoAfaCnSaws1XmjyjARuUGUW38IQKmoZKOBK-7abO5nMt6xk9sy_NTbOMHRu9HwKUWpFLT_OhANotH9bdVjbbPpBJmXPVszxtu7zJyd2ymcuRBVJYS5uQl8d3puzpagfZ5yBMYLI1JiI-WSruCchHK4kr18JqEE2jAElyXlzObfQcnI_Cbjt2kfk4TAXQCJkCnP69etBvwRPTHSWHlROvx7A2KMNHqzacqBYBRth1MiwdzmXFi8wMg0ufrGA2puHw3ia26uZDmZ6r8Ql5czJV35cKFBourGajnwkk8ES2Jz5rkWy_gJVIKpCK6_yuiRjLlljCysHowq_Jxbgk2A7FtX_3IJ0ZZilmgRgR-cUVCgeZt8CJsUMnQonfn8S1i14EFhyC7bIStgx2bmQbeMioDwoYUIxxzKbzNzCom6nciCeStEMoC55u2iNKD60rNebbG-XIVQIH0YT_jiBL_q4pIIAD0n8P8MbslW5kY__oZ9N-NsXV8qegNWgfqJSkD0RgP7fpwLDQ8nP8lw5dEjBTlvpIkOPLUy6b26ysLNwtXkIZ9s-AoMqT4O96Ld4zxLOjcWS1umXl-uZvXJbzDA1ofGPUgwr0fbrcWbIVwcVQKy8iOP2XY75OCeqrQgTEhYlnHOsxQp0U9p-f1N_FPqL1MOzUctgy1jcTptfaXAN4Oha-hgtgEl_U5mKq9QdXPL3RcZ_2r9wt78ehDWNNOr1WOUYHfcUaZpoz0j2Cfa2gfbscPw9-6Cosk1En9O_Fd1nOVg5WglMkYXCklt3j2x-WIioky7-tVBNRKW-ZXoQOdkYY0f6geNOLl5rxznjmn17_ZgJisP3Z-HvS3vxAAp9-ixBTeUP695AWxAFwaNyTLehW9N_7TdOonPx6wMorTWyRJwQHzTdmxlBLVQSZrjcQqpi_i1-bYTejqjjXiApS7rb9s75zpwQNYajyCaqzHSRDmV_bIXGuYt5Qf_sfMOuSvfOtVovict0Dt4wtWf_MRygILQbuTbQBRA90BT4uliisSM68eL-QL2JzAbDmtigjtq1u0r3pPtEP2sil9T3dYSZytfJMc121xNeStjRZj7DeebJhltCE_OU3uxY_hYA-8q9dFI-yt-E8c4t84xi5hRNGfaN2xfDTP2AygbTW2vcRJVInCcs4a8vdxFLvOyv89MWAEplPfz2SXZyX0-fOmQIidoEtGch4oo40flPWqHVjn81vr3IgMF8aaDPaULilL0I4NwzVvXcyaZVxNdfurAtZ1KxeswNMPnjdhvTYleaktUf3zBS8Rz7v3-MBxsPcB-neoPib-k902tbcxkOcjGUr3Of5dxjmB6ibFAb4UsOe1_JS9N45G73xcaj9PL6qIOypRSL9DQDY8hXKGxhPFTdBsrpsDKS8xMr0OD1jSlqsAGNayK0Y2ZAEwlhQlbqbYsOLdFtwYwEaynaUDF_s7822cD56EAaCBpmQlIVk1XazkQ-0dOhWjKIIl2WMP6L9oT3Pqorgxqw1SheWXwK__DC0uioUEr_WNMNsDW_jq9Ziuuuq9N1xBBf1OXGfeJfzmRDOdRAnvcjd8-XgN7U_MrQ-yvLascl6et8ZePpli-HM3FxIJ3x8PbQZzXVQYx_JX_lA-Rwr90ESwF50sMPt4IiqxjKxeR-WT1aHxp2IXwsob10U2bhG7CyEeEZNOWrS31nBBWUtIcGp4Hc4Zw2iTece4sgRSPhSfsFup1NHEuvzJyRyOXv5SsayGl91lh7WZeFU0R7v69jCwdEGJJzftPHs3s3ra4NqrnJdSFcODUCpM0eDiVi5BRhCzuYKZDKnnx8Gmj02_nO7wxv0ER854PFq46oea5KzavdT0mTjV_ijN-ICGc_jxgKILaKNumvRIE0RYCztlHCPBIhQiSrP1GTCVNbdDSsYV8bJw52Zl3bopZRu3P1TQUKCvHIYyaaEEwLSHcCJOwqdWaK0Z7XxH0TDndC4hAlZwsMsW1f92q8VxO4JoslMXBsa9mZWgzwKO5O85X93tR8u10wPyvha9UcPapRHYMdJBcGe9P_LUJ-IBU_WJBy75ILsUWj9F5t0K4Tnc46M3jok_egKrvZGAPcH--mU1pjuJyFBRaw_x75D7r-p3ITjangWUAVWglznTdgaj_lp2cIeJvo4l2_75dWY1F2YwXqVjn1x0lOu_TbvdHls_tS83LfmkVMmsEppNfO_b7IbG3etN3y6qJv8O937wD_Tm0wo0K5tXTfccQgTrp8HU40qFG0GmvHdUob4-daTKlhLeX5ZhCEsPsfr8dlJVfvB8XsAVAyzC3mseOU6nGbtoY0jK_Y3ApHVm_G81vhDLg8SSUbjRE_f79dUKvVBmN5s1ZvBa98fe7L9rPt8E53ESVMrWy22BRN_ee99jMh8Sd3jX8YbTqaIiG4fGnD2uScwozj4du6AyEA1ecrGxy2srGTQiE66X_k5wJLwLonGNCezYwtqAr11l5PqmQjGN0uoX7TKK5o5ZNuuMZKWamXOxYCpmr77S0T325R2EAAcT4mNkW9yg1DjE_nj9rQzZCIAKNx-R4Xxc8iWYQoxiaFW7HdyXTzgxnkQ2v6zzGSKETOwYtsKbtbnyBfSntncKDG4Xu6PG2gTCS32ZuD3hCHi8x8DAM7zwHRbCRKjT1QxprdNFz39sBxtFRZWOdhkUkLkXSyQW3m1rvKAJ3CxsjfUKtPrzuwAMtfZoDrF7HEFfMnuoSZboFvhEZdEmADgT1wQ1WmPxiFYi_TBOa1gZWTD9z7cPP9jCmJmvA96E2Rnj_K5QWcYD_-HAEwL0c-WP_Pj3S794yF7SSSR5mP7z-1qpWkg0gzjEXpWgxs41rLXmh9L_wQzhkXu8x0b1vCYBQkqva5JbZ4m35euwDo3FcAkoIZ5xFI9_e3-8qZ_d-OQEcGZhPMGuBtRI3kyPxMbnMFTH2vHGVXievQb5WjgmA_g6j7hyhmg3Yod1jyvnZyStTvfLI-pznKIumiNetCVN5jumU54D8o52tbodUjMetcojU_hE6ShplFt5IxrEtpaxbR1fzPHpL8q-rLZOiDHeG375irHJTgdIWrFZr9GGkwAmgHe0AfPNzlzzEYT7WFX8z2u-010zWZWjzF8djHvoFZy2jCWCLuGJm2U_y3nvY85f4mZ0ZZ1fb3mvpezzm9laZoM7QVeXmMMJLac3fyhcFJXC_ytTiNAdK8nVQz5k8HKIR7KzSiRsGl0ghKa1_mHTaWrK03GN6MG-f2pu_peshgaHZBdk-NY68WqoPx3q1W3wjSVbfB_1f6qkI4gAmvAyyEn3RbBKsIOPbB7C3TaGo9YA6VWuA62r70cNhASeO0_BoDnZLL_jCHQGcF5Jc2AgYaDeYK3HUk5oWCUfF3kgt2C2gr6zj3__h3WBC7BCREuxmDNqLspLzzNYruxssNL8aQTAdlZGzuQGZPYYb0zkQjHCbkUTcTE6DxUz3f1kcsZI66yVBHYfLp_S-yttNS_TVES4w6bgkjaD6b4IsBgVMpZSuwHCFjWWpvbmQ1rit8LFoXE_58qBzw47VdteDpANUSxcGzpxAHvOa6LgoFLyNis7bagHtvdmmd_AiwKtPiM6ChrKbbCSidDW4n27dIHCEW7J7s_FItt_oiwo6ufnvSNRqnW8izPNXPnm2AGbOqxaJlNLf5tyOFX_cQZAtsKAlP47oUWrtC71H4Rig5dyBMqA7NbiPjCSjCY_YmVlFq5G0ljJj4HOK0loDgeG2jVP-iwRBgzo2QZQw7ZOpul34jHncbJm18N1flTB4rQ8GP35oqm1tCsQ-byshvHiUOBO--TpehW7esyBYPnghqG4kq5zuVdO_QRAlel-gJC35NK3gdan1eVq6pwhvN0WDEpTeikZUYpXRSLuutJwPkQ0nAfSl8_bNiq2VlMFIdIj8Uy39J7Wgez4DivSAkuiqHXeKX0sryF4D0A2HHDqUWq6bFdFfc2kNUbCVWuVjrbw-ABsqzPlRe3veX3ZeVOzXHdpaAq9IpX5ug70Mi0TCEHGXHJk8p9q33uXYYkc9LW0_p3q_b3ObMbfFCWZZtValKCjgok1pTSwMqosLMKz_n2QpC-TrOnpdgVxIAyA3kk4lS4tnHAkc8Cp9ABBOihulVbGvZGL4OLKeDF6fItMMj4T_96R48b7ca2yqezhQ8nK_AVw5ViA2FT2gAzHI0TdeVH5BxYFzLOw9dltCfZVwkppTqgMCmJK6221KtHmd255PUflIoiZq6BkUqQZUp3fCbN33xOsP-d_A5Dcuc81VgWQHqK4203WyXdemiqtrTD6OR7vd9kRCPsPU1Nz6YHuvSRkFQiU4iBvj1bmjftOP1EHoEN8uL7MeDFmPn1nooPRxAIf08-1TcDbwjmxLOTsXn1U0sP5m-0NHweaysafXpx5zDdbNJ9al8PLSYvxUlarbATWcxzkFlUU6GNg5kKCbH3ywWHGSQdVeljeUrjW_Z7fgSlMm5Q0U0MtLj9TNPJR_I99wrjEuoEB8XjGjohAq4YDmG9UwnWWnKDGy1zIRtR_srJWcpQeEEnd4cmdOXFF-rB6_dbRu3nzRm1ydr-uIfsz0ejfuYGCKoWBqhum3zocmTr0E6eTI-NsMeXgD0CaYvYC-rz96YxVnwDqlYdugiCm6iEwrRmi3GZEy0NzGKcfHMUFBk1dXrYj_u6Vb_mM3LOAURjklc1V5xyDMqrBUFpywxZXDRpPcBprolzRx3q9f8EYBhwrCe8BKewSHX-J0aHWJWChQk5zW6cR7y7QJgkX3lcGjkctGDdHxgAZp0Jvkky7cnTO5rJc7efl2ahi1hAeSRPQA2SC-58i4R1MuKesSU9BnnRm0lBs5N4G1Secr8wj03PhJsv0bbi9z1PdGgdxBnNR1QGZeodrZF_r91f8y74gwCc8lwqd-OgMBarfWZuU0l07-qlrmtMf930ivueBIV0JAezTIafhF84Hpt74xDpCYUPBDC30oigZQWxFv63oP8jMoG7TJXZcRIVpWDueK1_hRWCxKP5Tx3zu8EwABxBx4_B3qA6vviwly-fyzM4f5z5t6S8BaQIYwsnLiLYzaTHiW8a_nHDWFfvjmPeO39KZo_-M1DLw3obzEdPSBpRa-rIK1PaMN2CUU6DO4yIWvYVdNIaVKEDWnMQSoQx2BBGoQ8iW0upPvsT9dyM54OcI1HGWKMlpIr_GOSLf-vVIoI6ywOrx5MgHCddgYp5a-nsU0_N5zFFxvWNbfJk5PbUbN-fYk4_SEhSTKKyRVD4sl4ob21j3aN_0YC9uYzK92_rzBCuTyc1VLxh3UUP2rUxzmXSVJ0tTsAXeMxXFzDiDEY1bYquq8xCnYMvlWf9bLmHjCl-c_1iHBAp3cDVp_1fpOwtfRQCjQU4s_Utaq6ASm0QT4TT8vViLiTCX294w3cgFcvITyswJfDISlmlk-TYnHDMy9iCLzCFMpxk1yOc0yyKZ-KGa28eOLOg0yGhUgrMuRyWm3cm24FEluLqbUp7J5lS_RI9HlAfnEqPWHyHqUVh-fa7txiKxzeSqq_3Kv8YAhegEi6uS4Ux4lSA1d_LRKVTBeujHNmvLWDCBOClBFO2qq00x9ptu9fWjsgpi-szBJJ6VYSA64TutKQ9vloboW4U1e7584Ob1izi278SQN2yQosYOmwgOws8hS5bOQJ7YrkAIL7YRWTlkU_B4Fv5disN-TDUL8HnfP-cNzqm64rYK5CPgbjlwPtl6s_AjtJ3EAwkgg8dsH4Gh14JPX7nTC7gdAbgmzEzqklC3OqCPDlULTC1Wht7rWg24Pe7GHQGdV-pd9PWCuUVYg7xPcaW3ullx8q7O-SaA7_KvIbcRKK-qnyvN7FLtoSGthH4rr09EUsWF_b5WRyQuGaxS7wRe2iI-Hv8jSHUbgfz6JbZb2l93Rz--m6jRtCRgZA2r8cvn7VEFwnweNfPvdHqzg5cDYE9tktklUqyqZ03MGoh2iGHOz-MS2jpmCTeCnTsxdc=",
+        "summary": []
+      },
+      {
+        "id": "ws_01e28ece3a14ab73006a6a57e3e6948198acd2f19ced4403b5",
+        "type": "web_search_call",
+        "status": "completed",
+        "action": {
+          "type": "search",
+          "queries": [
+            "Brooks Ghost latest model 2026 product page Brooks Ghost",
+            "Hoka Clifton latest model 2026 product page Hoka Clifton",
+            "Nike Pegasus latest model 2026 Nike Pegasus product page",
+            "ASICS GEL-Nimbus latest model 2026 product page",
+            "Saucony Endorphin Speed latest model 2026 product page"
+          ],
+          "query": "Brooks Ghost latest model 2026 product page Brooks Ghost"
+        }
+      },
+      {
+        "id": "rs_01e28ece3a14ab73006a6a57e6e24c819890f61eba26aab3e2",
+        "type": "reasoning",
+        "content": [],
+        "encrypted_content": "gAAAAABqalfzC4LjWG5wq4e-K8Uuv3UWYqSlkP-Cpecx9atyhbKALwSUoh0VM7zxSo64WAUNkPVnxLIvsvScVhJIAZxoOvJLGfdjoEvaQgwEUGZvDrfypQebxGw7xtVYgsmVvSjFUqwpK7lAxBcD141olFegNnaEXHW62yzOFEzwABhQ_cid2i37sCVff7h_7Scz9ZQGKay6ixccIReIiSlAwZsVJIOOSLVAZPLly9iHCgC87ehkd52wbb_ymL2n7-w1vTbU7ntVD3xDWLUNkV2o72PBSISiC6Mf4OqSXvANHyyw2UnOpbzweCPk-pX211-s3w30Eg4vb1WKr6Mm6qwUbJ_hXe9toc656isCHO3oBHNhV5RbB8b2jab6tCkEzlTr8sPQaIrqdPUW8fhHSR4mkKsL12GtHJjlFlIosGVOBKojYY28G6NgkyCZn8yN94wTURGeFuCNeDRMip3ki1YkZzJROU9lhz_Rt3473fQgtZZTBEX_ks_MxEE4egqDzKfKTbb-FNpMqZvx4Q5gVQm1B40fc1wrhdrieCba2H1mirDfOG3yyuVY8I8fIFkf0KrExXgEIHwRk7UOsVUvp63ODTn_dYqKvtXi08gCPr8helQooxdpvuJjoY1-2gp0ZyLJY3mG4NZ-eOOYcMqUkD8esOJYtgDZh7HKwWq2Zw5TwoZAqQroyYWnrnoArmXVdAk7tbRZ7M_SveJaSsZ1wKpVjzzj7F48eyxdQa4Wuaka5SeV9Y1c7T3uthyzmb2VimMSRujp9zNMqYe96zPCVALw-ovKWouPvLCZCt1ZkWa03xitMIVYV_B0mWHcr-jmhEbhRXO3XADltIJTorHiGHcWT_qtgB1K_G1Il4FMTeEwbNinJjRpcu-hLSa0IxEjw04OwOi5kDB1oJibuZ69trike7piHUj_wTc6o6BcY3YK5Pdah7IkW3srQnT64RBORo8qhBni6wLkTEiFoHWXxZCKO5hMT6eiOe3EJGTIZq9IAcXTfAJ6-1umvsKx1WjDcLBYyH-px3YCkbTZMYnVY_CqVPiaJLrUnU0OSlUB7lxeB-CEnOJXn_cWigdShgCQ-AfQ4oj5I58ttcmKLDAFD680RLUFHKLBF4ZASqUjZTBV_o_WBWPEhkLnfmeYbv0uUMTZb2mMfo4DsMrf2U8GSdMf3OZ9r3LKqGyZsOL3dMSY_YFb_gGkyuX1VulWN4MgOeQpTWGo0yF35_ghb8zsr_RHG-HObQH-omH4Xb-yxvkLnvpu8wuCUWBhGRf0_U-zhBaPrdW-ge_ofbve_Pc052qI4LFIaGFB567s7vcGCD9IGjyc73Apl-gukn5sfr_YF4TzXAF8kv4ygEPoXLbyI23YbdrlP5nHXr3x24mVfFkZyT8NRgeEA8fYer0xDPkeef3vQBIExd_LRyCObShevP-eOKL4_oJbi0zZYqUlUC3WBqaWaPdvUs-0Y9AMCFwgJvB8CaglPZivI-8tvgB2bLjvzv1lWqOMQLfRcYc-xSbGWxfIbt8j-I33hgPu-jyaXMpNTaNAYZHhbMxxQgqEBk1Vbo--v9IRL_AuoELDXXGT79nAO8kJBovMWKC8RChxjHVXgDmb2ZVsjcXkdS_sBDfxTPMXlXaJC-PLbamscLff13bOCJGeFkQJCs-FK2rmmmG5t70DeI57fFachsaCARoegbh9MpwHiIp5cmYZ6iPvnHOmwzs-yv-TZ8BMSm8lgvCN-HB2MFbMFhKY66_GP0lltLAUEiUOyAkSHqst8SoW246YTjzRcp5vWe0Qh_WgfVbZaXvkQDeXX0pmUfilDmUXDd0BGVldiDoucpitRweyX5waN9-h1yILtqsEIjXYimTxUkloenpqkVcx-zk8GgQpNb45CoT9tYYFbe5Tb6qGTZLvT_KRRWl8rt-UlucD6QXVDp9qEn88K6unbQY-YXBGcY5WT-KxkyrOISy87YdDMnPJJ-Z0bs3dYMNE6DQdjuBBXeAY7ywM4Y4v_NWsHjl-ieHf7jr8Y1-Vb9n1V-RKYboy0Ji6WXBvrXrPN3adgxlP51uHgonFgHpLwjB9Dj1oIDBcKSIXohmVVzHQVBFfPkFNtmK9zjeszzWMUtXetwjEXU_ExI0rYd1odaO0H9nJiht_SC_7zTU9WfQP2RqHlUqeKnMBSxq59gaDA0v4DnujUjpHxMGaKJ6SwPIksmyM1Uq61g_bL4pPu-7P_b9SO4Mbh24PfusIqTCE_LLJgfl_UX5jtKXqPu0JdRLlb0c76TEPOi-q7cJL4Y0JA7AEIiOruX6WYYDFF1wcn0fQMsDtxWCQRTKGpDdVO-0L3m_VGONFr_Eact3uJaqM6z7TU_IXQQUa5zrPfY5wb-6kaQnaYzHhsLyFLmgR9p03TNOvlrXZlvm5-WnCK9eUrmayxfGl8-l4GHMT6RUzy-ov5e-6iDii1GPWvH8yoZtgZaqUuREx_AmWhidcQOmFJYSvR07BELzMVAmdbETI5LJh8VYLcwt8Owir1J2Ybh3pRMzevmX9aS1jASa7S8IrvAP3HF8y-YGQGQGKHIL8pTDekK5GiUtq-ecy3PrSxGDjivln4VM8DSYeIsp9H4xNuSL5W8Smztl4GihmwQ4FRmpKPK58eGTWYDtdc4ZBaSHtg2C6JfKMa-HpzaFSxbbOF-VT2XbE7ZWG2h43XdY6YD8CDGcxUQj18-lhRm5yx_w6DTiwnKJ4bZ4aTpwCMxoka-Ro3yRpaYcEwPCKE3Wv6B5HnfgqSUqQKhUrDhCVvBKDF70kYG-5MnHTG36PPF51-d7NLkPjgDNnUXstfHhopQRz-Te7OeNeHF-ZnJFlfYZKWNjpmR1XgnD4mqhEtdCVSxdc483hzMgCb7qesM2rnsaG3DKiCrW8fi3NONf18n83SytCR1iWPhSoADczdKcNg7HUubjCiuUlQrpKbj0AbMPbW99_OTN97JFmtN_9fM9w09HTDS3nSXRMQ61tkmS8JrCoVW-aZN7x_JTyaUP8_rIkJu-u4MedOPlXFvBACfmFFRBm9pBCIOKqL1JRZ_46gKHzMtfdXGeuTVhRSn7_knw5_4oT9NUyvhnhXhUWrH91b9prZ2AQQmMvY5kK43wqNRsUYbDQ7dnLz0SshfXMGU9Ubn48LOaNsNCrY__HhxQdas5DBZ_h3J2O30Jq4bfBCXIzQNjATosGoefunx-DLGRfICk6Jp9m_pj-rE2DlVSg_OBXTKxNrFxAmaN979_eFAAZDpvRqU094fd9X5ovviyq8LOtEEEW5ODcoEKL3VSc_aA6V1HqieDXnEqcQo0YNuy6sZhvII90CZbiiRujgqne9GeyFk5CjezPjlrSHvg0gYeBmLElkKvj04QM7DHLCI7w4YpR65risJYhjL3a6G_4BU4gibumOfupLuiyMoJgJHvjvPYnpsl50vKeGNAadgFBCfcqE_clK_nW-s1EnXOtvLt2UuAd_H-DTn3_JId_ig_KN-caB4aGqVxmanUkQRx2L0XmnDqc_LzxpSOjytX1AAUWIGX-FDMAbH-hRDucphr4dEmzsiCGmAxoZdAMrNu9McTfAb3au2fBXdIY7VAixHXFJtJ_Qb4AIuEOKu_G_LyEGe9nySqXXJnA9cWAMvF4fJuEtZC_e1ZD4eUab2FozO-2WHdX9OOKj4gTgFaZSKE1ywl2HYcWyIdFaLnHneWNHMoV9rlsxksP36A1qikf-HUkYK1u-4gL2396QevnatgGUyBwxl5xW8CRDCLg3HkMbHM3cdl3RI3dM3klfM0EEMfJpaLyZNvQW349iyQ_mQ5978TJu2z0kn70-5hDOPGb6fI914eGHAEL_FmFJnwger2VoFvcMs37J6BSgtPwonrjFPIojej-5YtT190FNCXHsQLp4lJv_hu2uch7a8qk0rVVK88jfCGW-WKE9XrRcw-TRmbVAlrGIM5US7g0gJab7lJ2cZpqSrR0GbV_lEJQXOBJL7xDiuM5ZFaUBn33EPNbqrlWVwTzGyWkLxr2PUJBKqV1izdAbbtCX4aNYCWcHrhNZW3aT6YAEJ_XaLfmake4ij5mjWjoKXLnpoSh3BjZJrBqn2O1-PwNRR9VkmANClbzp6BPPaDGFE21BLDf9FtnFii3N_UhVGvbuGL4gXHfrF6wz7Hqy60v_hWMf05Kaf1Cm7OeyTVkwelwhJLQn9vu5Wu6cTAVcwJZX9AaQvTfMC2jjaNxbsO7Pit44vzItsBPH11bi4Cvmo54DkUTQ9ve1a1mm1ARbJ7ffPb21r57aarL-dB3rBsg93NHbgRgecgMoODsDx9KBVUcjrebX8GMp3ixARUnzFPr1E1qj0ttox39QEsdKBG6UV6dzvdhaGQo2I6I8Ghcq4fLNS8vRHbjxJ2d0B2vR2I-LPZxdJjvxPzn2Xz_AV3ihkLhQHGmyQoi3ELRXvM4h8UaZ73rKdl919NspFcJRIucumlBcF-ziFJcK99oVQ-8PkgXtOAVpt4SJI7jVpwFgsDOywRktCksrGoEo5dzIqsRZg1g9uT0mIowd5jCHUnB08ESAaIbL-lkPFfV_2dd-g3RqYg_dax3lpqxj4pSQhpG0VB501iwpTOXFLdwrMESkunv5wUZAAWsR_ZYAVWqA5iY_Lbgq4yT2ewpnt27PDoTolT6seHzMKTwBX9rhJkPl21zlW4xducVi0-T8motAA3xPDPRZS4dOunQrT_fo6IdHCqUWSjLQyh7tUctMd_l99RGEa1rR_8cwk4vE8JbGAI7leSJP7pjvufiYwZOXvRG9t-ErihwiL69l9OSW3a5-vBbprUZhCvlg9td8wp0R_edjFahZdR5y5mUPj5kJ_0ol_hW4Z5C30fSBR_jvSWtwClfeQaGTHpsNMaiuisuTHxRMvTQO4bmWk1VBGEoc1RBfl6E7AwxTF_sq5IfoCEnv0JqQV3AxG0h3L6Kn26reI3V1H3a4tF8J-ddyRRm1xQxq3KLiBEjewqf2SDFZxMX5-yb6kQCBMxsDgKdQ1hNMXJw03ZtQNewbS2FI9uweR4Qm9n0Hx874EwzsUK8hrtdKm4_tFCEoN_gz2pikQtfCJMr3V4uBC2sRXF5UlGjHf2xstIfRl7SY0Y8uwg6t7V9p4htEPKu3YfwHGBL2VZBQj7q8EP61FcCnTlYuMZ0ow==",
+        "summary": []
+      },
+      {
+        "id": "msg_01e28ece3a14ab73006a6a57ef145c81988e02bb01e1cf88ac",
+        "type": "message",
+        "status": "completed",
+        "content": [
+          {
+            "type": "output_text",
+            "annotations": [
+              {
+                "type": "url_citation",
+                "end_index": 420,
+                "start_index": 159,
+                "title": "Ghost 16 Men's Road Running Shoe | Smooth Cushioning Road Running Shoes | Brooks Running",
+                "url": "https://www.brooksrunning.com/en_us/ghost-16/1104181D020.085.html?dwvar_110418_color=020&tid=em%3Ast%3AUSA%7C20250618_Gear_Sale_Ghost_16_Deeper_Markdown_Resend_Email%7CCV3X%3ADont_miss_these_summer_savings%3AJune_18_2025&utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 559,
+                "start_index": 473,
+                "title": "INTRODUCING THE CLIFTON 10 | HOKA",
+                "url": "https://nz.hoka.com/blog/introducing-the-clifton-10?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 688,
+                "start_index": 610,
+                "title": "Nike Pegasus 42: A Powerful Update for the Beloved Nike Road Running Shoe. Nike.com",
+                "url": "https://www.nike.com/a/pegasus-42-release-date?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 877,
+                "start_index": 748,
+                "title": "GEL-NIMBUS® Running Shoes | ASICS US",
+                "url": "https://www.asics.com/us/en-us/gel-nimbus/c/aa50102000/?msockid=2b7d99ef96196d9715ba8f3997a36c07&utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 1026,
+                "start_index": 942,
+                "title": "ENDORPHIN SPEED 5 | エンドルフィンスピード5 – SAUCONY（サッカニー）公式オンラインストア",
+                "url": "https://saucony.jp/products/mens-endorphin-speed-5?utm_source=openai"
+              }
+            ],
+            "logprobs": [],
+            "text": "좋습니다 — 30대 남성용으로 범용성 좋고 평이한 인기 모델 5가지 추천합니다. (용도 한 줄 표기; 더 정확한 추천을 원하면 주로 뛰는 거리/페이스·발볼·예산 알려주세요.)\n\n- Brooks Ghost 16 — 부드러운 쿠션의 안정적 데일리 트레이너(일상 훈련·5–15km 추천). ([brooksrunning.com](https://www.brooksrunning.com/en_us/ghost-16/1104181D020.085.html?dwvar_110418_color=020&tid=em%3Ast%3AUSA%7C20250618_Gear_Sale_Ghost_16_Deeper_Markdown_Resend_Email%7CCV3X%3ADont_miss_these_summer_savings%3AJune_18_2025&utm_source=openai))  \n- HOKA Clifton 10 — 경량이면서 쿠셔닝이 좋아 장거리 러닝/회복주에 적합. ([nz.hoka.com](https://nz.hoka.com/blog/introducing-the-clifton-10?utm_source=openai))  \n- Nike Pegasus 42 — 반응성 좋고 다목적(템포·일상 훈련 모두 가능). ([nike.com](https://www.nike.com/a/pegasus-42-release-date?utm_source=openai))  \n- ASICS GEL‑NIMBUS 28 — 풍부한 플러시 쿠션으로 장거리/장시간 러닝에 편안함 제공. ([asics.com](https://www.asics.com/us/en-us/gel-nimbus/c/aa50102000/?msockid=2b7d99ef96196d9715ba8f3997a36c07&utm_source=openai))  \n- Saucony Endorphin Speed 5 — 템포 훈련·단거리 레이스에 좋은 반응성(플레이트 계열). ([saucony.jp](https://saucony.jp/products/mens-endorphin-speed-5?utm_source=openai))\n\n원하시면 발볼(좁음/보통/넓음), 주로 뛰는 거리(5/10/하프/마라톤), 페이스(천천히/중간/빠름)나 예산 알려주시면 더 맞춤 추천해드릴게요."
+          }
+        ],
+        "role": "assistant"
+      }
+    ],
+    "parallel_tool_calls": true,
+    "presence_penalty": 0,
+    "previous_response_id": null,
+    "prompt_cache_key": null,
+    "prompt_cache_retention": "in_memory",
+    "reasoning": {
+      "context": "current_turn",
+      "effort": "medium",
+      "mode": "standard",
+      "summary": null
+    },
+    "safety_identifier": null,
+    "service_tier": "default",
+    "store": true,
+    "temperature": 1,
+    "text": {
+      "format": {
+        "type": "text"
+      },
+      "verbosity": "medium"
+    },
+    "tool_choice": "required",
+    "tool_usage": {
+      "image_gen": {
+        "input_tokens": 0,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 0
+        },
+        "output_tokens": 0,
+        "output_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 0
+        },
+        "total_tokens": 0
+      },
+      "web_search": {
+        "num_requests": 1
+      }
+    },
+    "tools": [
+      {
+        "type": "web_search",
+        "return_token_budget": "default",
+        "search_content_types": [
+          "text"
+        ],
+        "search_context_size": "medium",
+        "user_location": {
+          "type": "approximate",
+          "city": null,
+          "country": "US",
+          "region": null,
+          "timezone": null
+        }
+      }
+    ],
+    "top_logprobs": 0,
+    "top_p": 1,
+    "truncation": "disabled",
+    "usage": {
+      "input_tokens": 9625,
+      "input_tokens_details": {
+        "cache_write_tokens": 0,
+        "cached_tokens": 4352
+      },
+      "output_tokens": 2164,
+      "output_tokens_details": {
+        "reasoning_tokens": 1792
+      },
+      "total_tokens": 11789
+    },
+    "user": null,
+    "metadata": {},
+    "output_text": "좋습니다 — 30대 남성용으로 범용성 좋고 평이한 인기 모델 5가지 추천합니다. (용도 한 줄 표기; 더 정확한 추천을 원하면 주로 뛰는 거리/페이스·발볼·예산 알려주세요.)\n\n- Brooks Ghost 16 — 부드러운 쿠션의 안정적 데일리 트레이너(일상 훈련·5–15km 추천). ([brooksrunning.com](https://www.brooksrunning.com/en_us/ghost-16/1104181D020.085.html?dwvar_110418_color=020&tid=em%3Ast%3AUSA%7C20250618_Gear_Sale_Ghost_16_Deeper_Markdown_Resend_Email%7CCV3X%3ADont_miss_these_summer_savings%3AJune_18_2025&utm_source=openai))  \n- HOKA Clifton 10 — 경량이면서 쿠셔닝이 좋아 장거리 러닝/회복주에 적합. ([nz.hoka.com](https://nz.hoka.com/blog/introducing-the-clifton-10?utm_source=openai))  \n- Nike Pegasus 42 — 반응성 좋고 다목적(템포·일상 훈련 모두 가능). ([nike.com](https://www.nike.com/a/pegasus-42-release-date?utm_source=openai))  \n- ASICS GEL‑NIMBUS 28 — 풍부한 플러시 쿠션으로 장거리/장시간 러닝에 편안함 제공. ([asics.com](https://www.asics.com/us/en-us/gel-nimbus/c/aa50102000/?msockid=2b7d99ef96196d9715ba8f3997a36c07&utm_source=openai))  \n- Saucony Endorphin Speed 5 — 템포 훈련·단거리 레이스에 좋은 반응성(플레이트 계열). ([saucony.jp](https://saucony.jp/products/mens-endorphin-speed-5?utm_source=openai))\n\n원하시면 발볼(좁음/보통/넓음), 주로 뛰는 거리(5/10/하프/마라톤), 페이스(천천히/중간/빠름)나 예산 알려주시면 더 맞춤 추천해드릴게요."
+  }
+}

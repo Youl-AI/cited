@@ -16,6 +16,7 @@ export * from '@/lib/engines/pricing'
  * 만들어야 `probe:engine gemini`가 ChatGPT 키를 요구하지 않는다.
  */
 const FACTORIES: Partial<Record<EngineId, () => Promise<Engine>>> = {
+  chatgpt: async () => (await import('@/lib/engines/chatgpt')).chatgptEngine,
   gemini: async () => (await import('@/lib/engines/gemini')).geminiEngine,
 }
 

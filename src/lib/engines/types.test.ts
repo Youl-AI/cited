@@ -124,8 +124,11 @@ describe('estimateCostMilliKrw — 예산 누적용 정밀 단위', () => {
 
   it('반올림 이전 값이라 원 단위로는 안 보이는 차이를 구분한다', () => {
     // 원 단위로 반올림하면 두 값이 같아져 예산 누적이 조용히 어긋난다.
+    // 델타는 "원 단위로는 안 보이지만 밀리원으로는 보이는" 크기여야 한다.
+    // 토큰 단가가 내려가면(모델 교체) 1토큰 차이는 밀리원에서도 사라지므로
+    // 여기 델타도 같이 키워야 한다 — 실제로 gpt-5 → gpt-5-mini에서 겪었다.
     const a = { calls: 1, tokensIn: 100, tokensOut: 100 } as const
-    const b = { calls: 1, tokensIn: 101, tokensOut: 100 } as const
+    const b = { calls: 1, tokensIn: 600, tokensOut: 100 } as const
     expect(estimateCostKrw('chatgpt', a)).toBe(estimateCostKrw('chatgpt', b))
     expect(estimateCostMilliKrw('chatgpt', a)).toBeLessThan(estimateCostMilliKrw('chatgpt', b))
   })
@@ -143,12 +146,20 @@ describe('estimateCostMilliKrw — 예산 누적용 정밀 단위', () => {
   })
 })
 
-describe('estimateFreeAuditCostMilliKrw — 무료 진단은 별도 단가표', () => {
-  it('같은 사용량이면 유료 측정보다 싸다', () => {
-    const usage = { calls: 1, tokensIn: 12, tokensOut: 920 }
-    expect(estimateFreeAuditCostMilliKrw('gemini', usage)).toBeLessThan(
-      estimateCostMilliKrw('gemini', usage),
-    )
+describe('estimateFreeAuditCostMilliKrw — 무료 진단 원가', () => {
+  it('유료 측정과 **같은** 단가다 (같은 모델을 쓰기 때문)', () => {
+    // 원래는 무료를 더 싼 모델로 돌릴 계획이었고 이 테스트도 "더 싸다"를
+    // 단언했다. 2026-07-30에 뒤집었다 — 모델이 다르면 같은 브랜드의 언급률이
+    // 무료와 유료에서 다르게 나오고, 무료 진단의 숫자가 유료 전환의 근거이므로
+    // 그 순간 근거가 무너진다. 차이는 질의 수·측정 횟수·지속성으로 둔다.
+    //
+    // 다시 나누기로 결정하면 이 단언을 되돌리고 FREE_AUDIT_PRICING만 고치면 된다.
+    for (const engineId of ['chatgpt', 'gemini'] as const) {
+      const usage = { calls: 1, searches: 2, tokensIn: 8468, tokensOut: 920 }
+      expect(estimateFreeAuditCostMilliKrw(engineId, usage)).toBe(
+        estimateCostMilliKrw(engineId, usage),
+      )
+    }
   })
 
   it('검색 요금은 무료 진단이라고 깎이지 않는다 (무료 티어에 그라운딩이 없다)', () => {

@@ -1,0 +1,208 @@
+{
+  "engineId": "chatgpt",
+  "query": "가성비 좋은 온라인 패션 쇼핑몰 추천해줘",
+  "capturedAt": "2026-07-29T19:44:20.948Z",
+  "elapsedMs": 31997,
+  "usage": {
+    "calls": 1,
+    "searches": 2,
+    "tokensIn": 13966,
+    "tokensOut": 463,
+    "tokensThinking": 2048
+  },
+  "raw": {
+    "id": "resp_0cd100da9204f29f006a6a57f4b66481999a92f23ae5f38cd4",
+    "object": "response",
+    "created_at": 1785354228,
+    "status": "completed",
+    "background": false,
+    "billing": {
+      "payer": "developer"
+    },
+    "completed_at": 1785354260,
+    "error": null,
+    "frequency_penalty": 0,
+    "incomplete_details": null,
+    "instructions": "너는 일반 소비자의 질문에 답하는 어시스턴트다. 한국어로, 구체적인 브랜드나 제품명을 들어 간결하게 답하라.",
+    "max_output_tokens": null,
+    "max_tool_calls": null,
+    "model": "gpt-5-mini-2025-08-07",
+    "moderation": null,
+    "output": [
+      {
+        "id": "rs_0cd100da9204f29f006a6a57f5290c81999a24e85959969371",
+        "type": "reasoning",
+        "content": [],
+        "encrypted_content": "gAAAAABqalgUXLdtYllH00QHAcvKzKpJrF8qGdKYod5mvKFdk5gtQ_3OEbrxR5UCx5-n3RLL3oTDNtCSgTDOoUATm7Ii9Me8ikCzeEUq8MS3uRsgrLDezFZkZOBbozBaJaLxPXQMawdRR6_Zzp3C5bSJInST5VURHpSheBYRwKUpWqa9p5Po16-IDGX6-QIrcUkVQcDrc6b0_iUNc5cec3BSRqFoMoczXkNQV_FnLm-n6jEYUYfF6jfqQm2dA7OT7iNXEufrlov0PFCU-mUr1jBcvJ_NsmqGytQWvQ7gzd4cQOtx2h1TyD7LuyFvIE9hbmR-iOOpHeXP5J4XRnbNufaYIat7By9_fIRl3aMi9SR9QeNcXMj-AbDX_ieb-8Gm3cb5F6uKMAXZz_Lq_6TUqsHajFtGvCgWNyKYkLFpOQN_OZc45gHJ6pCWivg4lBNy_GNxx8jG4TwaPv9pRoF_rrWbziWuCeZJL7Dqu0qF34xRsklz00lxQmJ8LiplcrvO0KgUbgaAGEreCRkaj_qXzImeT1Xdboan5_oPCX5GmAo7ieDeTVq2fA7Unm5ofnzqRgy-5u0DXimUAikWNYQRcIK8vZPiKDy4ZIU-48BkyDNyBsxTfbIy1je4n5P3-aNjJ1EB7yKo0pkDT_flFvHIUGxA0kSGfWwGrZc1BxuOgJk1XRjT9JnCG5wlTSU2Qh0pbncPvP3l_nr6wCmOJYUAclvrcHQ7FjcwQY4aKHUsY1cqOVxJK9FHAg5a-y_FBFChqR4uW_32C2-zKVmKr-EFIB3UoQbD270SRibJqr9LO-1a5MYqRpDhnGy8qWTbbut97Xn8ZxVWd1WgZssciTQXXuQwKp6dfVilQlOmqJgAAGrdECI6EVd9P9MLlfxLb9KFB4bECGM-OPXMY8oK1QQLZXn-goeLo1JG937_YgfNBdAFEcay4t44dkcZG7e4XcndW11HPozjTEIRe7ErHOZ8M8ntDp5lF4Hy0W4X5GKeF4pnssPj5faL2chE1WTdfq-Chfi_-Y-9_97ubr8zoeWLI-25QsQ2ePdtVF8Tw1iNLdCp5_Ljhk2IFKgokNJrOhsaaCgTXtI4RQX33194JrtLYksc6dK4y-YYOiSIjf0MIzWFJ9ODIcamJ9tg6H02Rz86r-P2NemnPTY3EUXW_6YhowMvsZYakVx8FA8WQVn8GKd85PigfzwODlXOkzwxje-t6A_P7XGkGvf6pq0vxtAe5A9TjF2i4F-vAfkulGrPcEiMEPHB-TNfSQdCT7-ZMe3YvO4CpiqYnEH3j058E-J1MnInIYmMDMJBgerD90nvTInR-TpSHlDNgTJoLsdoNR5Re8NklGvC9I71_kTLRiP1NZ04vKWo_ek-PVbi-et2Q0wh9Pt7-hvt5Mi5ZIh5km5j4piBZx2vpcYbEWIOyc-G2ooCLqVX_hMel6NvuTkqq1ceC1KAus2KR1R-KxkmQslAhrYqIBG6NbnoLR4t7fzOjRk_AFBku5BNG8YQX44fK9IApeU9pj0DeeBKw973oF_I4BewDijmkZV2M_HSxYgxclCsWQ8VwvPxzqVpvhMRYYJV74tAwzw9jVedwaxiEBNQ4E6FwBEkYR1IUPXBBbU6venmXWCpRl8RoqnJZ7vH18CV44yHjtMpKSbg07CMGA172UvoXTZPtHRUAnNtaDYfozpOZJaYvFb3iGbZKqeSskXriZT-3APkcn7X0enkZA2gCP6I5w4COy92UGJE9q9bIaUDNbMgyWtGwzDqEe5S4-XwjICuGcNgNUzIRAZfYkuwLK1n2nVI-h8B5z-yuxeISqnpQ910GavWhG9fnRCkGjjhffmJCAWFjWSUrv_3FkPRI9jDOEodKJBrh_QUhxeq6dlhXKtkfWnSB4HkwVTkprrV0uki0PHn1rARqsx4yXSOrGo1jw2sMU_3PJxUutoqtIw91s8M9nO4fVoqroWEUzceGOpfq7v5Y7RV6Jdo8Qm6cdC7-PBUOMr0edlH1MOiMS1NMyG_ns_zgmnsdgZMMGb5LsZYoKZf6kmudIsJImJpQCoyTq9abUYx8SQ0k12Otd9LxIrqQ2Th8iMw_IDtTQAuRv5ejwXNVyXMlF5HyON1Kd-mD6GilVODN37_KEcuLQja-DTbQCTOQo2WRtBJ_oMfFfSU-hW4HjxP0zMylUwwkzwJZfljDDW6Kn30gKeYYUsuEuNTdjLVqXQXR5FC4DMa0ZXujWXjiTHeEM7XLV616VPoY3nXb7gUEMY_AKPnsyVwYpDyo45Nxkkeb7wCGMq0MqwH7gR169WiVwTa4Y79Lphy2ahMIg7CNWSVZMGAdU82IGJbdthftiXkCHaSzW4irbeFR8C8-8UzmEhl8dCot7WlbJ-yKzxHQXVSN0SE5VjRTt9Cp4YX1ue57RZp_RbPZzbWoFIq6XvT3MkYzeExay73r-ORhb4Nk-F8Oe_utg7UP8649W5XN4jVeDVn8o2G6-aovpHBDh2XNxCw4cwYffbY2Yln-X_akvMxBXQXUKbuPpfmdNZRH-DCcvNqBsAyzL5Ty6OLw1Io23f3Iq7AT-arvABdc6vCqM0cROMJKqctt1DLZa7qSrDaR49A_L3zvqFafQC_BgOTnWRvQSv3TnTb1z8il9C_YZi0Yn4NZ7O0kmrnCUnGfXQxwyn8vXXCKA5gZtH5_m4xtu3vgjHu2YyDibjZfww4wH81XxH7gLweR--zifjrIf_6gRuazbKwlgygfca4tZoonfVWG5xHnHhgKvt-kmWEL0l2pCZA67BODX6XRhVURj_DaXIStYr189Bgq2twFcRGK32poubnMZsu86Q5YMRNWYx9YJBI0tI9v3KLK99xGxLmLGMIp9PPZ5jE-HJ5I5LOks8muWuhgOnz7Kcoj_0o0HZUPkHe9bpbwJ41airNWNAwnxqk05QOcXq5FM14423wQRCHrduXnYYKWocJ4BtaqDHZ8WywWtRGU3JkHT4i5wYgvQoAUVoHVBYHzIA47HexBeUcrdSQ2al2CmBOyrOuSrrTsWZat0rVUwA-o-DOxzjtTdlc4vHBgHhH3rig979P1caVVhlo0mR0ks0ElROts9GjM70xpmAOeOwubYtQu2fqb4RuYFOWCJCasIJFHbLda4wqsMnTarDewYek3YUb60xhmWuz-2pzgq0vWAw-CeK3IIYBLyPz1oo1uLx7uYyi3GKMFicjkT31hqTjoypdV8Req1Tx0FX8FUEj9oE8LJelnt3tw27YAOt7VCjHOblVa3GcWevHyIhzh8b1meTeC-f--JKqKePVK3DWgVCa0klmjvXuwaQy7f-feSGPZJju0fP8Nx6puKn-yWL3cl85mgZANZ46wVXU95OF0TjC9tedw3WEgPDtjKsGXEr717sTFjtbab2JeOdD6wu3M14jSI5dG_kp3OAon0WoMBjLeLUN8SXWbXBOG6cXNPt87lUMMIhzgxE9kr-RsBnoj6a9ra8x988YrcCWU8cOEDlw3XnBF9fKVoVu7Bb_D-5y2guqiASfhNpj9dwDIyPER63ZZeau_1MivigPdj_KcCjJRWWfsz32W8NAVTqWF9bpeE-8qUZ-Dk75rm6ZKRCjN1JCWDVgdQn0ery9jRBVj3tzDj3M0SkH1XkF1go2xoJUh8FX9Khho-PCpRvaw_y6oPINOaw2QrZGt2QYUuAOq-y4WF2Q4hO4YIKpfoYtMib0ZclVumDSAxsDdog0b254CKeFdQvRY-SsTwOSrwnZYcQGzIwJcrlB2twhEb1zvcAm0QPmgP1cpKp-ugZcnG9O3osRrVeQ_FjPDMdfKdQ5PCAq0YZ1WPJ384QXdVY21aboWW6pva8Y3vGD0mKRy3qb59QBO4MqFBirNcwxTNWzNi4j5MjnxVHLbmFYX-C2vjg9HaoBaOrzKG6EV1StuF5Cr3u8uSdFhasAeyHBlZVOIh03I-jexDnb2Aer-e3gKg4rpTHM-IcwOW30CENqEEpbKYzCkC1oNyd45j6-1QZZrf9g6ia6zdRO8rFa29OrnAfKidX22GiXYjhGYgv20-4htwnmi0NLMH4nTLedny5jQUNu4xkOPAcYlhZxGwhg8j-VYOy1PiV5o9BHm-f1WGtmqmho7onajn-HxTtXsvu0g9EyI_qKgaAayht8ggqqpNTBUB5Msa42ISAFZQPn68WbZ3aiJiB88Q-eoHmf859tA3FvPO_iXG9hTVTnO807pVgFDLAueei07gm-ng5TrRKzgrzVJ3iDVjawqnDi8fm-4PY_V1Uh2ivCH-zTkxsbqMlv_Reglvkb1GPzhHvbxerhPdqOOjV_0teu3TP7fNfgPiA2riN553hBMJz0Glf5YMaeJ-Fu6bjWcxeIG_Acg8ldgNAfvoIFEdk6BlTP3sJzEKnNH-bi7wUNpFgOnihaLsgEXr2MWg_2AvfArOQKyYxmnSW27LZvuLGC5SXABBTgFLVCSl406tBPAKVoz6jmHNspTcL6KCs_qDf5BORsrZYtxh5ME0aEwQE4ZcLSRIt2B4u3bVL2GurPlN44qXEhxX8RaIu8eqKhnoIGULlkSe2fYmZbc1ikUAy9LrNlQSR-ly5PhCmZNV3V2oa758eLkVELU24LKEM0YrKCyokZOVxL6S_tPYiHSQ94CY6owXaEa8ihShnkscFwew8YWYHd0UyHgCVRUxvi9qYg5-jya1ccrqVFPzVDlFxAnsntzlH5LgY_k483iJM881cRZGdgvUhG37S2SzOJsOrbXKsOhVILmujT8IkRIigcdsYOZ6KIpDSL7FUJYpYWEt9XRVJllX_3Wc7Y11KOrlzAGylDd5Q9shN0SvvrhAwYooYJ_34NXDIz8CoKD5P0jjWsNbq-UCXi8egtf9LGhYdZfMtepJg_QsmUWC_P4jrGAjnhiJtoI72xVz9aYaKRqmfs7yh-7j0JFHT82sBEgRE3gpVtdHgSJ8eib3_noVY-qrgtxBpHL5Z8tz6excko6lUIBAKHvz0HegHW59NokKAr-D8iuQmTWTxIHESMFxbYICcznTJYzqVMNUQJdtnDe37XlEg9VGZejjH6Hv8qce7g8vomHg_-0NrNYyE4i-9W5CafVzwNkt6TbDZwnbOuT-o16WDeWp6w_QhK10MZpT0WSNd2aWMuOrWqC-quNd2wqx4YqrMN366MLXFHTYFuNpvfpcdDWkHW7zQC1lMXoSzz2wtYPWuPZOm8DE6sICQ78TfLKFnzoz_MJO53XIcdyQhvbhxZBwuTC5P6CGY-AsfPEGPjdQaOly3om3SpChYHiwzkyfdfUmLdCQ06wYAmbjwi4XA3k3TE0x33wx9ZG-3Usx7cfgBk_CO0jiMkLWLAMyiYMuwp35qVkaRad5OG7JKDV3TR9ZzrQfwVpzf8UhXp_oJP5qtwD3PFFquJLX9kGgZyGiFVAFTczIC_CZG8uJCFkvw7IrKxVy992FKTfT2zj7sY0OpW1JyD8B0KPJfYvwddJ1-BiF_bMkgsyQVrzhBMV-xRduUWMbw1gbAxud1ARviydnTaTrGOLDrKzbDF_FDeuhj0DEAkHQpvt7_Iw1aCzYBSYhDMNIBABHLuaIJ7A8LWOidps-9O4WE4pRDE0VfeiR5D3eGBGB03dw1icn1CwbfzZ5smxgfQCe0Jg5kKA0iL9J-tXtCxzBR7p1F3rAXmaMvTyZDRQistGJDilEeYi1s9hVRRGdl6CeKhN9cmUrG8s3OKWVbn1jP1r4eERZzIJSOmSkuDvreLGIHypK6bAQopapurkgt5BQrpixwPScx78D0WHkzze4RLM8b-IcdjjPXup2y9bjpXNkdLzZSaUazngvm12gc0xH2EizdWPO9oqCwZGbJqseQRaetjqgA9I6SXBvEQ01iiMPLatIIo-bjEqsQvSEjkyW7Op79oNk_hA9qmlKju_Zdfsqp4BdSWj_kMQoN9qGXyoNGsc5PazFFAzreJYf9e4SDYC__bTBRqf7S8DBRhppY9AWXFYTsBM23u-hUhkxi8yTBS3xm55UHvOzMZoxv4hpencG52gup0k1TRrajoddDg95TLlGOAlEFrVIkJ9T6AHNiE4wwfHAAS6kyO1o1Cb97jDVR9G3rw8UrOi-jkrRqnfNY5gRovoMCnOTPPaalTpadvDky9tNdzOwuo_ATGdqTsSiXc6SsVYllza0-SPJJ3NGvD8FUCmXcDaHJHsMiMVjGuJcBWq9aPCB2-33HEvcWnCh-TlXWofZ9ESpyj",
+        "summary": []
+      },
+      {
+        "id": "ws_0cd100da9204f29f006a6a58005e088199b147361d68f893f8",
+        "type": "web_search_call",
+        "status": "completed",
+        "action": {
+          "type": "search",
+          "queries": [
+            "무신사 가성비 무신사 스토어 소개",
+            "브랜디 가성비 브랜드 Brandi 소개",
+            "에이블리 가성비 에이블리 소개",
+            "지그재그 패션 플랫폼 지그재그 소개"
+          ],
+          "query": "무신사 가성비 무신사 스토어 소개"
+        }
+      },
+      {
+        "id": "rs_0cd100da9204f29f006a6a58029c2c8199a1d9eee958ffb589",
+        "type": "reasoning",
+        "content": [],
+        "encrypted_content": "gAAAAABqalgUQe-CZuwnICDmVxGZv-7S_qIxbkjwp5bPGeCMMdOtPzCUyOwu3aLL9iAmBPzqcgMIieD6SXL10DKog8hg5WmzHAlfsbXy8VZVikuIltpbqvMgM_fLLW1lDY4hWybE4L8zNqueLfOOi4DIT0oET0Rc5Xgq_TT-gCHZr4JcJ4sOdAwRohaiiw1QxPReWpWlWqVZdJRXa_Az400FMipTqqQI_hYbIlmpFM01tk-RDM1dtW9pnjWHd-MzzHPViJrFPRSfzfCy0EMQ2rNsc3AlDK2COJIDXjQ-mIZR2kPTW4J3IhjcluLOMVcJjuZVdpi27O1nRr5V-NL6gwkPuDIeHSuUAoY1tWu1KmlTatLn3Fh7tAaLKYqV6Ris-Ss0yCFxVIVsSGUKzU5UIxVaUjroXER9hDaa570HtVEP6DuplZLsHb9CWOxxX_B34CwfSKcC6wqeVf7VN79C-nQr_GoUsoiKHXvsiIZm0NXWZQCzXT0YA0I4ixpppUp9dVX7U3jyI1owRMKjaymiV8t0GHyGvZaYOvgLFnoX60HO5kN9ve6v0jl0ZhKvqPeXEpeiCHLIhGplm6DlD0KyN-4JiKYqV9YZf0X8jUlvLS_gnYLbkug39oQYW6hz5oCLcUP5PX8dXF294gu7Hr1fCisu2Sce1NQIO-xtGGqg_VZ2MSWE11qqkvqXHtflXy0owcQ9F1z3tTgpwBYJiLbdca6Iapw2YuIW5blpoTGys6WSKlZWfXYIOYOXKqeOcyOHCGRN28cNJcrR_Tab9Wcta_66Iaf7nG_tNGWLsneNkbnUPl9rrP3-R-uSbbPgNAssjh5Ramu-U3G58ssVwBNUlxV8JnyjabfnIbM63DcH_cviAvbaARw7uDiH9vbdPNL6RMOMVv3Uhr4cIjhEbhuAyzTaJn4_8UdqBbfKLsP9iDmx-HFBVdp6OqG3Wobz2qzQ_dxeONuVu8GTFrxtsfIDYNxZumhX04WuP5wbl_Vk4JCuFKzvfCkLG04kKS29Tv1pMLIV3liJDeDsIwqivlDM6WYH-PaCAZ89BNrpM8LAnVZzpFLB9EiuctIC1d0LFGilCEc958J4Vfl6u5ko-UExLSjMR9Etu2zquzJp0YKHCYNTpvMNytnBnxaGtxbRh1eG62QjLe515CyCRmHLTEFp3iyMfs27DRtn5xF-Jd2c5WmN5VmDLH7ElIgR4zu4jZaRe0MAxGptBY2S3Gi_b6KxsKSOhOnBPP0qaSSm5jp_Vj37S1IddCX8molk9-q8rwklpfV9n1t8oj27h5ayIKkBOc_OohDGTWfgw3MYSEL3tjJvbpXJoXMkGy_Q0wuH3OhfYsyOm_LdTCByrVhO-ALyhJFBHFTixLrKNAlkPCuaFuvZfIVDvTOMWICcv38t-97H28XYNil-eC-e5MJPSnjT3iiGZe0kb3BfJkDGZrXzWp9W9I4C_zBWRfsu4GadRF1IDK9lMoAWYnlUx3hCKJ12t1iybqjouQmw8nG26jOG0fuH12tLAaJ5XpGZ_9Tfd3yNGrYAMTIYVj6SuBF8U_WzVg1vVAr6AY_lf-SWRB7HWn_nOkE-cDvm4P3IlVys4P9cdVahLAgjywPfNZGulBvVDd6DDSZwYbbqrg_2DRymugdSA-PMXuJEshZJXTP8sq4FNPizCExtXfKuRZ4YZbJJu2iy2xkrxGvQ89fvDFa9vwMvLxZxmkc_31IiliLWn2bYn04IgHJ8aQIwFDcrqlEScnKzTHwYJOwbQifW_q55-qk84H-Zc3E4LhgSGrQgqkeiVC7SRDxyE71iV4UfJsPb0YSUQPfTQrrGng-63QjLRfb-wg-uotCPyAqKWKhwJfqii9EE5SN1e9QWviIfcG7AZX0UzKYupgL5xxKg3vr9BE03KfXItLSRvqsCnpWVVDzA02JWm5HJKkcSSUl41ln4P8obyb0HEVUKjDM7eaiNFQnY4FG9WqBDn9TxinlflcW2lezUpMB24VxL7f0COun61YlrEFA375hmt3MjUztOEnw34MGdWR9jZUiHZ1kRbxJohceIx_ycBFQhsYM-8xooJ5F-usmCgXENsZ9xScLqd9UMvNXAZs2uaYfp2eKeBMEswYWfSqL6dwagfSlzSubyK7NwVImpa9XZBfyGEZXWAH8FpjkYk1XQQZGOpHgAk6jDLP_BT7Z_8ChNc4bV4sQ7kJEOfSK_mN3lulKmj68c4SKvCKeQZ4dNZla5FO9yoj_d1E0NGcU0e2r48zlNhgOANh5x4gvYF5A2LFw-5LtGufasgzVmGMDXcoJXG57qMXHU5zgW7Dk_C9W5v_o4RhzhfCvVvIexNiPO1adQvi4pZ68qAjuUWOO3clNxamGf-uDuRhaJOk7lyqHR4N9iyzY87DyWxZwpCG3lzQ==",
+        "summary": []
+      },
+      {
+        "id": "ws_0cd100da9204f29f006a6a5804bfac81999a9de067e691e26e",
+        "type": "web_search_call",
+        "status": "completed",
+        "action": {
+          "type": "search",
+          "queries": [
+            "에이블리 소개 가성비 Ably 에이블리 쇼핑앱",
+            "지그재그 패션 플랫폼 소개 ZigZag 패션앱"
+          ],
+          "query": "에이블리 소개 가성비 Ably 에이블리 쇼핑앱"
+        }
+      },
+      {
+        "id": "rs_0cd100da9204f29f006a6a5806d9c88199adee0a7d2945b1a7",
+        "type": "reasoning",
+        "content": [],
+        "encrypted_content": "gAAAAABqalgUw9UAjdj4O4c1vTbdlaL_t49CHVLIRdwEqY5Fi-yYdozicri7414P3yClZjFDxGdmRXr1b1hcQa-i3jg3g2RmDPEm6n2zdr1GBGsRradRgUFSrkZGPQGJzIBWQGNsiC30qP6lmNj7ol3rNQaQogXIoT6vwXwlQhwGpLlFXpum5BmCP_rRK0bCM0W7sDUfu3wlKVtGaFYnBnBq1UUj60KFraWryey-9w0T0DrpkrLF5vRnj_9w71qs5alWdRnXg3S6ux5SpK7PVuVtHP2dLFZkv-WWpxJ-2E-cnCzClNuLAYiYhcb2gaquvccd5iwp6JraNUX3LjEzKrhLt_Lj9BPkcPglhUfCryDPzbpRnGoaeITfKc9xMkVejc9UCtYN342JLf1w-JwNVgdblJXUT3SKdHnQubFeBOTwLYISSiB6E5K9jmWK7vFeLfEG50HIjUiWbd0dQN5OgUxzxEE03GFArQO8O__eTJaUnkU8Y9a3HUBBgRZAjjUXROqtzLcHJ3fgiRfLQrPQeKJYTrUZwxnI-ugg4zgUJhiRPaZ5Nal-NN0PZphZems9NN7auOVpT_96pln3iNCdU1a2AEPInnBtIrGy6WvJgKaeMVOIzYcKREPNGDkt44C4Vpiz4QoMxt-daYFylTxfCbAnhfeQfkxZpLuV8ViCpZ7ps_GcwsehBhm8aNiPpgH0wMtLNTeLXhS5xKEk_qLZbJ1u-cvsULoJwO3-QuITO8AA6J8XngqIlwrjgyoZ83a_vJlcN3lg_eS32zLA5NaHpNfM7670VaPuz6wVEQAPV80XeJ2lUOFchjhRyxEsjQgl5FJ3kLtYZAugBTjF7PdBJRhf_YbpXX23OvpeP7j52BUm_PTL2Bvlur-08i8vLKp_A1vWmlsgr_zpGve9zjGhyAZ2zc0hmF2igTL7khoT12YWlTrxZJ-skOpyC7GhhzEV3IEdqFLzh3cUHt3mW7JAKOddZHZt9F_3dIzeMiMtZbv1IpKQ6aX56K5Xi_FS_ak5dWBQmnCQwAIGmS9fKI-Bza0KaRzKPMOfV6CplX9PrwCAkiUSu2wSqbNJREtqegE2Oliw9B9Vn1STaHi2ujWs8IzAOio2hXsndsShEaJrJfgkcUwD2S5nrw7rIK8J5m1u4-Da_BEO5dwdwydqFTnymVyCErpr7o9MQrvk-e_Sm4cP0dAcdGXwS5t4adJM78nvLOJQYV115soqo0R5X6_lB61Vk1TjqeDRLiQPxUMQGGLNPZ2qRDZbuSo4HVX39o0cDDZCCdDp0GKotdbL7DhnzgTAFkmN5ET5wFe79DxsPwddEzGKKJLYA2yO_m1gyJ-v6RTNqVyRp83Q_Zkg-It2BgnrYavdgm41STfcG51SdXr4E4REP5qVQ8kD0CoFFkxiB_BLKPPAP9RusELsNbls-7yVEUnbDN5wOW7qqY4QF68ES2ThqQp44FuNXkFol5UmkO_U99xfP9242x9iSRyfKqZ2lfCJ3yp9IvqJcn9sQJpYQXeeDTHhY6whKMF2T-8hTTyHbQ17qa_w7gFU6ykA62_goxhQ5da7H3qyURbEMUEnVIvA0-fzAxYLMVpAB_UvTem8C9zp7w82QTiMhrAD9BgZebqzWzAnpTI72R6Jq6kGs1Evl9D1xlJ-bA5E_gezldth_enkAp4stmbA5FAdNSgpsipbMe3A4GXZOCr3Et-JGE70zKcj_eE6b1RM_mGJo4jDbeHzkeD2ukv8g_-oYXOZPR2eKfqgiEL32xHDSk_vgfYreFEyI0y4GaS8UjbP_SpweWZQXHcFUVAEygwdQXCeCmUySQBsT0sjVBZytP2ce1wIRNZWVCBFKZjCxse54wkoUfk-VNhcWJmmWxJgkS8M5JOKKk2UvzhyCsIPxAiiKVkXcc9nFKJPeJpKjsEDdfMlEKxnNgqrdg_uteHx6ZXHWqJcGqFaHmpIYDcDdES0YENBN51Rd8lH4NVWz331fFIuAGkjwcULlCAX2BQnkDY4DYC9xhBFb8kFRRELP9YrzAh4Npq4v03hFOhlXgcAlq5hHKDaRJs4jWpoNO1QN2RGHEWIG_zfhU-5qeaD16suXT6f4EzYCZcuh9TeahGwLaA1NkspMVFPT1bI4GgX7FVOLCEm0izoVuFGj8b48U-4SyUpXpfoqGmHG93RZWo9e0XzpRb4k4df7TKJvXEtUxCuNJ-oQzWum1gAdOcFApxrlU27KdoyxkwkYfitZ4gisl_V7sBzAIdGzG7Q0k8h-C7cZ3sCSbpwwa8CmQw6_xkF9M_VTpqo6EPXZqbXjeNzMa1gOhnTy_ZZxjOponZ-NCJMnit8gi0a0qWTh5fCg88zcN3ze3rlKR61eVTsAoUM7Br2FgyqpzfpAv-U-IVIBSwh-pfyb12AS0MVxyOTFMjkU6QUB16E_6NqGYwZDQuYjdDoNuF05ygquchsVuRdKpOyN6U_vAXXvBPDRhucbRdAN9kW8nSO9HK7w_wPQM-kCsHd1EFgq8JUVhgyTtHpfcYd0mf7ZX4tNd-mUsSoLWgGYxvdkdDdSwyddAaZPuaMDHePhwFF5w5vJjeCKeuadxtmifCtcaruiJotwubIZaRQTmu9mOimRrSK010GVGzRoiqFB46vXX_VXB5dqfXegEnNm63ZS4izctw5azb-MlyOpk4XIi8MQIFdxJLmu1aXSm3dcFJNc_caiqifYFXTWMiUTxxOcYwEC04n88SHIJnqeeeHM4z3mhtQg37R4UQoNzOKTK0lbphoydI-2RhtD21rO4GRy29HWztwBZQNmBvNx2IBYRY4BiPGYAzAjRWshZKYRR-muqRWWLYmEE0CI5NTJWSzDSnGcc4SmyHC6R5mNjvogi8cjZW1JWZuAzpzp5k-9PBOJwsjiFYbNMXg69mYnYxil15zK9CNaTgWJsa2RqPogyS4EFSjSanFemPLgbPV8JNQ8FZIwZUi6h4SuhkQLf3_5sWfXMsZ06FZHm3bunGTsziqQDjiHK3ZxAI4v-ab80dOfF0IQ4Xxe3pSSODmNCpIT8cyKWRhebfjs5ili435YTnxdUMtldkJHW2DdfeOw_4dzJKLu_qEI-SJfI59boFhua6jQ_KHbRiaCla-RbxDtDmDXkQRFos4-eudp2gmTX2y_PbzOoTGAX91odE4kdOu0AUQpe9bpWQk_xCoJVTfGxZqaF7PlW4BaQCZINRP2WzvFk5TASmMiC6KhZlgvYV71Q1_G9tvv8LtAH8xu245win3tnARnz_zxcGJ8SUOA4Oq7-zYHrZXtGfPY4ZTNWSod7OdkRcbJp1BoMV0_D0MEsPhSzIA8zFsP-phsVtrDL94TOd416J3xoyqK5xqUdF2ljfdOOwT9H7o01T2Yng_WYUmqUfS1ZGmjKzvE2l7bTaPpIqaj6-LrNfHWoXQAtiV9C85_M3v7Msj_TsvS0R477pA4pWom0uIYTCprlobE5_VBBbONoYkmIUsiqd300zQU-x6ldA9-N9Au-mOK9lsngUpWVlKfO9f_uZhmRpJgdHU3pc66xN3sKXKLTGLXzsP6qmPeNetIUQltfMHap--fIP6YYAa2lotTxZLfl7QvhAxvtD6L4zcxZ6qegWm4-ErLZy63lvMWNAVQWWoMI9LiKu7DghtvuzXdvIRS5kN7EUcMCMBpQpKSNqOX5B9pxHXDruaJ4ldDxr9cFWwRObq_ApdOUXbMGNtAYF93gMgGimoz0RGzWI25spf7DdItVoQyL30kHjlxpZLGXJOQ_0eoCkWgMvmFN_6PwPNYCq6zfzchjSFp1XIfEkO7oWYu-g1k4AKFPzX7u45UHjWIlcOnMt_KIjvt8PzD8QaSLW_gEZIcPjSK3ra-M2PlwaFntPriI-pE8Mbs3gzxMq3uzcfC1HAzzC-yKAWxAq_Tnp4_DpdopipUWmehbZAwv-ro2yya89JGFSUxN2qzKz3HovAziLGwQ_Sh8WPRa6znTrFJASFsP2V_LDrwJN_UfRJGp_kR2B1Is30xGHBDSSs5COWQO1TCF7zC4qtOXOMKkIypzfbCHemRkw7oV_XGZv7zc9wWqJh8kQ-VsKNeqHksLAdoyvtN4Lwg80ut6qZDkMJMMzEBc6jtMPGDDr9Q08bir8dzhAx9-usR2ib-_H_L6LXMTZnWlHNjHcbcQQs5wDcz5B_ua3nuOdytaVIOFKlKtSORu0d8bi3RkCWImhnu3ikyqhKx9yI6F5TSA-hIOVVsXuEsqDl_I1h71ZMgrcBHkA44-xEpdn9xGI5CWxhLJHR2aPxnkNGq0u6a_hnO2PalSKdp-gNl3a0Z1iSbHSDNx8cSa7HLLodGpcxtyW1Sbhv6s9pbSHl-XC4ndqPV__C7ui6Zd36ChYNhC1K9TUOienCmrs0Z3ORavyjXmkC9Nh4jjRpExMEEwtKH05lhBHIRFjz8J5bUTof5OuTKw1MrfnlQOjmrpjk63m-TGDIF_HFpC5G04072u3KFKtWwS2_2QncFaCawkHiwHbxlpRPG6sSBdsvR8BabrFdiMfaOFNeQqGHSOlV7tLiePudmB-1Q6BcBO5ahOPMRvzRZNihmXdAj7FfgHmE0QdfNtdN8eCT_i9pP6mtvSxSE8ceTm6R6YVvXvoFk4hP0Hnp2_MOvFxiXZ8xQ8EN7-NBk-SXyADXnO3btX1ti1Y154QItJrigcBt1xFmGwfFblzxq5vXVG1K6vlSSayMunhsKPIAIPzYGCwtBHUMcK7dhWwJ_q6h9AxLWqexp-FHa_q8jlkrZN_fbQ8XoaYNhenQirvSBoiiv59RWWgi80fngsiC6oKak7h5_unOKrxDQDL71gfAaXVFGUwoCTWwQjotx3pBiSyB2SdK2uer0j8xBJl3IVzU-rzxisovJuqAi_RA0qmYNoVh-2rpEpF8U27Hu8nsWgi3CYvgvB2SKz1uphofe8QNXloxVHqh9DOecxzFEKlnQ04JONh-mcT8ahPr6XRSb_wFoHkPBowr_EfcjQpvU_SZArK2nVm2fWvdRJ9fsaDwAAzmla3UXMnlMEiVm7J1Xrb-wwC28GqGJGYGhVZKT2DK1TZb4GwSbXJJFXdijupu4QkASaNYOeVLhb1z-CalmjGX1_ttvTAtOGqd0snYTknan14ZNl12XHklmxSAcehpN5UTKrPA68p4GA4cBQqZu7KHEqv8SAPSgnoDaIHESGJKWLdw7X0i22H8v_mnHtNnxkiqrD4VmyyfUfZUby72MYDwhcn7zVWgs5PHMpnBMUrkhp3uSbckU6x7ZWkQidLu8I8yA8ZKIVq4uyyXu6BExI0aoZvffhwEs2v7UwMt4BZ-_rDuQ-9MkJaftfn7GGGZuhns86EP0yiVFZU_kdjyegVXiavPgMmbYbYMiHThJOMafsg5VnB6JHMhuiB99XgxSQUrHeCv7zbENmkXzsj_lOshqHKRM8ehN47rKTQh26Z8PxI7A3mFrVfGUhtvhG_71Vrdv-rz-L7GuTY1oGUWYBitoA18Et94dpoGgW79clAAWjvesYqkEJ7xZ2GV-qQp_1f2mdzEJAqgzwuF-kU8iL7FkTKaZscAanZw0guj10P7y9GP4TmTDjOQQcKy1k6KpK--zIoKOqubjxLkbVdkVJnUbCxjNL79nqmzJWevh-UeC3HWCgrJF0XafdHy0zoWMc0_g2ZV0d8MenQ1QKdw5gm5pSaaZFwcGf4VIJ6mfe3bxgZbiuXM5NkyhyfHuZ-X_l3fvm5PAj8vkzoDtGaiL6jcGPFbk6YDjhW5HnJLEVRGU__A6tsReBnhGvmehIScD1ba2NPEsQmrJK0RJBgPkPCFqti_ATyu9me3tI5q85D8YUZmrE9NNMjacjGMruRq19KYibtjx8ujN-qQK37uji-t-v36lMES_xRysx75OeQBMsgpl5GAHJyvVS32YBCty9wFoI2_1A==",
+        "summary": []
+      },
+      {
+        "id": "msg_0cd100da9204f29f006a6a580fb4b48199acad8de84b49f68f",
+        "type": "message",
+        "status": "completed",
+        "content": [
+          {
+            "type": "output_text",
+            "annotations": [
+              {
+                "type": "url_citation",
+                "end_index": 237,
+                "start_index": 135,
+                "title": "무신사 - MUSINSA Corporation",
+                "url": "https://corp.musinsa.com/ko/business/commerce/?service=musinsa&utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 492,
+                "start_index": 300,
+                "title": "‎브랜디 - 인기 쇼핑몰을 한곳에 앱 - App Store",
+                "url": "https://apps.apple.com/kr/app/%EB%B8%8C%EB%9E%9C%EB%94%94-%EC%9D%B8%EA%B8%B0-%EC%87%BC%ED%95%91%EB%AA%B0%EC%9D%84-%ED%95%9C%EA%B3%B3%EC%97%90/id1005442353?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 666,
+                "start_index": 562,
+                "title": "에이블리 - 초개인화 AI 쇼핑 - Apps on Google Play",
+                "url": "https://play.google.com/store/apps/details?id=com.banhala.android&utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 803,
+                "start_index": 734,
+                "title": "지그재그 ZIGZAG",
+                "url": "https://official.zigzag.kr/?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 1038,
+                "start_index": 846,
+                "title": "카테고리 킬러는성장한다",
+                "url": "https://img2.surenet.co.kr/_upload/board/202201/88343.%5B%EC%9C%A0%ED%86%B5%5D%20%EA%B5%90%EB%B3%B4%EC%A6%9D%EA%B6%8C%20Daily%20%EC%A2%85%ED%95%A9.pdf?utm_source=openai"
+              }
+            ],
+            "logprobs": [],
+            "text": "좋아요 — 가성비 중심으로 자주 추천되는 온라인 패션몰 몇 곳만 간단히 골라드릴게요.\n\n- 무신사(MUSINSA) — 스트리트·캐주얼 중심, 자체 PB(무신사 스탠다드)로 품질 대비 가격 경쟁력 좋고 대규모 세일·쿠폰 행사도 자주 열립니다. ([corp.musinsa.com](https://corp.musinsa.com/ko/business/commerce/?service=musinsa&utm_source=openai))  \n- 브랜디(Brandi) — 20~30대 여성 타깃, 초특가·웰컴쿠폰·빠른 배송 등으로 득템하기 좋습니다. ([apps.apple.com](https://apps.apple.com/kr/app/%EB%B8%8C%EB%9E%9C%EB%94%94-%EC%9D%B8%EA%B8%B0-%EC%87%BC%ED%95%91%EB%AA%B0%EC%9D%84-%ED%95%9C%EA%B3%B3%EC%97%90/id1005442353?utm_source=openai))  \n- 에이블리(ABLY) — AI 개인화 추천·전상품 무료배송 등 편의성 높고 소호몰 상품을 저렴하게 구경하기 좋습니다. ([play.google.com](https://play.google.com/store/apps/details?id=com.banhala.android&utm_source=openai))  \n- 지그재그(ZIGZAG) — 수천 개 스토어를 한곳에 모아 비교하기 쉬워 가성비 상품·리뷰 빠르게 찾기 좋습니다. ([official.zigzag.kr](https://official.zigzag.kr/?utm_source=openai))\n\n참고로 위 앱/몰들은 이용자 수·인기로도 상위권에 올라 자주 추천됩니다. ([img2.surenet.co.kr](https://img2.surenet.co.kr/_upload/board/202201/88343.%5B%EC%9C%A0%ED%86%B5%5D%20%EA%B5%90%EB%B3%B4%EC%A6%9D%EA%B6%8C%20Daily%20%EC%A2%85%ED%95%A9.pdf?utm_source=openai))\n\n더 원하시면(예: 여성/남성·연령대·스타일·예산 범위) 알려주세요 — 그에 맞춰 더 좁혀서 추천해드릴게요."
+          }
+        ],
+        "role": "assistant"
+      }
+    ],
+    "parallel_tool_calls": true,
+    "presence_penalty": 0,
+    "previous_response_id": null,
+    "prompt_cache_key": null,
+    "prompt_cache_retention": "in_memory",
+    "reasoning": {
+      "context": "current_turn",
+      "effort": "medium",
+      "mode": "standard",
+      "summary": null
+    },
+    "safety_identifier": null,
+    "service_tier": "default",
+    "store": true,
+    "temperature": 1,
+    "text": {
+      "format": {
+        "type": "text"
+      },
+      "verbosity": "medium"
+    },
+    "tool_choice": "required",
+    "tool_usage": {
+      "image_gen": {
+        "input_tokens": 0,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 0
+        },
+        "output_tokens": 0,
+        "output_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 0
+        },
+        "total_tokens": 0
+      },
+      "web_search": {
+        "num_requests": 2
+      }
+    },
+    "tools": [
+      {
+        "type": "web_search",
+        "return_token_budget": "default",
+        "search_content_types": [
+          "text"
+        ],
+        "search_context_size": "medium",
+        "user_location": {
+          "type": "approximate",
+          "city": null,
+          "country": "US",
+          "region": null,
+          "timezone": null
+        }
+      }
+    ],
+    "top_logprobs": 0,
+    "top_p": 1,
+    "truncation": "disabled",
+    "usage": {
+      "input_tokens": 13966,
+      "input_tokens_details": {
+        "cache_write_tokens": 0,
+        "cached_tokens": 0
+      },
+      "output_tokens": 2511,
+      "output_tokens_details": {
+        "reasoning_tokens": 2048
+      },
+      "total_tokens": 16477
+    },
+    "user": null,
+    "metadata": {},
+    "output_text": "좋아요 — 가성비 중심으로 자주 추천되는 온라인 패션몰 몇 곳만 간단히 골라드릴게요.\n\n- 무신사(MUSINSA) — 스트리트·캐주얼 중심, 자체 PB(무신사 스탠다드)로 품질 대비 가격 경쟁력 좋고 대규모 세일·쿠폰 행사도 자주 열립니다. ([corp.musinsa.com](https://corp.musinsa.com/ko/business/commerce/?service=musinsa&utm_source=openai))  \n- 브랜디(Brandi) — 20~30대 여성 타깃, 초특가·웰컴쿠폰·빠른 배송 등으로 득템하기 좋습니다. ([apps.apple.com](https://apps.apple.com/kr/app/%EB%B8%8C%EB%9E%9C%EB%94%94-%EC%9D%B8%EA%B8%B0-%EC%87%BC%ED%95%91%EB%AA%B0%EC%9D%84-%ED%95%9C%EA%B3%B3%EC%97%90/id1005442353?utm_source=openai))  \n- 에이블리(ABLY) — AI 개인화 추천·전상품 무료배송 등 편의성 높고 소호몰 상품을 저렴하게 구경하기 좋습니다. ([play.google.com](https://play.google.com/store/apps/details?id=com.banhala.android&utm_source=openai))  \n- 지그재그(ZIGZAG) — 수천 개 스토어를 한곳에 모아 비교하기 쉬워 가성비 상품·리뷰 빠르게 찾기 좋습니다. ([official.zigzag.kr](https://official.zigzag.kr/?utm_source=openai))\n\n참고로 위 앱/몰들은 이용자 수·인기로도 상위권에 올라 자주 추천됩니다. ([img2.surenet.co.kr](https://img2.surenet.co.kr/_upload/board/202201/88343.%5B%EC%9C%A0%ED%86%B5%5D%20%EA%B5%90%EB%B3%B4%EC%A6%9D%EA%B6%8C%20Daily%20%EC%A2%85%ED%95%A9.pdf?utm_source=openai))\n\n더 원하시면(예: 여성/남성·연령대·스타일·예산 범위) 알려주세요 — 그에 맞춰 더 좁혀서 추천해드릴게요."
+  }
+}

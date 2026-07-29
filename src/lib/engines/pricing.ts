@@ -46,34 +46,50 @@ export interface EnginePrice {
  * 설계 문서: "이 설계 과정에서 원가 계산이 두 번 틀렸다. 계산은 틀리고 실측만 맞는다."
  */
 export const PRICING: Record<EngineId, EnginePrice> = {
-  // 검색 툴 요금은 확정값. 토큰 단가는 실제로 고를 모델에 맞춰 채운다.
-  chatgpt: { perCallUsd: 0.01, perMTokenInUsd: 1.25, perMTokenOutUsd: 10 },
-  gemini: { perCallUsd: 0.014, perMTokenInUsd: 1.5, perMTokenOutUsd: 9 },
+  // gpt-5-mini ($0.25 / $2.00 per MTok) + 웹검색 $10/1k **호출**.
+  //
+  // ★ OpenAI의 검색 청구 단위는 **호출**이지 검색 질의가 아니다 — Gemini와
+  //   정반대다. 2026-07-30 실측에서 한 응답의 `action.queries`에 질의가 3~4개
+  //   들어 있었지만 청구 카운터 `tool_usage.web_search.num_requests`는 1이었다.
+  //   chatgpt 어댑터는 그 카운터를 읽어 `usage.searches`에 넣는다.
+  //   질의를 세면 원가가 3~4배로 부풀려진다.
+  chatgpt: { perCallUsd: 0.01, perMTokenInUsd: 0.25, perMTokenOutUsd: 2 },
+  // gemini-3.5-flash-lite ($0.30 / $2.50 per MTok) + 그라운딩 $14/1k **검색 질의**.
+  //
+  // ★ 한때 여기에 `flash` 단가($1.50 / $9.00)가 들어 있었다. **틀렸다** —
+  //   엔진(`GEMINI_MODEL`)은 `flash-lite`로 돌고 있었으므로 유료 Gemini 원가가
+  //   5배 부풀려 계산됐다. 단가표와 엔진 기본 모델은 **같이 움직여야 한다.**
+  //   모델을 올리면 여기도 반드시 함께 고쳐라.
+  gemini: { perCallUsd: 0.014, perMTokenInUsd: 0.3, perMTokenOutUsd: 2.5 },
   // SerpApi Starter $25 / 1,000건 = 건당 $0.025
   naver: { perCallUsd: 0.025, perMTokenInUsd: 0, perMTokenOutUsd: 0 },
   google_aio: { perCallUsd: 0.025, perMTokenInUsd: 0, perMTokenOutUsd: 0 },
 }
 
 /**
- * ★ 무료 진단은 **저가 모델**로 돈다 (설계 문서 "무료 진단 플로우").
+ * 무료 진단 원가표.
  *
- * 검색 툴 요금($0.01)은 그대로 붙지만 토큰 단가가 한 자릿수 배로 떨어져
- * 호출당 60% 이상 절감된다. 무료 진단은 리드 수집용이라 유료 측정만큼의
- * 정확도가 필요 없다.
+ * ★ **지금은 PRICING과 같다. 그게 의도된 것이다.**
  *
- * 3단계의 무료 진단 잡은 위 PRICING이 아니라 **이 표**로 원가를 계산해야 한다
- * (`estimateFreeAuditCostMilliKrw`). 하나로 합치면 무료 진단 예산 킬스위치가
- * 실제보다 비싸게 계산해 조기에 막는다.
+ * 원래 설계는 무료 진단을 더 싼 모델로 돌리는 것이었다. 그 방침을 뒤집었다
+ * (2026-07-30 결정):
+ *   - 무료와 유료가 다른 모델이면 **같은 브랜드의 언급률이 서로 다르게** 나온다.
+ *     "무료에서 33%였는데 결제하니 21%"는 고객이 즉시 알아채는 모순이고,
+ *     무료 진단의 숫자가 유료 전환의 근거이므로 그 순간 근거가 무너진다.
+ *   - 무료에 더 나쁜 모델을 쓰면 열등한 제품을 먼저 보여주는 셈이 된다.
+ *
+ * 무료와 유료의 차이는 모델이 아니라 **질의 수 · 측정 횟수 · 지속성**이다
+ * (무료 = 질의 3개 1회, 유료 = 질의 10~30개 주 3회 + 추이).
+ *
+ * 표를 남겨 두는 이유는 이 결정이 뒤집힐 수 있기 때문이다. 다시 나누게 되면
+ * 여기만 고치면 되고, `estimateFreeAuditCostMilliKrw` 호출부는 그대로다.
  */
 export const FREE_AUDIT_PRICING: Record<'chatgpt' | 'gemini', EnginePrice> = {
-  chatgpt: { perCallUsd: 0.01, perMTokenInUsd: 0.15, perMTokenOutUsd: 0.6 }, // 실제 고를 mini급 모델 단가로 교체
-  // gemini-3.5-flash-lite 실측 단가 (2026-07-29 공식 가격표 확인).
-  //
+  chatgpt: PRICING.chatgpt,
   // ★ perCallUsd가 0이 아니다. 한때 0으로 적어뒀는데 **틀렸다** —
   //   "월 5,000건 무료"는 근거 없는 값이었고, 실제로는 무료 티어에 검색
   //   그라운딩이 아예 없다. 무료 진단이라고 검색이 공짜가 되지 않는다.
-  //   토큰 단가만 저가 모델 몫으로 낮아진다.
-  gemini: { perCallUsd: 0.014, perMTokenInUsd: 0.3, perMTokenOutUsd: 2.5 },
+  gemini: PRICING.gemini,
 }
 
 /**

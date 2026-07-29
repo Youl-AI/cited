@@ -192,6 +192,6 @@ describe('레지스트리', () => {
 
   it('미구현 엔진은 무엇이 구현됐는지 알려준다', async () => {
     const { getEngine } = await import('@/lib/engines')
-    await expect(getEngine('naver')).rejects.toThrow(/구현된 엔진: gemini/)
+    await expect(getEngine('naver')).rejects.toThrow(/구현된 엔진:.*gemini/)
   })
 })

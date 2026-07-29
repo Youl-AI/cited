@@ -22,6 +22,8 @@ const PASSTHROUGH = [
   'GEMINI_API_KEY',
   'GEMINI_MODEL',
   'ANTHROPIC_API_KEY',
+  'OPENAI_API_KEY',
+  'OPENAI_MODEL',
 ] as const
 
 const env: Record<string, string> = { NODE_ENV: 'test' }
