@@ -6,6 +6,9 @@
 //   이 규칙이 특히 중요해졌다 — 아래에서 error 레벨의 필드가 그대로
 //   Sentry의 `extra`로 전송된다. (@/lib/email/send의 maskEmail이 주소를
 //   로거에 닿기 전에 마스킹하는 이유가 이것이다.)
+//   `@/lib/sentry-scrub`가 `extra`와 console breadcrumb의 문자열에서
+//   접속 문자열·Bearer 토큰을 지우지만, 그건 **비밀** 전용 그물이다.
+//   이메일·이름 같은 개인정보는 여전히 여기서 걸러야 한다.
 
 import { captureMessage } from '@sentry/nextjs'
 

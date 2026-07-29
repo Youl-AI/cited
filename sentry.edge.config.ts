@@ -6,10 +6,11 @@
 import * as Sentry from '@sentry/nextjs'
 import { scrubEvent } from '@/lib/sentry-scrub'
 
+// tracesSampleRate 없음 — 근거는 sentry.server.config.ts 주석 참고
+// (transaction은 beforeSendTransaction으로 가므로 scrubEvent를 안 거친다).
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
   enabled: Boolean(process.env.SENTRY_DSN),
-  tracesSampleRate: 0.1,
   sendDefaultPii: false,
   beforeSend: scrubEvent,
 })

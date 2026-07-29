@@ -11,10 +11,21 @@
 import * as Sentry from '@sentry/nextjs'
 import { scrubEvent } from '@/lib/sentry-scrub'
 
+// ★ tracesSampleRate를 넣지 않는다 (성능 추적 off). 이유가 셋이다.
+//   1. transaction 이벤트는 `beforeSend`가 아니라 `beforeSendTransaction`으로
+//      간다(@sentry/core client.js). 아래 scrubEvent를 **아예 거치지 않는**
+//      이벤트가 생기고, 거기엔 request.url·query_string·http.url·db.statement가
+//      실린다.
+//   2. @sentry/node sdk/index.js가 `hasSpansEnabled(options)`로 분기한다 —
+//      tracesSampleRate를 세우는 것만으로 HTTP·Postgres 등 자동 계측 전체가
+//      매 콜드스타트마다 적재된다.
+//   3. 무료 플랜에서 span/transaction 쿼터는 에러와 별도로 과금된다.
+//
+// 나중에 성능 추적이 필요해지면 `tracesSampleRate`만 켜지 말고 반드시
+// `beforeSendTransaction: scrubEvent`(또는 동등한 scrub)를 **같이** 붙여라.
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
   enabled: Boolean(process.env.SENTRY_DSN),
-  tracesSampleRate: 0.1,
   // 이메일·IP·쿠키·요청 본문이 자동으로 실려 나가지 않게 한다.
   sendDefaultPii: false,
   // 자동 첨부가 아니라 **메시지 본문**에 박혀 오는 비밀(DATABASE_URL의

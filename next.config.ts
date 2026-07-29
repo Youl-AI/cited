@@ -16,4 +16,16 @@ export default withSentryConfig(nextConfig, {
   // 인증 토큰이 없을 때의 "소스맵 업로드 건너뜀" 안내를 포함해 빌드 로그를
   // 조용히 유지한다.
   silent: true,
+  // 기본값이 true라 DSN이 없어도 모든 빌드가 sentry.io로 플러그인 텔레메트리를
+  // 보낸다. CI 빌드가 남의 서비스에 네트워크 의존성을 갖는 것은 그 자체로
+  // 실패 지점이고, 우리가 얻는 것은 없다.
+  telemetry: false,
+  // SENTRY_AUTH_TOKEN이 없으면 업로드가 어차피 건너뛰어지는데, 플러그인은
+  // 그때도 productionBrowserSourceMaps를 강제로 켠다 — 빌드만 느려지고
+  // (측정: 3.5초 → 6.5초) 얻는 것은 없다.
+  // ★ 토큰이 생기면 이 블록을 지워라. 안 지우면 소스맵이 영영 안 올라간다.
+  sourcemaps: { disable: true },
+  // 성능 추적을 껐으므로 라우터 전환 훅(네비게이션 스팬 시작)이 필요 없다.
+  // src/instrumentation-client.ts 주석 참고. 추적을 켤 때 이 줄을 지워라.
+  suppressOnRouterTransitionStartWarning: true,
 });
