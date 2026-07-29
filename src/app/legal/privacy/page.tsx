@@ -71,16 +71,20 @@ export default function PrivacyPage() {
         IP와 브라우저 정보가 원문 그대로 세션 정보에 함께 기록됩니다. 이는 계정 탈취 탐지와
         이상 접속 확인을 위한 것이며, 세션 유효기간은 최대 30일이고 서비스를 계속 이용하면
         만료 시점이 하루 단위로 갱신됩니다. 세션이 만료된 뒤 같은 세션으로 다시 접속하면 그
-        시점에 자동으로 삭제됩니다. 다만 만료 이후 다시 접속하지 않는 세션은 이 삭제를
-        일으킬 다음 접속 자체가 없어 삭제되지 않고 데이터베이스에 남을 수 있으며, 접속 없는
-        만료 세션을 찾아 일괄 삭제하는 절차는 아직 구축되어 있지 않습니다.
+        시점에 자동으로 삭제되며, 만료 후 다시 접속하지 않는 세션도 하루 1회 자동으로
+        실행되는 정리 작업이 찾아내어 일괄 삭제합니다.
       </p>
 
       <h2>2. 개인정보의 이용 목적</h2>
       <ul>
         <li>회원 식별 및 서비스 제공</li>
+        <li>이메일 주소 인증(본인확인) — 회원가입 시 인증 메일을 발송합니다</li>
         <li>로그인 세션 관리, 계정 탈취 탐지 및 이상 접속 확인</li>
-        <li>서비스 공지 발송</li>
+        <li>
+          약관·방침 변경 등 서비스 공지 발송 (공지 발송 기능은 아직 제공되지 않습니다. 현재
+          회사가 발송하는 메일은 회원가입 시의 이메일 인증 메일뿐이며, 공지가 필요한 시점부터
+          이 목적으로 이용을 시작합니다.)
+        </li>
         <li>
           유료 서비스 결제, 정산 및 세금계산서 발행, 측정 완료 알림, 결제·구독 관련 안내,
           전자상거래법 등 관계 법령에 따른 거래 기록 보존 의무 이행 (아직 제공되지 않는
@@ -102,10 +106,9 @@ export default function PrivacyPage() {
         </li>
         <li>
           로그인 세션 정보(접속 IP, 브라우저 정보): 세션 유효기간인 최대 30일. 서비스를 계속
-          이용하면 만료 시점이 하루 단위로 갱신됩니다. 세션이 만료된 뒤 같은 세션으로 다시
-          접속하면 그 시점에 삭제됩니다. 다만 접속이 없는 채로 만료된 세션은 삭제를 일으킬
-          다음 접속 자체가 없어 삭제되지 않고 남을 수 있으며, 접속 없는 만료 세션을 찾아
-          일괄 삭제하는 절차는 아직 없습니다.
+          이용하면 만료 시점이 하루 단위로 갱신됩니다. 만료된 세션은 같은 세션으로 다시
+          접속하는 시점에 삭제되며, 접속이 없더라도 하루 1회 자동으로 실행되는 정리 작업이
+          만료된 세션을 일괄 삭제합니다.
         </li>
         <li>결제 기록: 전자상거래법에 따라 5년 (유료 결제 기능 도입 후 발생하는 기록부터)</li>
         <li>
@@ -118,8 +121,10 @@ export default function PrivacyPage() {
         </li>
       </ul>
       <p>
-        위 기간은 회사가 보관을 약속하는 상한이며, 현재는 수동 절차로 이행합니다. 보유기간을
-        자동으로 집행하는 시스템은 아직 구축되어 있지 않습니다.
+        위 기간은 회사가 보관을 약속하는 상한입니다. 로그인 세션 정보는 위와 같이 하루 1회
+        자동 삭제 작업으로 보유기간이 집행됩니다. 회원 정보(탈퇴 시 익명화)와 결제 기록 등
+        나머지 항목은 아직 자동 집행 시스템이 없어 현재는 수동 절차로 이행하며, 자동화는
+        해당 기능이 열리는 시점에 맞춰 순차적으로 구축합니다.
       </p>
 
       <h2>4. 파기 절차 및 방법</h2>
@@ -185,18 +190,25 @@ export default function PrivacyPage() {
           </TableRow>
           <TableRow>
             <TableCell className="whitespace-normal">Resend Inc.</TableCell>
-            <TableCell className="whitespace-normal">인증·알림 이메일 발송</TableCell>
+            <TableCell className="whitespace-normal">
+              인증 이메일 발송 (현재는 회원가입 시 이메일 인증 메일에 한합니다)
+            </TableCell>
           </TableRow>
           <TableRow>
             <TableCell className="whitespace-normal">Sentry(Functional Software, Inc.)</TableCell>
-            <TableCell className="whitespace-normal">오류 모니터링</TableCell>
+            <TableCell className="whitespace-normal">
+              오류 모니터링 (오류 모니터링 연동을 활성화한 경우에 한합니다)
+            </TableCell>
           </TableRow>
         </TableBody>
       </Table>
       <p>
         회사는 위탁계약 체결 시 개인정보보호법에 따라 수탁자가 개인정보를 안전하게 처리하도록
         관리·감독합니다. 위 목록은 현재 실제로 서비스를 호출·연동하고 있는 수탁자만 담고
-        있습니다. 결제대행사, 측정에 사용하는 AI·검색 API 제공자 등 아직 제공되지 않는 기능에
+        있습니다. 다만 Sentry는 오류 모니터링 연동을 활성화한 경우에만 실제로 전송이
+        이루어지며, 연동을 활성화하지 않은 기간에는 아무 정보도 전송되지 않습니다. 회사는 이
+        연동을 언제든 켜고 끌 수 있으므로 활성화 여부와 무관하게 미리 고지합니다.
+        결제대행사, 측정에 사용하는 AI·검색 API 제공자 등 아직 제공되지 않는 기능에
         필요한 처리위탁은 위 목록에 포함되어 있지 않으며, 해당 기능이 실제로 제공되기 시작하는
         시점에 이 표를 갱신하고 &lsquo;13. 방침의 변경&rsquo;에 따라 고지합니다.
       </p>
@@ -218,7 +230,10 @@ export default function PrivacyPage() {
             <TableCell className="whitespace-normal">미국</TableCell>
             <TableCell className="whitespace-normal">서비스 이용 데이터 전반</TableCell>
             <TableCell className="whitespace-normal">서비스 호스팅</TableCell>
-            <TableCell className="whitespace-normal">위탁계약 종료 시까지</TableCell>
+            <TableCell className="whitespace-normal">
+              위탁계약 종료 시까지. 요청·실행 로그는 {B.hostingProvider}의 표준 로그 보존
+              정책에 따라 그보다 짧은 기간만 보관된 후 삭제됩니다.
+            </TableCell>
           </TableRow>
           <TableRow>
             <TableCell className="whitespace-normal">Neon Inc.</TableCell>
@@ -227,14 +242,19 @@ export default function PrivacyPage() {
               회원·브랜드·구독 정보 등 서비스 데이터베이스 전체
             </TableCell>
             <TableCell className="whitespace-normal">데이터베이스 운영</TableCell>
-            <TableCell className="whitespace-normal">위탁계약 종료 시까지</TableCell>
+            <TableCell className="whitespace-normal">
+              위탁계약 종료 시까지. 회사가 데이터베이스에서 삭제한 정보는 Neon의 표준
+              백업·시점 복구 보존 기간이 지나면 백업에서도 삭제됩니다.
+            </TableCell>
           </TableRow>
           <TableRow>
             <TableCell className="whitespace-normal">Resend Inc.</TableCell>
             <TableCell className="whitespace-normal">미국</TableCell>
             <TableCell className="whitespace-normal">이메일 주소, 발송 콘텐츠</TableCell>
-            <TableCell className="whitespace-normal">인증·알림 이메일 발송</TableCell>
-            <TableCell className="whitespace-normal">발송 완료 후 지체 없이 파기</TableCell>
+            <TableCell className="whitespace-normal">인증 이메일 발송</TableCell>
+            <TableCell className="whitespace-normal">
+              Resend의 표준 데이터 보존 정책에 따라 발송 기록이 30일간 보관된 후 삭제됩니다.
+            </TableCell>
           </TableRow>
           <TableRow>
             <TableCell className="whitespace-normal">Sentry(Functional Software, Inc.)</TableCell>
@@ -242,8 +262,12 @@ export default function PrivacyPage() {
             <TableCell className="whitespace-normal">
               오류 발생 시 기술 로그(이메일·IP 등 식별정보는 전송 전 자동 제거)
             </TableCell>
-            <TableCell className="whitespace-normal">오류 모니터링</TableCell>
-            <TableCell className="whitespace-normal">위탁계약 종료 시까지</TableCell>
+            <TableCell className="whitespace-normal">
+              오류 모니터링 (연동을 활성화한 경우에 한합니다)
+            </TableCell>
+            <TableCell className="whitespace-normal">
+              Sentry의 표준 이벤트 보존 정책에 따라 보관된 후 삭제됩니다.
+            </TableCell>
           </TableRow>
         </TableBody>
       </Table>
@@ -316,7 +340,7 @@ export default function PrivacyPage() {
         <li>개인정보분쟁조정위원회 (국번없이 1833-6972, kopico.go.kr)</li>
         <li>개인정보침해신고센터 (국번없이 118, privacy.kisa.or.kr)</li>
         <li>대검찰청 (국번없이 1301, spo.go.kr)</li>
-        <li>경찰청 사이버범죄 신고시스템 (182, ecrm.police.go.kr)</li>
+        <li>경찰청 사이버범죄 신고시스템 (국번없이 182, ecrm.police.go.kr)</li>
       </ul>
 
       <h2>13. 방침의 변경 및 이전 버전 열람</h2>

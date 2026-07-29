@@ -11,6 +11,11 @@ const valid = {
   EMAIL_FROM: 'Cited <noreply@example.com>',
 }
 
+// 배포로 판정되는 조합을 만들 때 얹는다. 배포에서는 CRON_SECRET이 필수라
+// (아래 'CRON_SECRET' describe 참고), 이걸 빼면 BETTER_AUTH_URL을 검증하려던
+// 테스트가 엉뚱하게 CRON_SECRET 때문에 실패한다.
+const deployable = { CRON_SECRET: 'c'.repeat(32) }
+
 describe('parseEnv', () => {
   it('필수 키가 모두 있으면 파싱된다', () => {
     const env = parseEnv(valid)
@@ -112,6 +117,7 @@ describe('BETTER_AUTH_URL 위생', () => {
   it('프로덕션의 https://는 통과한다', () => {
     const env = parseEnv({
       ...valid,
+      ...deployable,
       NODE_ENV: 'production',
       BETTER_AUTH_URL: 'https://cited.co.kr',
       NEXT_PUBLIC_APP_URL: 'https://cited.co.kr',
@@ -164,6 +170,7 @@ describe('BETTER_AUTH_URL 위생', () => {
   it('배포 신호가 있어도 https면 통과한다', () => {
     const env = parseEnv({
       ...valid,
+      ...deployable,
       NODE_ENV: 'development',
       VERCEL: '1',
       BETTER_AUTH_URL: 'https://cited.co.kr',
@@ -220,6 +227,7 @@ describe('BETTER_AUTH_URL 위생', () => {
   it('끝 슬래시만 다른 같은 오리진은 일치로 본다', () => {
     const env = parseEnv({
       ...valid,
+      ...deployable,
       NODE_ENV: 'production',
       BETTER_AUTH_URL: 'https://cited.co.kr/',
       NEXT_PUBLIC_APP_URL: 'https://cited.co.kr',
@@ -252,6 +260,89 @@ describe('BETTER_AUTH_URL 위생', () => {
     }
     expect(thrown).toBeInstanceOf(Error)
     expect((thrown as Error).message).toContain('BETTER_AUTH_URL')
+  })
+})
+
+// CRON_SECRET은 /api/cron/* 라우트의 유일한 인증 수단이다. 배포에서 이 값이
+// 비어 있으면 라우트가 fail-closed로 401을 돌려줘 만료 세션 정리가 조용히
+// 멈춘다(= 보유기간 집행이 멈춘다). 그래서 부팅 시점에 막는다.
+//
+// 다만 로컬은 없이도 돌아가야 한다. `next build`·`next start`는 로컬에서도
+// NODE_ENV=production이므로, BETTER_AUTH_URL의 https 강제와 **같은 카브아웃**
+// (배포 신호 없음 + 루프백 주소 = 로컬 빌드)을 적용한다.
+describe('CRON_SECRET', () => {
+  it('로컬 개발에서는 없어도 통과한다', () => {
+    expect(parseEnv({ ...valid, NODE_ENV: 'development' }).CRON_SECRET).toBeUndefined()
+  })
+
+  it('배포가 아닌 로컬 프로덕션 빌드(루프백)에서는 없어도 통과한다', () => {
+    expect(parseEnv({ ...valid, NODE_ENV: 'production' }).CRON_SECRET).toBeUndefined()
+  })
+
+  it('배포 신호가 있으면 필수다', () => {
+    expect(() =>
+      parseEnv({
+        ...valid,
+        VERCEL: '1',
+        BETTER_AUTH_URL: 'https://cited.co.kr',
+        NEXT_PUBLIC_APP_URL: 'https://cited.co.kr',
+      }),
+    ).toThrowError(/CRON_SECRET/)
+  })
+
+  it('프로덕션 실호스트면 배포 신호가 없어도 필수다', () => {
+    expect(() =>
+      parseEnv({
+        ...valid,
+        NODE_ENV: 'production',
+        BETTER_AUTH_URL: 'https://cited.co.kr',
+        NEXT_PUBLIC_APP_URL: 'https://cited.co.kr',
+      }),
+    ).toThrowError(/CRON_SECRET/)
+  })
+
+  // `.env.example`을 그대로 복사하면 `CRON_SECRET=`(빈 문자열)이 된다.
+  // 빈 값은 "설정됨"이 아니라 "없음"으로 취급해야 한다 — 라우트도 빈 값을
+  // 거부하므로 배포에서 통과시키면 크론이 영원히 401을 받는다.
+  it('배포에서 빈 문자열은 설정된 것으로 보지 않는다', () => {
+    expect(() =>
+      parseEnv({
+        ...valid,
+        VERCEL: '1',
+        CRON_SECRET: '',
+        BETTER_AUTH_URL: 'https://cited.co.kr',
+        NEXT_PUBLIC_APP_URL: 'https://cited.co.kr',
+      }),
+    ).toThrowError(/CRON_SECRET/)
+  })
+
+  it('배포에 값이 있으면 통과한다', () => {
+    const env = parseEnv({
+      ...valid,
+      VERCEL: '1',
+      CRON_SECRET: 'c'.repeat(32),
+      BETTER_AUTH_URL: 'https://cited.co.kr',
+      NEXT_PUBLIC_APP_URL: 'https://cited.co.kr',
+    })
+    expect(env.CRON_SECRET).toBe('c'.repeat(32))
+  })
+
+  it('검증 실패 메시지에 시크릿 값 자체는 담기지 않는다', () => {
+    const plausible = 'crn_live_9f2a'
+    let thrown: unknown
+    try {
+      parseEnv({
+        ...valid,
+        VERCEL: '1',
+        CRON_SECRET: '',
+        BETTER_AUTH_URL: 'https://cited.co.kr',
+        NEXT_PUBLIC_APP_URL: 'https://cited.co.kr',
+      })
+    } catch (error) {
+      thrown = error
+    }
+    expect((thrown as Error).message).toContain('CRON_SECRET')
+    expect((thrown as Error).message).not.toContain(plausible)
   })
 })
 

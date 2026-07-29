@@ -765,6 +765,18 @@ git commit -m "feat(collection): planSnapshot · 팬아웃 · completeness · �
 
 ### Task 3: 수집 잡
 
+> **개인정보처리방침을 함께 고쳐야 하는 태스크다.** 여기서 만드는
+> `collect-brand`/`collect-one`이 **이용자의 브랜드명·질의문을 OpenAI·Gemini·
+> SerpApi·Anthropic에 처음으로 실제 전송하는 코드**다. 그 순간 이들은 새 수탁자가
+> 되므로 `src/app/legal/privacy/page.tsx`의 **§7(개인정보 처리 위탁)**과
+> **§8(국외 이전)** 표를 갱신해야 한다. §8은 개인정보보호법 제28조의8 제2항의
+> 법정 고지사항이고, §8 말미의 "측정 기능이 도입되면… 이 항을 갱신"이라는 기존
+> 문장이 가리키는 시점이 바로 이 코드다.
+> 갱신 자체는 프로덕션 배포 전까지 끝내면 되며(2단계 `*.smoke.test.ts`는 CI
+> 기본 실행에서 제외되므로 실제 위탁이 아니다), 완료 확인은 이 문서 맨 끝
+> **3단계 완료 조건**의 해당 항목에서 한다. 이 코드를 쓰면서 방침 갱신을
+> 미룰 수는 있어도, 잊어서는 안 된다.
+
 **Files:**
 - Create: `src/trigger/collect-one.ts`, `src/trigger/collect-brand.ts`,
   `src/lib/collection/repository.ts`

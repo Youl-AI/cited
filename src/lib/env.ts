@@ -31,6 +31,16 @@ const baseSchema = z.object({
   // 구분해야 하는데 NODE_ENV만으로는 둘 다 'production'이라 구분되지 않는다).
   VERCEL: z.string().optional(),
 
+  // 크론 인증. Vercel Cron은 이 변수가 설정돼 있으면 스케줄 호출에
+  // `Authorization: Bearer $CRON_SECRET` 헤더를 붙인다. /api/cron/* 라우트가
+  // 그 헤더를 검증한다 — 라우트 URL은 공개되므로 이게 유일한 방어선이다.
+  //
+  // 스키마상 optional인 이유는 로컬 개발(`next dev`)이 이 값 없이도 돌아야
+  // 하기 때문이다. 배포에서는 아래 superRefine이 필수로 승격한다.
+  // `.min(1)`을 붙이지 않는 이유: `.env.example`을 복사하면 빈 문자열이 되는데,
+  // 그 상태로 로컬을 막으면 안 된다. 빈 값의 거부는 배포 검사에서만 한다.
+  CRON_SECRET: z.string().optional(),
+
   // 선택 — 관측
   SENTRY_DSN: z.string().optional(),
   // Sentry 서버 설정(sentry.server.config)도 관례상 동일한 DSN을 읽는다.
@@ -115,9 +125,30 @@ export function isDeployedEnv(value: Pick<Env, 'VERCEL'>): boolean {
 //     클라이언트 baseURL로 쓴다. 서버의 baseURL과 다르면 better-auth의 origin
 //     검사가 모든 인증 요청을 거부한다. 지금까지는 우연히 같았을 뿐이다.
 //     이건 환경과 무관하게 항상 강제한다.
+//
+//  3. CRON_SECRET 누락 — /api/cron/* 라우트의 유일한 인증 수단이다. 배포에서
+//     이게 비어 있으면 라우트가 fail-closed로 401을 돌려주고, 만료 세션 정리
+//     크론이 **조용히** 멈춘다. 그러면 접속 IP·User-Agent가 든 만료 세션이
+//     계속 쌓이고, 개인정보처리방침 §3·§4에 적어 둔 "하루 1회 자동 삭제"가
+//     거짓이 된다. 조용한 실패를 부팅 실패로 바꾼다.
+//
+//     범위는 위 1번의 로컬 카브아웃과 **같은 판정**을 쓴다. 로컬
+//     `next build`·`next start`도 NODE_ENV=production이므로 그것까지 막으면
+//     로컬 프로덕션 빌드가 통째로 죽는다 (1번에서 실제로 겪은 문제다).
 const schema = baseSchema.superRefine((value, ctx) => {
   const isDeployed = isDeployedEnv(value)
   const httpAllowedHere = !isDeployed && isLoopbackUrl(value.BETTER_AUTH_URL)
+  // "배포된 것으로 취급하는 환경" = 배포 신호가 있거나, 로컬 빌드로 볼 수 없는
+  // production. httpAllowedHere가 곧 "로컬 프로덕션 빌드"의 정의다.
+  const behavesLikeDeployment = (value.NODE_ENV === 'production' || isDeployed) && !httpAllowedHere
+  if (behavesLikeDeployment && !value.CRON_SECRET) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['CRON_SECRET'],
+      message:
+        '배포 환경에서는 필수입니다 (없으면 /api/cron/* 이 401만 돌려주고 만료 세션 정리가 멈춥니다). Vercel 환경변수에 임의의 긴 무작위 문자열을 넣으면 Vercel Cron이 Authorization 헤더로 함께 보냅니다',
+    })
+  }
   if (
     (value.NODE_ENV === 'production' || isDeployed) &&
     !value.BETTER_AUTH_URL.startsWith('https://') &&

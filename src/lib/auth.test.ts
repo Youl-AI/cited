@@ -130,6 +130,10 @@ describe('실제 auth 설정을 다른 환경으로 재적재했을 때', () => 
       VERCEL: '1',
       BETTER_AUTH_URL: 'https://cited.co.kr',
       NEXT_PUBLIC_APP_URL: 'https://cited.co.kr',
+      // 배포에서는 env.ts가 CRON_SECRET을 필수로 요구한다(만료 세션 정리
+      // 크론의 유일한 인증 수단). 여기서 검증하려는 건 쿠키 Secure이므로,
+      // 부팅이 다른 이유로 막히지 않게 채워 준다.
+      CRON_SECRET: 'c'.repeat(32),
     })
     expect(deployedAuth.options.baseURL).toBe('https://cited.co.kr')
 
