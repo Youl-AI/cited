@@ -19,6 +19,8 @@ const PASSTHROUGH = [
   'NEXT_PUBLIC_APP_URL',
   'RESEND_API_KEY',
   'EMAIL_FROM',
+  'GEMINI_API_KEY',
+  'GEMINI_MODEL',
 ] as const
 
 const env: Record<string, string> = { NODE_ENV: 'test' }

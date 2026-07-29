@@ -23,6 +23,7 @@
     "probe:engine": "tsx --env-file=.env.local scripts/probe-engine.mts"
   },
   "dependencies": {
+    "@google/genai": "2.13.0",
     "@neondatabase/serverless": "1.1.0",
     "@sentry/nextjs": "10.68.0",
     "better-auth": "1.6.25",

@@ -4,7 +4,8 @@
 // user/session/account/verification 테이블에 스키마 변경 없이 그대로 붙는지,
 // 그리고 가입 → 인증 메일 링크 생성 → 이메일 확인 → 세션 발급까지 실제로 도는지.
 //
-// ★ 이 테스트는 끝나면 자기가 만든 행을 전부 지운다. 정상 상태는 13개 테이블 0행이다.
+// ★ 이 테스트는 끝나면 자기가 만든 행을 전부 지운다. 정상 상태는 시작 시점의
+//   행 수로 되돌아오는 것이다 — 0행이 아니다. 서비스가 라이브라 실사용자가 있다.
 
 import { sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
@@ -61,13 +62,29 @@ async function countAll(): Promise<Record<string, number>> {
   return counts
 }
 
+/**
+ * 테스트 시작 시점의 행 수.
+ *
+ * ★ 예전에는 "전 테이블 0행"을 단언했다. 출시 전에는 맞았지만 **서비스가
+ *   라이브가 된 순간 영구히 깨진다** — 실제 가입자가 생기기 때문이다.
+ *   이 테스트가 확인해야 할 것은 "DB가 비어 있다"가 아니라 **"이 테스트가
+ *   만든 행이 남지 않는다"**이므로 절대값이 아니라 델타를 본다.
+ *
+ *   절대값으로 되돌리지 마라. 되돌리면 프로덕션 DB를 비워야만 통과하는
+ *   테스트가 되고, 그건 언젠가 누군가 실제로 비우게 만든다.
+ */
+let baseline: Record<string, number>
+
 describe('Better Auth ↔ 기존 Drizzle 스키마', () => {
-  beforeAll(cleanup)
+  beforeAll(async () => {
+    await cleanup()
+    baseline = await countAll()
+  })
   afterAll(cleanup)
 
   it('가입하면 user·account 행이 생기고 인증 링크가 만들어진다', async () => {
     const before = await countAll()
-    expect(before['user']).toBe(0)
+    expect(before).toEqual(baseline)
 
     const result = await auth.api.signUpEmail({
       body: { email: TEST_EMAIL, password: TEST_PASSWORD, name: '스모크' },
@@ -185,23 +202,12 @@ describe('Better Auth ↔ 기존 Drizzle 스키마', () => {
     expect(sessionCookie?.startsWith('__Secure-')).toBe(false)
   })
 
-  it('정리 후 13개 테이블이 전부 0행으로 돌아온다', async () => {
+  it('정리 후 13개 테이블이 시작 상태로 돌아온다', async () => {
+    // 델타를 본다. 이유는 baseline 선언부의 주석 참고 — 실사용자가 있는
+    // 프로덕션 DB에서도 "우리가 만든 행이 남지 않았다"를 정확히 검증한다.
     await cleanup()
     const counts = await countAll()
-    expect(counts).toEqual({
-      user: 0,
-      session: 0,
-      account: 0,
-      verification: 0,
-      subscriptions: 0,
-      brands: 0,
-      queries: 0,
-      collection_runs: 0,
-      answers: 0,
-      detections: 0,
-      free_audits: 0,
-      payments: 0,
-      serpapi_usage: 0,
-    })
+    expect(counts).toEqual(baseline)
+    expect(Object.keys(counts)).toHaveLength(13)
   })
 })
