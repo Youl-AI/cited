@@ -5,7 +5,6 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { signOut } from '@/lib/auth-client'
-import { authErrorMessage } from '@/lib/auth-errors'
 
 /** 로그인 영역의 상단 내비게이션. 순서는 쓰는 빈도 순이다. */
 const APP_NAV = [
@@ -13,6 +12,9 @@ const APP_NAV = [
   { href: '/settings', label: '설정' },
   { href: '/billing', label: '결제' },
 ] as const
+
+const SIGN_OUT_FAILED =
+  '로그아웃하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'
 
 type HeaderUser = { name: string; email: string }
 
@@ -26,8 +28,6 @@ export function SiteHeader({ user }: { user?: HeaderUser }) {
   const [signingOut, setSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState<string | null>(null)
 
-  const SIGN_OUT_FAILED = '로그아웃하지 못했습니다. 연결을 확인하고 다시 시도해 주세요.'
-
   async function onSignOut() {
     setSigningOut(true)
     setSignOutError(null)
@@ -39,10 +39,14 @@ export function SiteHeader({ user }: { user?: HeaderUser }) {
     //   연결 자체가 끊기면(오프라인·DNS 실패) fetch가 **던진다**. 둘 다 잡지
     //   않으면 예외 경로에서 버튼이 "나가는 중…"으로 영구히 잠긴다
     //   (실제로 요청을 끊어서 확인했다).
+    // authErrorMessage의 매핑표는 로그인·가입·인증 문맥용이다. 로그아웃 응답에
+    // USER_NOT_FOUND가 실려 오면 "이메일 또는 비밀번호가 올바르지 않습니다"가,
+    // SESSION_EXPIRED면 "다시 로그인해 주세요"가 뜬다 — 로그아웃 중에 둘 다
+    // 말이 안 된다. 여기서는 코드와 무관하게 한 문구로 간다.
     let failed: string | null = null
     try {
       const { error } = await signOut()
-      if (error) failed = authErrorMessage(error, SIGN_OUT_FAILED)
+      if (error) failed = SIGN_OUT_FAILED
     } catch {
       failed = SIGN_OUT_FAILED
     }
