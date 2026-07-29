@@ -887,9 +887,20 @@ export const USD_TO_KRW = 1400
  *   - OpenAI 웹검색: $10 / 1,000회
  *   - Gemini 3 grounding: 월 5,000건 무료, 이후 $14 / 1,000회
  *
- * ★ `perMTokenIn`이 지배 변수다. 웹검색이 붙으면 **긁어온 본문이 통째로 입력
- *   토큰**으로 들어와 호출당 5,000~20,000 토큰이 될 수 있다. 이 폭이 현재
- *   원가 추정의 가장 큰 불확실성이며, Task 4 스모크 테스트에서 실측한다.
+ * ★ **검색 본문의 토큰 청구는 제공자마다 다르다. 같은 공식으로 계산하지 마라.**
+ *   - **Gemini: 청구하지 않는다.** 2026-07-29 실측 확인 — grounding on/off와
+ *     무관하게 입력 토큰이 질의문 그대로였다(9~12 토큰). 공식 문서도
+ *     "Retrieved context ... is not charged as input tokens"로 명시한다.
+ *     즉 Gemini의 grounding 비용은 `perCallUsd`뿐이다.
+ *   - **OpenAI: 청구한다.** 문서가 `$10/1k calls + Search content tokens
+ *     billed at model rates`로 명시한다. 여기서는 `perMTokenIn`이 지배 변수이며
+ *     호출당 5,000~20,000 토큰이 될 수 있다. **Task 4에서 반드시 실측하라** —
+ *     Gemini에서 이미 한 번 틀린 가정이다.
+ *
+ * ★ **사고(thinking) 토큰을 빠뜨리지 마라.** 실측에서 `flash-lite`는 0이었지만
+ *   `flash`는 한 번에 2,404 토큰을 썼고 출력 단가로 청구된다. 모델을 한 단계
+ *   올리면 호출당 원가가 3.2원 → 41.9원(13배)이 된다. `CostUsage`에 사고 토큰을
+ *   별도로 담고 출력 단가로 계산하라.
  *
  * 설계 문서: "이 설계 과정에서 원가 계산이 두 번 틀렸다. 계산은 틀리고 실측만 맞는다."
  */
@@ -920,11 +931,20 @@ export const FREE_AUDIT_PRICING: Record<
   { perCallUsd: number; perMTokenInUsd: number; perMTokenOutUsd: number }
 > = {
   chatgpt: { perCallUsd: 0.01, perMTokenInUsd: 0.15, perMTokenOutUsd: 0.6 }, // 실제 고를 mini급 모델 단가로 교체
-  // grounding은 월 5,000건까지 무료다. 무료 진단을 이 티어에 우선 배정하면
-  // perCallUsd가 0이 된다 — 다만 유료 측정과 **같은 티어를 나눠 쓰므로**
-  // 고객이 늘면 잠식된다. 6단계 관측 대상.
-  gemini: { perCallUsd: 0, perMTokenInUsd: 0.1, perMTokenOutUsd: 0.4 }, // 실제 고를 Flash-Lite급 단가로 교체
+  // gemini-3.5-flash-lite 실측 단가 (2026-07-29 공식 가격표 확인).
+  // perCallUsd가 0인 이유: grounding이 **월 5,000건까지 무료**다.
+  //
+  // ★ 이 0은 조건부다. 티어를 넘으면 $0.014가 되어 호출당 원가가
+  //   3.2원 → 22.8원(7배)이 된다. 그리고 **유료 측정 경로가 같은 티어를
+  //   나눠 쓴다** — 고객이 늘면 무료 진단 몫이 줄어든다.
+  //   6단계는 SerpApi 잔여 건수와 **같은 방식으로 grounding 잔량을 추적**해야
+  //   한다. 안 하면 어느 날 갑자기 무료 진단 원가가 7배가 되는데 원인을 모른다.
+  gemini: { perCallUsd: 0, perMTokenInUsd: 0.3, perMTokenOutUsd: 2.5 },
 }
+
+/** grounding 무료 한도. 초과분은 $0.014/호출. 유료 측정과 공유한다. */
+export const GEMINI_FREE_GROUNDING_PER_MONTH = 5000
+export const GEMINI_GROUNDING_OVERAGE_USD = 0.014
 
 /** Claude Haiku 4.5 판정기 단가 ($1 / $5 per MTok) */
 export const JUDGE_PRICING = { perMTokenInUsd: 1, perMTokenOutUsd: 5 }
