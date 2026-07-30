@@ -23,6 +23,7 @@
     "probe:engine": "tsx --conditions=react-server --env-file=.env.local scripts/probe-engine.mts",
     "probe:collection": "tsx --conditions=react-server --env-file=.env.local scripts/probe-collection.mts",
     "probe:audit": "tsx --conditions=react-server --env-file=.env.local scripts/probe-audit.mts",
+    "probe:aliases": "tsx --conditions=react-server --env-file=.env.local scripts/probe-aliases.mts",
     "measure": "tsx --conditions=react-server --env-file=.env.local scripts/measure.mts",
     "label:collect": "tsx --conditions=react-server --env-file=.env.local scripts/label-collect.mts",
     "label": "tsx --conditions=react-server scripts/label.mts",

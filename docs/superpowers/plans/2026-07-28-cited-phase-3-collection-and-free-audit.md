@@ -3734,8 +3734,53 @@ git commit -m "feat(audit): 진단 리포트 구성 (증거 우선 · 경쟁사 
 - Test: `src/lib/audit/aliases.test.ts`
 
 **Interfaces:**
+> ### ★ 2026-07-30(3) — 실행 완료. 계획서와 달라진 것
+>
+> **① `sanitizeAliases`에 `others` 인자를 추가했다.** 계획서 버전은 카테고리
+> 일반어만 막고 **형제 브랜드 이름을 막지 못한다.** `SYSTEM_PROMPT`가 "경쟁사
+> 이름을 넣지 마세요"라고 지시하지만 지시는 검증이 아니다. `29CM`이 무신사의
+> 별칭이 되면 29CM 언급이 전부 무신사 언급으로 집계되어 **우리 언급률과 Share
+> of Voice가 동시에 부풀려진다** — 숫자가 좋아 보이는 방향의 오류다.
+>
+> **② `MAX_ALIAS_LENGTH`를 40 → 24로 내렸다.** 40자는 한국어 문장을 막지 못한다.
+> 계획서의 자기 테스트 픽스처("무신사는 한국의 대표적인 온라인 패션
+> 플랫폼입니다")가 27자여서 **그 테스트가 실패했다.** 24자는 가장 긴 정당한
+> 표기(`The North Face Korea` 20자)를 남긴다.
+>
+> **③ 계획서 테스트 두 건이 서로 모순이었다.** "정상 별칭을 통과시킨다"는
+> `['MUSINSA','Musinsa','무탠다드']` 세 개를 기대하는데, 바로 다음 테스트
+> "대소문자만 다른 중복을 하나로 합친다"는 하나로 합치기를 요구한다.
+> 1차 매칭이 `normalizeKo`로 소문자화하므로 **합치는 쪽이 맞다** — 둘 다 남기면
+> 1차 후보만 두 배가 되고 재현율은 1도 늘지 않는다.
+>
+> **④ 모델 응답의 `canonical`을 정규화해서 맞춘다.** 계획서의
+> `brands.includes(b.canonical)`는 모델이 `' 29cm '`처럼 돌려주면 그 브랜드를
+> 조용히 별칭 0개로 만든다. 돌려주는 `canonical`은 **요청한 표기**로 고정한다 —
+> 모델 표기를 쓰면 판정 subject가 신청 내용과 어긋난다.
+>
+> **⑤ 중복·빈 브랜드명을 입력에서 걷어낸다.** 신청 폼은 이미 걸러주지만
+> 운영자 CLI(`audit:new`)는 그 경로를 타지 않는다. 중복이 남으면 판정 subject가
+> 겹쳐 언급 수가 두 배로 세어지고, 빈 이름은 1차에서 모든 답변에 걸린다.
+>
+> **⑥ 클라이언트 생성을 `judge/claude.ts` 규약에 맞췄다.** 계획서는 SDK가
+> `process.env`를 읽게 두는데, 이 저장소는 `env.ANTHROPIC_API_KEY`를 명시적으로
+> 확인하고 없으면 그 사실을 그대로 던진다.
+>
+> **⑦ Step 5 실측을 돌렸고 프롬프트를 한 번 고쳤다.** 결과는
+> `docs/superpowers/notes/2026-07-30-alias-actuals.md`. 요약: 1차 실행에서
+> `무신사`가 영문 표기를 아예 안 냈고 `토리든`이 `TORIDEN`(r 하나 누락)으로
+> 나왔다. 프롬프트를 "아는 브랜드는 반드시 / 모르는 브랜드는 비워 둘 것"
+> 두 방향으로 갈라 쓰고 겹자음·축약·재조합 세 가지 실패 방식을 실제 예로
+> 박으니 전부 통과했다. **모델 승급은 필요하지 않았다.** 건당 2.6원.
+>
+> 계획서의 프로브 스크립트는 문자열 일치로 판정하는데, 그러면 `Roundlab`을
+> 실패로 센다 — `normalizeKo`가 공백을 지우므로 답변의 `Round Lab`과 실제로
+> 매칭된다. 프로브가 **1차 매칭과 같은 정규화**로 비교하게 고쳤다.
+>
+> 변이 17건 전부 잡힘.
+
 - Consumes: `@anthropic-ai/sdk` (2단계에 이미 있다), `zodOutputFormat`,
-  `BrandProfile` (2단계 `src/lib/detection/types.ts`)
+  `BrandProfile` (2단계 `src/lib/detection/types.ts`), `normalizeKo` (프로브)
 - Produces:
   - `interface AliasSuggestion { canonical: string; aliases: string[]; ambiguous: boolean }`
   - `type AliasFn = (brands, category) => Promise<AliasSuggestion[]>`
