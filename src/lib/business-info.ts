@@ -17,8 +17,13 @@
  *  - 전자상거래법 제10조(사업자 신원정보): **판매 시작 시점**부터 의무.
  *    아직이라 비어 있고 테스트는 skip 상태다.
  *
- * TODO(phase-4): 사업자 등록·통신판매업 신고가 끝나면 아래 빈 문자열 항목을
- * 채우고, `business-info.test.ts`의 `describe.skip('BUSINESS_INFO — 유료 오픈 전
+ * 2026-07-30: 사업자 등록 완료(372-31-02135). `businessNumber`·`representative`가
+ * 채워졌고 테스트의 상시 검증 묶음으로 옮겼다. 남은 것은 **상호**·**사업장 주소**
+ * (등록증에서 확인)와 **통신판매업 신고번호**(사업자 등록과 별개 절차 — 관할
+ * 시·군·구청에 따로 신고해야 한다).
+ *
+ * TODO(phase-4): 통신판매업 신고가 끝나고 상호·주소를 채우면
+ * `business-info.test.ts`의 `describe.skip('BUSINESS_INFO — 유료 오픈 전
  * 필수', ...)`를 `describe(...)`로 되돌려 테스트가 다시 검증하게 한다.
  * (4단계 계획서 `docs/superpowers/plans/2026-07-28-cited-phase-4-billing-and-onboarding.md`의
  * "착수 전 확인" 체크리스트에도 같은 항목이 있다 — 여기 마커는 grep으로 이 파일을
@@ -26,12 +31,21 @@
  */
 export const BUSINESS_INFO = {
   serviceName: 'Cited',
-  /** 상호 — 사업자 등록 후 채운다 */
+  /** 상호 — 사업자 등록증의 '상호'를 그대로 옮긴다 (아직 확인 전) */
   companyName: '',
-  /** 대표자명 — 사업자 등록 후 채운다 */
-  representative: '',
-  /** 사업자등록번호 000-00-00000 — 사업자 등록 후 채운다 */
-  businessNumber: '',
+  /** 대표자명 — 개인사업자라 `privacyOfficer`와 같은 사람이다 */
+  representative: '김하율',
+  /**
+   * 사업자등록번호 000-00-00000.
+   *
+   * ★ 비밀 값이 아니다. 전자상거래법 제10조가 **공개를 의무로 하는** 정보이고
+   *   국세청 사업자등록상태 조회로 누구나 확인할 수 있다. 그래서 코드에 둔다.
+   *   `.env`로 옮기면 푸터·약관·결제창이 빌드 환경마다 달라진다.
+   *
+   * 표기는 하이픈 포함 형식으로 고정한다. 국세청 조회 API와 토스페이먼츠는
+   * 하이픈 없는 10자리를 받으므로, 보내는 쪽에서 `businessNumberDigits`를 쓴다.
+   */
+  businessNumber: '372-31-02135',
   /** 통신판매업 신고번호 — 무료 서비스만 제공하는 동안은 신고 의무가 없다.
    *  4단계(유료 결제 오픈) 전에 신고하고 채운다. */
   mailOrderNumber: '',
@@ -51,3 +65,36 @@ export const BUSINESS_INFO = {
 } as const
 
 export type BusinessInfo = typeof BUSINESS_INFO
+
+/** 하이픈을 뗀 10자리. 국세청 조회 API와 토스페이먼츠가 이 형태를 받는다. */
+export const businessNumberDigits = BUSINESS_INFO.businessNumber.replace(/\D/g, '')
+
+/**
+ * 사업자등록번호 검증자리 확인 (국세청 알고리즘).
+ *
+ * 자리수만 세면 오타를 못 잡는다. 이 번호는 푸터·약관·결제창에 그대로 나가고,
+ * 틀린 번호를 표시하는 것은 전자상거래법 제10조 위반이면서 동시에 고객에게
+ * "조회했는데 없는 사업자"로 보이는 문제다 — 결제 직전에 신뢰를 깬다.
+ *
+ * 앞 9자리에 가중치 [1,3,7,1,3,7,1,3,5]를 곱해 더하고, 9번째 자리의 5배 중
+ * 십의 자리를 한 번 더 더한 뒤, 10에서 그 합의 일의 자리를 뺀 값이 10번째
+ * 자리와 같아야 한다.
+ */
+export function isValidBusinessNumber(value: string): boolean {
+  const digits = value.replace(/\D/g, '')
+  if (!/^\d{10}$/.test(digits)) return false
+  // ★ '0000000000'은 검증자리까지 맞는다(합 0 → 검증자리 0). 그런데 이건
+  //   JSDoc의 `000-00-00000` 자리표시자를 그대로 붙여넣은 경우다. 알고리즘이
+  //   통과시키는 유일한 자리표시자라 명시적으로 막는다.
+  if (/^0{10}$/.test(digits)) return false
+
+  const weights = [1, 3, 7, 1, 3, 7, 1, 3, 5] as const
+  let sum = 0
+  for (const [i, weight] of weights.entries()) {
+    sum += Number(digits[i]) * weight
+  }
+  // 9번째 자리(index 8)는 가중치 5가 이미 곱해졌고, 그 곱의 십의 자리를 더한다.
+  sum += Math.floor((Number(digits[8]) * 5) / 10)
+
+  return (10 - (sum % 10)) % 10 === Number(digits[9])
+}
