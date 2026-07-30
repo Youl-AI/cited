@@ -134,6 +134,8 @@ export interface BuildAuditResultArgs {
    */
   selfDomains?: readonly string[]
   competitorDomains?: readonly string[]
+  /** 증거 상한. 생략하면 무료 기본값(3). 유료 리포트가 6을 넘긴다 */
+  evidenceMax?: number
   unresolved: number
 }
 
@@ -166,7 +168,7 @@ export function buildAuditResult(args: BuildAuditResultArgs): AuditResult {
     return am - bm
   })
 
-  const evidence: EvidenceItem[] = sorted.slice(0, EVIDENCE_MAX).map((a) => {
+  const evidence: EvidenceItem[] = sorted.slice(0, args.evidenceMax ?? EVIDENCE_MAX).map((a) => {
     const d = byAnswer.get(a.id)
     return {
       query: a.queryText,

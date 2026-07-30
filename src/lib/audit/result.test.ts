@@ -149,6 +149,23 @@ describe('buildAuditResult', () => {
     expect(item!.text.endsWith('…')).toBe(true)
   })
 
+  it('evidenceMax를 넘기면 증거가 그만큼 늘어난다 (유료 리포트)', () => {
+    // ★ 상한 테스트는 상한 **이상**의 데이터로 해야 한다 — 답변 3개짜리
+    //   픽스처로는 evidenceMax를 무시해도 통과한다(기본 상한도 3이므로).
+    const many = Array.from({ length: 8 }, (_, i) => ({
+      id: `m${i + 1}`,
+      queryText: `질의 ${i + 1}`,
+      engineId: 'gemini',
+      text: `답변 ${i + 1}`,
+      citations: [],
+    }))
+    const capped = buildAuditResult({ ...base, answers: many, detections: [], evidenceMax: 6 })
+    expect(capped.evidence).toHaveLength(6)
+    // 생략하면 기존 상한(3) 그대로다 — 무료 리포트 동작 불변.
+    const free = buildAuditResult({ ...base, answers: many, detections: [] })
+    expect(free.evidence).toHaveLength(3)
+  })
+
   it('600자 이하의 답변은 손대지 않는다', () => {
     const r = buildAuditResult(base)
     expect(r.evidence[0]?.text).toBe('무신사에서 파는 제품이 좋습니다.')
