@@ -7,6 +7,7 @@ import {
   estimateCostMilliKrw,
   estimateFreeAuditCostMilliKrw,
   estimateJudgeCostKrw,
+  estimateJudgeCostMilliKrw,
 } from '@/lib/engines/pricing'
 
 describe('EngineError', () => {
@@ -214,5 +215,32 @@ describe('estimateJudgeCostKrw', () => {
 
   it('원 단위 정수를 돌려준다', () => {
     expect(Number.isInteger(estimateJudgeCostKrw(1234, 567))).toBe(true)
+  })
+})
+
+describe('estimateJudgeCostMilliKrw', () => {
+  // ★ 원 단위 반올림으로는 판정 원가를 누적할 수 없다. 판정 호출 하나가
+  //   1원 미만이면 estimateJudgeCostKrw는 **0을 돌려주고**, 그것을 아무리
+  //   더해도 0이다. 원가가 조용히 사라진다 — 이 파일 상단이 수집 원가에 대해
+  //   경고하는 것과 같은 함정이다.
+  it('1원 미만도 0으로 뭉개지 않는다', () => {
+    expect(estimateJudgeCostKrw(100, 20)).toBe(0)
+    expect(estimateJudgeCostMilliKrw(100, 20)).toBeGreaterThan(0)
+  })
+
+  it('밀리원 정수를 돌려준다', () => {
+    expect(Number.isInteger(estimateJudgeCostMilliKrw(1234, 567))).toBe(true)
+  })
+
+  it('원 단위 함수와 1000배로 맞는다', () => {
+    const milli = estimateJudgeCostMilliKrw(500_000, 100_000)
+    expect(estimateJudgeCostKrw(500_000, 100_000)).toBe(Math.round(milli / 1000))
+  })
+
+  it('출력 토큰이 입력보다 비싸다', () => {
+    // Haiku 4.5는 $1 / $5. 단가표가 뒤집히면 원가가 과소 계상된다.
+    expect(estimateJudgeCostMilliKrw(0, 1_000_000)).toBeGreaterThan(
+      estimateJudgeCostMilliKrw(1_000_000, 0),
+    )
   })
 })

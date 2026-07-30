@@ -166,9 +166,27 @@ export function estimateFreeAuditCostMilliKrw(
   return Math.round(costUsd(FREE_AUDIT_PRICING[engineId], usage) * USD_TO_KRW * 1000)
 }
 
-export function estimateJudgeCostKrw(tokensIn: number, tokensOut: number): number {
+/**
+ * 판정·별칭 생성(둘 다 Claude Haiku 4.5) 원가. **밀리원 정수.**
+ *
+ * ★ 누적은 반드시 이 함수로 해라. `estimateJudgeCostKrw`는 원 단위로
+ *   반올림하므로 호출 하나가 1원 미만이면 **0을 돌려주고**, 그것을 아무리
+ *   더해도 0이다. 판정은 배치로 여러 번 도는데 배치 하나가 1원을 안 넘는 일이
+ *   흔하다 — 그러면 판정 원가 전체가 조용히 사라진다.
+ *
+ *   이 파일 상단이 수집 원가에 대해 경고하는 것과 같은 함정이고, 실제로
+ *   2026-07-30까지 판정·별칭 원가가 **아예 집계되지 않고 있었다.**
+ *   `JUDGE_PRICING`은 정의만 되어 있고 아무도 쓰지 않았다.
+ */
+export function estimateJudgeCostMilliKrw(tokensIn: number, tokensOut: number): number {
+  assertNonNegative({ calls: 0, tokensIn, tokensOut })
   const usd =
     (tokensIn / 1_000_000) * JUDGE_PRICING.perMTokenInUsd +
     (tokensOut / 1_000_000) * JUDGE_PRICING.perMTokenOutUsd
-  return Math.round(usd * USD_TO_KRW)
+  return Math.round(usd * USD_TO_KRW * 1000)
+}
+
+/** 원(KRW) 정수. 화면 표시용. 누적에는 `estimateJudgeCostMilliKrw`를 써라. */
+export function estimateJudgeCostKrw(tokensIn: number, tokensOut: number): number {
+  return Math.round(estimateJudgeCostMilliKrw(tokensIn, tokensOut) / 1000)
 }

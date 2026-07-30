@@ -9,12 +9,14 @@
  *
  * ★ --dry도 **돈이 든다.** 수집과 판정을 실제로 부른다. 저장과 발송만 건너뛴다.
  */
+import { createAliasGenerator } from '@/lib/audit/aliases'
+import { createCostMeter } from '@/lib/audit/cost'
 import { executeAudit } from '@/lib/audit/execute'
 import { getAudit, markFailed, markRunning, markSent } from '@/lib/audit/repository'
 import { sendEmail } from '@/lib/email/send'
 import { auditReportEmail } from '@/lib/email/templates'
 import { env } from '@/lib/env'
-import { claudeJudge } from '@/lib/judge/claude'
+import { createClaudeJudge } from '@/lib/judge/claude'
 import { formatInterval, formatPercent } from '@/lib/stats/wilson'
 
 const [auditId, ...flags] = process.argv.slice(2)
@@ -52,6 +54,22 @@ if (!dry) await markRunning(audit.id)
 
 const started = Date.now()
 const judgeErrors: string[] = []
+
+// ★ 원가는 **세 군데**에서 나온다 — 수집(엔진 답변), 판정, 별칭 생성.
+//   2026-07-30까지 수집만 세고 있었고, 그래서 실제보다 낮은 원가가 남았다.
+//   판정기와 별칭 생성기를 여기서 직접 만드는 이유가 그것이다. 기본 인스턴스
+//   (`claudeJudge`·`generateAliases`)는 onUsage가 비어 있어 사용량이 버려진다.
+const meter = createCostMeter()
+const judge = createClaudeJudge({ onUsage: meter.judge })
+const aliasFn = createAliasGenerator({
+  onUsage: meter.alias,
+  // 별칭 생성 실패는 던지지 않고 빈 별칭으로 이어진다. 아래에서 경고를 찍지만
+  // 원인은 여기서만 보인다 — ChatGPT 0%의 진짜 이유가 이 줄에 있을 수 있다.
+  onError: (error) => {
+    console.warn(`  별칭 생성 실패 — ${error instanceof Error ? error.message : String(error)}`)
+  },
+})
+
 let result
 try {
   result = await executeAudit(
@@ -63,13 +81,16 @@ try {
       selfDomains: audit.selfDomains,
     },
     {
-      judge: claudeJudge,
+      judge,
+      aliasFn,
       onProgress: (done, total) => process.stdout.write(`\r  수집 ${done}/${total}`),
-      onStats: (s) =>
+      onStats: (s) => {
+        meter.collection(s.costMilliKrw)
         console.log(
-          `\n  수집 원가 ${(s.costMilliKrw / 1000).toFixed(1)}원 · ` +
+          `\n  수집 ${(s.costMilliKrw / 1000).toFixed(1)}원 · ` +
             `${(s.durationMs / 1000).toFixed(1)}초 · 답변 ${s.answers}/${s.attempted}`,
-        ),
+        )
+      },
       // ★ 미판정 숫자만 남기면 원인을 모른다. rate limit이면 재실행하면 되고
       //   스키마 오류면 코드를 고쳐야 한다 — 그 판단에 필요하다.
       onJudgeError: (error, ids) => {
@@ -81,11 +102,14 @@ try {
 } catch (error) {
   const reason = error instanceof Error ? error.message : String(error)
   console.error(`\n실패: ${reason}`)
+  // ★ 실패해도 이미 쓴 돈은 남는다. 여기서 안 찍으면 그 금액을 알 길이 없다.
+  console.error(`쓴 원가: ${meter.format()}`)
   if (!dry) await markFailed(audit.id, reason)
   process.exit(1)
 }
 
 console.log(`\n총 소요 ${Math.round((Date.now() - started) / 1000)}초`)
+console.log(`원가 ${meter.format()}`)
 console.log(`언급률 ${formatPercent(result.citedRate.point)} (${formatInterval(result.citedRate)})`)
 console.log(`답변 ${result.totalAnswers}개 · 미판정 ${result.unresolved}건`)
 for (const line of judgeErrors) console.warn(`  판정 실패 — ${line}`)
