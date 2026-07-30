@@ -3702,7 +3702,7 @@ Expected: PASS (17 passed)
 
 다섯 중 살아남는 변이가 있으면 **테스트를 추가하고 다시 돌린다.**
 
-- [ ] **Step 6: 커밋**
+- [x] **Step 6: 커밋**
 
 ```bash
 git add src/lib/audit/result.ts src/lib/audit/result.test.ts
@@ -4284,7 +4284,7 @@ pnpm tsx --conditions=react-server --env-file=.env.local scripts/probe-aliases.m
 
 결과를 `docs/superpowers/notes/2026-07-30-alias-actuals.md`에 남긴다.
 
-- [ ] **Step 6: 커밋**
+- [x] **Step 6: 커밋**
 
 ```bash
 git add src/lib/audit/aliases.ts src/lib/audit/aliases.test.ts scripts/probe-aliases.mts docs/superpowers/notes
@@ -5827,7 +5827,7 @@ Task 2에서 만든 수집 코어가 **이용자의 브랜드명·질의문을 G
 
 `pnpm test`에 방침 페이지 관련 테스트가 있으면 함께 갱신한다.
 
-- [ ] **Step 2: E2E 테스트**
+- [x] **Step 2: E2E 테스트**
 
 `tests/e2e/free-audit.spec.ts` — **실제 API를 부르지 않는다.** 진단 실행은
 수동이므로 E2E가 검증할 것은 **신청 → 인증 안내까지**다.
@@ -5899,7 +5899,7 @@ pnpm test:e2e
 
 Expected: 5 passed
 
-- [ ] **Step 3: Vercel 환경변수 추가**
+- [x] **Step 3: Vercel 환경변수 추가**
 
 프로덕션·프리뷰·개발 세 환경에 `OPERATOR_EMAIL`을 넣는다.
 넣지 않으면 `env.ts`의 `superRefine`이 **빌드를 실패시킨다** (의도된 것이다 —
@@ -5937,7 +5937,7 @@ pnpm audit:run <id>             # 발송
 - 리포트 화면의 신뢰구간이 메일과 같은가
 - `/audit/<id>`가 `noindex`인가 (`curl -sI` 또는 페이지 소스)
 
-- [ ] **Step 5: 배포 기록**
+- [x] **Step 5: 배포 기록**
 
 `docs/superpowers/notes/YYYY-MM-DD-first-deploy.md`에 남긴다:
 
@@ -5947,7 +5947,7 @@ pnpm audit:run <id>             # 발송
 - 확인한 항목 체크리스트
 - 다음에 볼 지표: 신청 수, 인증률, 리포트 발송까지 걸린 시간, 가입 전환
 
-- [ ] **Step 6: 커밋**
+- [x] **Step 6: 커밋**
 
 ```bash
 git add tests/e2e src/app/legal docs/superpowers/notes
