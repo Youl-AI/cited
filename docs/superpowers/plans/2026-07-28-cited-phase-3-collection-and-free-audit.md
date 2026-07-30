@@ -1331,13 +1331,22 @@ git commit -m "feat(collection): 수집 잡 · 팬아웃 · 부분 실패 허용
 > }
 >
 > export interface DetectionOutput {
->   /** answerId(=queryId:engineId:sampleIndex) → 대상별 판정 */
->   detections: Map<string, DetectionResult[]>
+>   /**
+>    * ★ **평평한 배열**이다. 초안은 `Map<string, DetectionResult[]>`였는데
+>    *   순서를 잃고 얻는 것이 없었다 — 각 항목이 이미 `answerId`를 들고 있다.
+>    *   답변 순 → 주체 순(self, 경쟁사…)으로 입력 순서를 유지한다.
+>    */
+>   detections: DetectionResult[]
 >   metrics: BrandMetrics
->   /** 1차를 통과해 2차로 간 비율. 원가 관측용 */
->   stage1PassRate: number
->   /** 2차 판정에 쓴 비용 */
->   judgeCostMilliKrw: number
+>   stage1Candidates: number
+>   stage1Passed: number
+>   /**
+>    * ★ 후보가 없으면 **null**이다. 0을 돌려주면 "1차가 전부 탈락시켰다"로
+>    *   읽히는데, 후보가 없는 것(답변 0건)과 전부 탈락한 것은 원가 관측에서
+>    *   정반대로 해석된다.
+>    */
+>   stage1PassRate: number | null
+>   stage2Called: number
 >   /** 2차가 실패해 미판정으로 남은 건수 */
 >   unresolved: number
 > }
@@ -1364,19 +1373,56 @@ git commit -m "feat(collection): 수집 잡 · 팬아웃 · 부분 실패 허용
 >
 > **판정 실패는 던지지 말고 `unresolved`로 센다.** 2차 LLM이 하나 실패했다고
 > 진단 전체를 버리면 안 된다. 이미 돈을 쓴 수집 데이터다.
+>
+> **★ 2026-07-30(2) — `judgeCostMilliKrw`를 돌려주지 않는다.** 초안에는 있었지만
+> 계산할 방법이 없다. `JudgeFn`은 사용량을 돌려주지 않고, 토큰은
+> `createClaudeJudge({ onUsage })`로 나가며 **그 콜백은 호출자가 붙인다.**
+> 여기서 흉내내면 두 곳에서 따로 계산해 언젠가 갈린다. 원가는 판정기를
+> 소유한 쪽(`executeAudit`·CLI)이 집계한다.
+>
+> **★ 답변의 `id`는 호출자가 넘긴다.** `pipeline.ts`가 `queryId:engineId:sampleIndex`를
+> 다시 조립하면 그 형식이 두 곳에 생기고, 갈리는 순간 판정과 답변의 조인이
+> 조용히 깨진다. 키의 단일 출처는 `collection/run.ts`의 `answerKey`다.
+>
+> **★ `CollectedAnswer`를 타입으로도 참조하지 않는다.** `detection/`은 ESLint
+> 순수 경계 안이라 `collection/`을 몰라야 한다. 최소 형태 `AnswerInput`을
+> 따로 두면 구조적 타이핑으로 `CollectedAnswer`가 그대로 들어맞는다.
+
+> ### ★ 2026-07-30(2) 조정 — `brandToProfiles`로 이름을 바꾸고 정책을 뒤집는다
+>
+> **① 이름 충돌.** 아래 본문은 `toBrandProfiles(brand)`를 만드는데, Task 6-2의
+> `aliases.ts`에도 `toBrandProfiles(suggestions)`가 있다. 같은 이름·다른
+> 시그니처라 import 한 줄 차이로 조용히 엉뚱한 것이 불린다.
+> **이 태스크의 것은 `brandToProfiles`다** — 저장된 브랜드 행을 변환하고,
+> Task 6-2의 것은 생성된 별칭을 변환한다.
+>
+> **② "경쟁사는 항상 `ambiguous=true`" 규칙을 없앤다.** 아래 본문의 테스트가
+> 그것을 요구하는데, 그 논리는 `ambiguous`가 **2차 판정을 게이트할 때** 성립했다.
+> 2단계에서 "1차에 걸리면 예외 없이 2차를 거친다"로 바뀌었으므로 이제 이 값은
+> 판정 프롬프트에 주는 힌트일 뿐이다.
+>
+> 경쟁사에만 보수적 힌트를 주면 **경쟁사 언급이 덜 잡혀 우리 Share of Voice가
+> 부풀려진다.** 숫자가 좋아 보이는 방향의 오류는 아무도 의심하지 않는다 —
+> 가장 위험한 종류다. `ambiguous`는 브랜드가 실제로 일반어와 겹칠 때만 true고,
+> 그 판정은 Task 6-2의 생성기가 자기 브랜드·경쟁사에 **똑같이** 한다.
+>
+> **③ `detection-repository.ts`는 4단계로 미룬다.** `detections` 테이블에 쓰는
+> 계층인데, 3단계 무료 진단은 저장하지 않고(`free_audits.result` 하나만) 유료
+> 주간 수집이 4단계에 생긴다. 3단계에는 소비자가 없다.
 
 **Files:**
-- Create: `src/trigger/judge-run.ts`, `src/trigger/aggregate-run.ts`,
-  `src/lib/collection/detection-repository.ts`,
-  `src/lib/collection/brand-profile.ts`
-- Test: `src/lib/collection/brand-profile.test.ts`
+- Create: `src/lib/detection/pipeline.ts`, `src/lib/collection/brand-profile.ts`
+- Test: `src/lib/detection/pipeline.test.ts`,
+  `src/lib/collection/brand-profile.test.ts`
 
 **Interfaces:**
 - Consumes: `detectMentions` (2단계), `computeMetrics` (2단계), 수집 결과
 - Produces:
-  - `judgeRun` — 수집 완료 후 판정 배치, `aggregateRun`을 트리거
-  - `aggregateRun` — 집계 후 리포트 메일
-  - `toBrandProfiles(brand): { self: BrandProfile; competitors: BrandProfile[] }`
+  - `runDetection(input, judge, opts): Promise<DetectionOutput>`
+  - `brandToProfiles(brand): { self: BrandProfile; competitors: BrandProfile[] }`
+    — 자기 자신·빈 이름 경쟁사를 걷어낸다(SoV 분모에 자기가 두 번 들어가면
+    점유율이 반토막난다)
+  - Task 7의 `executeAudit`과 4단계 잡이 소비한다
 
 설계 ②: 판정을 수집에서 분리한 것은 의도적이다. 원본이 남아 재판정이 가능하고,
 LLM 판정을 배치로 묶어 원가를 낮출 수 있으며, 판정이 실패해도 수집 데이터는
@@ -4459,7 +4505,9 @@ export async function executeAudit(
     measuredAt: now().toISOString(),
     metrics: detection.metrics,
     answers: collected.answers.map(toResultAnswer),
-    detections: [...detection.detections.values()].flat().map((d) => ({
+    // `detections`는 평평한 배열이다(입력 순서 유지). Map으로 묶었던 초안은
+    // 순서를 잃고 얻는 것이 없었다 — 각 항목이 이미 answerId를 들고 있다.
+    detections: detection.detections.map((d) => ({
       answerId: d.answerId,
       subject: d.subject,
       mentioned: d.mentioned,
