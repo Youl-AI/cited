@@ -20,85 +20,59 @@
  *
  * 순수 함수다. 외부 I/O 없음.
  */
+import { QUERY_TEMPLATES, REGION_SLOT } from '@/lib/audit/query-templates'
+
 export const AUDIT_QUERY_COUNT = 3
 
-interface CategoryTemplate {
-  /** 폼에서 고르는 이름 */
-  label: string
-  /** 이 카테고리로 인정할 입력 (부분 일치) */
-  aliases: string[]
-  queries: readonly [string, string, string]
+export const KNOWN_CATEGORIES: readonly string[] = QUERY_TEMPLATES.map((t) => t.label)
+
+function matchTemplate(category: string) {
+  const trimmed = category.trim()
+  return QUERY_TEMPLATES.find((t) => t.aliases.some((a) => trimmed.includes(a)))
 }
 
-const TEMPLATES: readonly CategoryTemplate[] = [
-  {
-    label: '패션',
-    aliases: ['패션', '의류', '옷', '쇼핑몰'],
-    queries: [
-      '30대 남자 옷 어디서 사는 게 좋아?',
-      '가성비 좋은 온라인 패션 쇼핑몰 추천해줘',
-      '요즘 인기 있는 국내 패션 브랜드 알려줘',
-    ],
-  },
-  {
-    label: '화장품',
-    aliases: ['화장품', '뷰티', '스킨케어', '코스메틱', '기초화장품'],
-    queries: [
-      '건성 피부에 맞는 수분크림 추천해줘',
-      '가성비 좋은 국내 스킨케어 브랜드 뭐가 있어?',
-      '올리브영에서 잘 팔리는 화장품 알려줘',
-    ],
-  },
-  {
-    label: '식품',
-    aliases: ['식품', '음식', '먹거리', '간편식', '밀키트'],
-    queries: [
-      '간편하게 먹을 수 있는 밀키트 추천해줘',
-      '선물하기 좋은 국내 식품 브랜드 알려줘',
-      '요즘 인기 있는 건강식품 뭐가 있어?',
-    ],
-  },
-  {
-    label: '가전',
-    aliases: ['가전', '전자제품', '전자기기', '디지털'],
-    queries: [
-      '자취방에 놓기 좋은 소형가전 추천해줘',
-      '가성비 좋은 무선 이어폰 뭐가 있어?',
-      '요즘 잘 나가는 국내 가전 브랜드 알려줘',
-    ],
-  },
-  {
-    label: '교육',
-    aliases: ['교육', '학원', '강의', '인강', '온라인 강의'],
-    queries: [
-      '온라인으로 코딩 배우려면 어디가 좋아?',
-      '직장인이 듣기 좋은 온라인 강의 플랫폼 추천해줘',
-      '국내 이러닝 서비스 뭐가 있어?',
-    ],
-  },
-]
-
-export const KNOWN_CATEGORIES: readonly string[] = TEMPLATES.map((t) => t.label)
+/** 지역형 업종인가. CLI가 `--region` 필수 여부를 판단할 때 쓴다 */
+export function isRegionalCategory(category: string): boolean {
+  return matchTemplate(category)?.regional ?? false
+}
 
 /**
  * @param category 고객이 고르거나 입력한 카테고리
- * @param brandName 브랜드명. **질의에는 넣지 않는다.** 향후 카테고리 추론에
- *   쓸 수 있도록 받아두되, 지금은 의도적으로 사용하지 않는다.
+ * @param brandName 브랜드명. **질의에는 넣지 않는다.**
+ * @param region 지역형 업종의 지역. 지역형인데 없으면 던진다 —
+ *   조용히 일반형으로 강등하면 무의미한 측정이 고객에게 배송된다.
  */
-export function generateAuditQueries(category: string, brandName: string): string[] {
+export function generateAuditQueries(
+  category: string,
+  brandName: string,
+  region?: string,
+): string[] {
   void brandName
   const trimmed = category.trim()
   if (!trimmed) throw new Error('카테고리가 비어 있습니다')
+  const cleanRegion = region?.trim() ?? ''
 
-  const matched = TEMPLATES.find((t) => t.aliases.some((a) => trimmed.includes(a)))
-  // 복사해서 돌려준다 — 호출자가 배열을 바꿔도 템플릿이 오염되지 않는다.
-  if (matched) return [...matched.queries]
+  const matched = matchTemplate(trimmed)
+  if (matched) {
+    if (matched.regional) {
+      if (!cleanRegion) {
+        throw new Error(
+          `'${matched.label}'은(는) 지역이 필요한 업종입니다. --region으로 지역을 넣으세요` +
+            ' (예: --region "강남"). 지역 없이 물으면 AI가 "어디 사세요?"부터 묻습니다.',
+        )
+      }
+      return matched.queries.map((q) => q.replaceAll(REGION_SLOT, cleanRegion))
+    }
+    // 전국형은 지역을 무시한다 — 붙이면 전국 브랜드 질문이 지역 질문으로 변질된다.
+    return [...matched.queries]
+  }
 
   // 모르는 카테고리 — 입력을 그대로 넣어 일반형 질의를 만든다.
-  // 억지로 가까운 카테고리에 끼워 맞추면 엉뚱한 질의로 측정하게 된다.
+  // 지역이 있으면 붙인다(로컬 업종일 가능성이 높아서 왔을 것이다).
+  const subject = cleanRegion ? `${cleanRegion} ${trimmed}` : trimmed
   return [
-    `${trimmed} 추천해줘`,
-    `가성비 좋은 ${trimmed} 브랜드 뭐가 있어?`,
-    `요즘 인기 있는 ${trimmed} 알려줘`,
+    `${subject} 추천해줘`,
+    `가성비 좋은 ${subject} 브랜드 뭐가 있어?`,
+    `요즘 인기 있는 ${subject} 알려줘`,
   ]
 }
