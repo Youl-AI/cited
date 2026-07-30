@@ -164,8 +164,16 @@ describe('generateAuditQueries — 지역', () => {
   })
 
   it('모르는 업종 + 지역이면 일반형 질의에 지역을 붙인다', () => {
-    const out = generateAuditQueries('네일아트 클래스', 'x', '수원')
-    for (const q of out) expect(q).toContain('수원')
+    // 주의: 입력이 어떤 별칭에도 부분 일치하면 안 된다 — 걸리면 이 테스트는
+    // fallback이 아니라 템플릿 경로를 타면서 조용히 초록불이 된다.
+    // ('네일아트 클래스'가 '네일'에 걸려 실제로 겪은 문제.)
+    const out = generateAuditQueries('수제 도자기 공방', 'x', '수원')
+    expect(out).toHaveLength(3)
+    for (const q of out) {
+      // '수원'과 업종이 각각 어딘가 있는 것으로는 부족하다 —
+      // subject가 `지역 + 업종`으로 결합됐는지까지 못박는다.
+      expect(q).toContain('수원 수제 도자기 공방')
+    }
   })
 
   it('isRegionalCategory가 템플릿의 regional을 그대로 따른다', () => {
