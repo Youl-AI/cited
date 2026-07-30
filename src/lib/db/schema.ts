@@ -291,6 +291,13 @@ export interface RunMetrics {
   callsByEngine: Partial<Record<EngineId, number>>
   tokensIn: number
   tokensOut: number
+  /**
+   * ★ 누적 단위는 **밀리원**이다. 호출당 3.2원을 원 단위로 반올림하면 매번
+   *   0.2원이 사라지고, 주 100회면 20원, 고객 100명이면 월 8,600원이 장부에서
+   *   사라진다. 원 단위 `estimatedCostKrw`는 화면 표시용 파생값이다.
+   */
+  estimatedCostMilliKrw: number
+  /** 표시용. `estimatedCostMilliKrw`를 반올림한 값 — 이것으로 합산하지 마라 */
   estimatedCostKrw: number
   serpApiCalls: number
   durationMs: number

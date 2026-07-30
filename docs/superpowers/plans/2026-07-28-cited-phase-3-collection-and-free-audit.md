@@ -5482,13 +5482,20 @@ shareOfVoice.n이 0이면 그 블록을 아예 그리지 않는다. 0%도 '측�
 
 - [ ] **Step 1: 개인정보처리방침 갱신 — 법정 고지사항이다**
 
-Task 2에서 만든 수집 코어가 **이용자의 브랜드명·질의문을 Google·Anthropic에
+Task 2에서 만든 수집 코어가 **이용자의 브랜드명·질의문을 Google·OpenAI·Anthropic에
 처음으로 실제 전송하는 코드**다. 그 순간 이들은 새 수탁자가 된다.
+
+> **★ 2026-07-30(2) — OpenAI가 빠져 있었다.** 이 문서를 쓸 때는 2단계에 Gemini
+> 어댑터만 있었는데, 그 뒤 ChatGPT 어댑터(`gpt-5-mini`)가 추가됐다. **세 곳
+> 전부** 적어야 한다. 현재 방침 §7·§8에는 Neon·Resend만 있다 —
+> `grep -n "OpenAI\|Google LLC\|Anthropic" src/app/legal/privacy/page.tsx`가
+> 아무것도 돌려주지 않으면 아직 안 고친 것이다.
 
 `src/app/legal/privacy/page.tsx`의 두 표를 갱신한다:
 
 - **§7 개인정보 처리 위탁** — Google LLC(Gemini API, AI 답변 생성),
-  Anthropic PBC(Claude API, 언급 판정)를 추가한다. 위탁 업무 내용에
+  **OpenAI, L.L.C.(Responses API, AI 답변 생성)**,
+  Anthropic PBC(Claude API, 언급 판정 및 별칭 생성)를 추가한다. 위탁 업무 내용에
   **"이용자가 입력한 브랜드명·카테고리는 전송되지 않으며, 시스템이 생성한
   일반 소비자 질의문만 전송된다"**를 명시한다 (Task 4 `queries.ts`가 실제로
   그렇게 동작한다 — 사실과 다르게 쓰면 안 된다).
@@ -5650,7 +5657,9 @@ git commit -m "test(e2e): 진단 신청 플로우 · 방침 갱신 · 1차 배�
       **`web`으로는 만들 수 없다**
 - [ ] 프로덕션에서 신청→인증→발송→열람을 **본인 계정으로 끝까지** 돌렸다
 - [ ] 확인 메일과 리포트 메일이 스팸함으로 가지 않는다
-- [ ] 개인정보처리방침 §7·§8에 Google LLC·Anthropic PBC가 반영됐다
+- [ ] 개인정보처리방침 §7·§8에 **Google LLC·OpenAI, L.L.C.·Anthropic PBC**가
+      반영됐다 (`grep -n "OpenAI\|Google LLC\|Anthropic" src/app/legal/privacy/page.tsx`가
+      비어 있으면 미완료다)
 - [ ] `OPERATOR_EMAIL`이 세 환경 모두에 있다
 - [ ] `/audit/<id>`에 `noindex`가 걸려 있고, 발송 전 리포트는 404다
 - [ ] 진단 1건 실행에 걸린 **운영자 시간**을 기록했다

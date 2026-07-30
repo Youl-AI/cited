@@ -21,6 +21,7 @@
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
     "probe:engine": "tsx --conditions=react-server --env-file=.env.local scripts/probe-engine.mts",
+    "probe:collection": "tsx --conditions=react-server --env-file=.env.local scripts/probe-collection.mts",
     "measure": "tsx --conditions=react-server --env-file=.env.local scripts/measure.mts",
     "label:collect": "tsx --conditions=react-server --env-file=.env.local scripts/label-collect.mts",
     "label": "tsx --conditions=react-server scripts/label.mts",
