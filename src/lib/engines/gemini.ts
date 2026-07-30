@@ -54,10 +54,10 @@ export function parseGeminiResponse(raw: unknown): ParsedGeminiResponse {
       //   그대로 두면 "인용 12건" 같은 부풀려진 숫자가 대시보드에 올라간다.
       if (!url || seen.has(url)) continue
       seen.add(url)
-      citations.push({
-        url,
-        title: typeof chunk.web.title === 'string' && chunk.web.title ? chunk.web.title : url,
-      })
+      const title =
+        typeof chunk.web.title === 'string' && chunk.web.title ? chunk.web.title : url
+      const domain = hostnameFromTitle(title)
+      citations.push({ url, title, ...(domain ? { domain } : {}) })
     }
   }
 
@@ -66,6 +66,27 @@ export function parseGeminiResponse(raw: unknown): ParsedGeminiResponse {
     citations,
     finishReason: typeof first.finishReason === 'string' ? first.finishReason : null,
   }
+}
+
+/**
+ * Gemini 인용의 `title`이 사실은 호스트명일 때 그것을 돌려준다.
+ *
+ * ★ Gemini는 인용 URI를 리다이렉트 프록시로 준다:
+ *     uri  : https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQ…
+ *     title: "tistory.com"
+ *
+ *   URL을 파싱하면 모든 출처가 `vertexaisearch.cloud.google.com` 하나로 뭉개져
+ *   "AI가 어떤 사이트를 읽는가"를 잴 수 없게 된다. 그 정보가 `title`에만 있다.
+ *
+ *   다만 title이 항상 도메인이라고 가정하지 않는다 — 실제 문서 제목이 올 수도
+ *   있다. 호스트명처럼 생긴 것만 도메인으로 인정한다: 공백·슬래시가 없고,
+ *   점으로 나뉜 레이블이 둘 이상이며, 마지막 레이블이 글자로만 된 TLD.
+ */
+export function hostnameFromTitle(title: string): string | undefined {
+  const value = title.trim().toLowerCase()
+  if (!/^[a-z0-9.-]+$/.test(value)) return undefined
+  if (!/^([a-z0-9-]+\.)+[a-z]{2,}$/.test(value)) return undefined
+  return value.startsWith('www.') ? value.slice(4) : value
 }
 
 /**

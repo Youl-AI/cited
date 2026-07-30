@@ -3,6 +3,16 @@ import type { EngineId, EngineTier } from '@/lib/plans'
 export interface Citation {
   url: string
   title: string
+  /**
+   * 실제 출처 호스트명. **URL에서 뽑을 수 없을 때만** 채운다.
+   *
+   * ★ Gemini는 인용 URI를 `vertexaisearch.cloud.google.com/grounding-api-redirect/…`
+   *   리다이렉트로 준다. URL을 파싱하면 모든 출처가 구글 도메인 하나로 뭉개져서
+   *   "AI가 어떤 사이트를 읽는가"를 잴 수 없다. 실제 도메인은 `title`에 들어 있다.
+   *   그 엔진별 사정은 어댑터가 알고 여기 채운다 — 집계 쪽(`stats/sources`)이
+   *   엔진마다 다른 예외를 알 필요가 없다.
+   */
+  domain?: string
 }
 
 export interface EngineUsage {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractUsage, parseGeminiResponse } from '@/lib/engines/gemini'
+import { extractUsage, hostnameFromTitle, parseGeminiResponse } from '@/lib/engines/gemini'
 import { estimateCostMilliKrw } from '@/lib/engines/pricing'
 
 /**
@@ -31,6 +31,49 @@ const raw = {
     toolUsePromptTokenCount: 0,
   },
 }
+
+describe('hostnameFromTitle — 리다이렉트 프록시 뒤의 실제 도메인', () => {
+  it('호스트명처럼 생긴 title을 도메인으로 인정한다', () => {
+    // 실측 title 값들. Gemini는 인용 URI를 리다이렉트로 주고 실제 도메인은
+    // 여기에만 있다. 이걸 못 뽑으면 모든 출처가 구글 도메인 하나로 뭉개진다.
+    expect(hostnameFromTitle('tistory.com')).toBe('tistory.com')
+    expect(hostnameFromTitle('eomisae.co.kr')).toBe('eomisae.co.kr')
+    expect(hostnameFromTitle('runningwikii.com')).toBe('runningwikii.com')
+  })
+
+  it('www를 벗긴다', () => {
+    expect(hostnameFromTitle('www.nike.com')).toBe('nike.com')
+  })
+
+  it('대문자와 공백을 정리한다', () => {
+    expect(hostnameFromTitle('  Tistory.COM ')).toBe('tistory.com')
+  })
+
+  it('실제 문서 제목은 도메인으로 오인하지 않는다', () => {
+    // title이 항상 도메인이라고 가정하면 "무신사 - MUSINSA Corporation" 같은
+    // 제목이 도메인으로 집계돼 출처 목록이 쓰레기가 된다.
+    expect(hostnameFromTitle('무신사 - MUSINSA Corporation')).toBeUndefined()
+    expect(hostnameFromTitle('Nike Pegasus 42: A Powerful Update')).toBeUndefined()
+    expect(hostnameFromTitle('러닝화 추천')).toBeUndefined()
+  })
+
+  it('점이 없으면 도메인이 아니다', () => {
+    expect(hostnameFromTitle('localhost')).toBeUndefined()
+    expect(hostnameFromTitle('무신사')).toBeUndefined()
+  })
+
+  it('TLD가 숫자면 도메인이 아니다', () => {
+    expect(hostnameFromTitle('1.2.3.4')).toBeUndefined()
+  })
+
+  it('URL을 넣으면 도메인이 아니다 (슬래시가 있다)', () => {
+    expect(hostnameFromTitle('https://tistory.com/a')).toBeUndefined()
+  })
+
+  it('빈 문자열은 undefined다', () => {
+    expect(hostnameFromTitle('')).toBeUndefined()
+  })
+})
 
 describe('parseGeminiResponse', () => {
   it('텍스트를 뽑아낸다', () => {
