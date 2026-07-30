@@ -1,0 +1,276 @@
+{
+  "engineId": "chatgpt",
+  "query": "민감성 피부 저자극 토너 추천해줘",
+  "capturedAt": "2026-07-30T09:06:59.358Z",
+  "elapsedMs": 31728,
+  "usage": {
+    "calls": 1,
+    "searches": 4,
+    "tokensIn": 21894,
+    "tokensOut": 888,
+    "tokensThinking": 1152
+  },
+  "raw": {
+    "id": "resp_0756cc656cd8810d006a6b1413ee90819b8d359c47b092202c",
+    "object": "response",
+    "created_at": 1785402387,
+    "status": "completed",
+    "background": false,
+    "billing": {
+      "payer": "developer"
+    },
+    "completed_at": 1785402418,
+    "error": null,
+    "frequency_penalty": 0,
+    "incomplete_details": null,
+    "instructions": "너는 일반 소비자의 질문에 답하는 어시스턴트다. 한국어로, 구체적인 브랜드나 제품명을 들어 간결하게 답하라.",
+    "max_output_tokens": null,
+    "max_tool_calls": null,
+    "model": "gpt-5-mini-2025-08-07",
+    "moderation": null,
+    "output": [
+      {
+        "id": "rs_0756cc656cd8810d006a6b14147b34819ba6cfcfc44101e137",
+        "type": "reasoning",
+        "content": [],
+        "encrypted_content": "gAAAAABqaxQzfVpeVL3lOnlnQwoISGawfgLhUwfkPeMEJgfT7SEK8YI3p48bPUSfWTROTDjbbXL1yCRiCRvCnhf3WNUCTy5Hr-CXaWjos8puOtMBRlcJAXGl7WDfJy5ZcLG8FomW1AWwqrH4ZvWSgy60FPvil4piN24veTnoQyYQVmC1Z9JU4FYwufyX5xBO08NKmwK7A1BAo2bIgPXXr5wp2DcYWhCcU10E_U8Yb75Cn_Zrli-6O6NbouY90JOWCoM_CiDBxJo6ZuHsccPm3gDUO22TwLz7ydMfiqe_xCC6b3-scCN-2w1MPtWcoiyi2yq1XQPZ6lkqiamwGQiBhgD7EWO1FCOgleskRXsNHqicC7kPb83zpfAVIFvKrqC046uA0EjXLwBMj19pqNHqOgcSvEiKUqPWF_e2kftLeEiOxYQFRYmA6UKCOJlOXuMir3FmMVqTSZAGqU9Ka-ylyy8Eg1v2ZJsUq1ZG6fnU8_Rdh1avWZDMV_1INzJPJ0UmQMDSKYxQMGF5Ve51q8UBDXLpwaE2dZScfg0TkbIa4rHungzvxXO-NlYjbVISceYObF8het0xVN5fHh64HHK5jjPsfxg5JiSZ57k3BTDuwLYPoAEc6W4DTvGsAgedd8rQtCxkj5k1vKIUsJ_MHuvA0LcwwhcwlpPAiz2kFBKH8ha3pfZGy125_P79kMLTqGmX2wWBItw8lFBq0hv4jcZ4sQV7_G6B-4qRPGvU7tPq38HwlepG4pKcZZRugKtJre_Kom0sUy2cXb1g6dFD8OVbWZMjh78mvXLJN9E5kPfd5SFckm1pZCU_wtRIoh_jnaMPpU1fvqIvDkuleT-9ELhT1UOCB5Yk-Tw4E8H_117hxYmTtLPCFNJVll3u8FVrLtVzkuorf9prP2IQhAaz8Sbv3Dlh0pZkAj-gH2GmmKijUTXOKk9dQX20KVOIkWn_EMyoYjpiRdK3yx2LdDO_ZE7oQ4HyUPbZYS5HoTozqlXOWNenU0eNcvbPlLeXci-4-THVAKidX8Qli8nq-oSG4c4pGI8yco16rFopM-fQmfh5SuZ7IvNMvY1eO5RCB7CbrDiOUivMaErhYf54N4W-UG6dp2gAF_H5C1MfvrvRjcyibdhMWcEeEtRqJHLRiCfkjxrzKqn5D7L7FOxeyyZ-3kg6c2nbSKpfDBT8cpkkeQytlR0kMbHE0NxVmN_M58FUa7KTyqG2m11ABY59iEmAjCzIEiKmssZNihBAfsTVFxpF4xS1oN23j28mOcF39er04klIMZMJxv5vKD-RR6TyUNO35JWeW_2dAtzNVBMqBpIn3f4T0SBmMzcgNnTXEzLvkRTcAopbUl3setqzRjbcx7xWQmgl8lIH_G8x_5JVXHbrBRygzjiMdCoyMVafiRkg7Dar1EV8NKMlcnD7_32VsYdhQ4e4VU1VevkmGewhDgWvxQPckzJnrT3dsz_kyBqSoVnE266CNxwH_uYFVoOq1hetHyAxc0s8654_ptpF5iREdqVlu6_wBC19BJonyEgle5E_Ran4Kq3sLplU6SPKZTQ8mFO0B9hMr9QMwelsmeWoYCUGxMifByfH4g9q1C12yNwbA5fx92aCu4rZdqUTk2pmQRkk9TZaojSwXCZxfmdA8_g8kw5B8rtKJEx_EaepE1IWJ1OHn_n_Nmu5cCZLxqnzqICoNLkHIIVte2OvfwobNsj_YZaFlnln3fNdb2D8uLan3o1j82TjIEseCmMcP7_HRN4DefSIlishGEAJVrgmvWW_rAg7WtRkC96ktfC_Tie5Ri3cFfU_RVthRj9fbJmoDO9n-XPRm0jUrXFFD5nwKGgRhC6f1ZLD7tDck0b8o1oVk8XU6ZiYTD3c8t8O9evAz0xAtc5kXPmqmAOjhuXQ0fW0KdblollO6khj7WHQR7QkZp59sU62U4py5oesZGFdA90kFqKzl2S8frKFxMe6rt2mJVWz46H1_ZHWZ4bXx2b-HE9tRjgC1AcC3tbwAQ1EE3tVeUk3skO-pZ0oO_GB7A66N53VpM4bdefw6w6d6zV1pv-XlHK9RfbOgz56x-5CwiDGiRVUiyY7DFu9EKnvOh7xixVd1RlG-mTRnLhyYWYEv4i0hgPDZslyaRfZGya9L0ZgWh_kfYmF4d8ZtURY6LcxCfFWeFRSRojvvDMPlEIieGtl2gcZb_E2J1UppDuQzXUPnL7AQESReftrhfTk_m6j8jKgPMOaL-pbqbrJeQnuHLk-zB9EP3_RT8MSFFPUahrca6PE72VfjiKH1pmYlBQcAEC_mbQw91KHRw0pAaFaN39ZdMKf_OOxuwLgxK-2ehWHgc-mtaRMRbLPg66fWeXiolpBmJXgsXkhKYs9u67BJPsvO4LTIPp2nQHQBhwBfjNppq57hCIqns2u2-1KgzhiljhuNLdpZO589--M_cRptzP9h4IxjtZSmT6H_5afLfWRcCjneCFvkcK1okJlERDmwRk1TpttMxIfesAo5o0qb6ObcjjLSn-aRbxYh3qmge3HgCf6msZvd6PrTwEu3dspA02Dg60WXnN7Uwyasg0isTqZVU9D52ans_rrWBzK3ynR6PD7bfgpixl9oHw9RTFBcmjr91UKyfa4BePACl4DNT1AcF-unDEjV97q4Yb7Pfr8eEqd4KFWAe48m6AeOQBemILix1HDXPT-TDnv8uj-T5uEN6wlkP2mZbRVdETixQPPCLJAyXAJ1tFHnPcP7eTiloWAMq2QMqkzcKrQlx1CGjW9IrQbe7-LxrYOoTRVY3Cf87PonvKSLuE1xI_y70NMdrKdF204n-laLPv1WlI6v-Dmj8er36i7",
+        "summary": []
+      },
+      {
+        "id": "ws_0756cc656cd8810d006a6b1417f128819b94885718a924afc5",
+        "type": "web_search_call",
+        "status": "completed",
+        "action": {
+          "type": "search",
+          "queries": [
+            "best toner for sensitive skin recommendations La Roche-Posay Avène CeraVe Paula's Choice Pyunkang Yul",
+            "Avène Gentle Toning Lotion sensitive skin review Avène lotion tonique review",
+            "Paula's Choice Calm Redness Relief Toner for Normal to Oily Skin ingredients sensitive skin",
+            "Pyunkang Yul Essence Toner sensitive skin review ingredients"
+          ],
+          "query": "best toner for sensitive skin recommendations La Roche-Posay Avène CeraVe Paula's Choice Pyunkang Yul"
+        }
+      },
+      {
+        "id": "rs_0756cc656cd8810d006a6b141a9c60819b9e7a285a8093761a",
+        "type": "reasoning",
+        "content": [],
+        "encrypted_content": "gAAAAABqaxQzRoxyC64W73VRLwv1HP6Pnc_IEhJnXtvHIeNIwL22WjzAIP7wkFwLHfb19qSzgVdz2-HBGCgdI3uC1UmDbulzMO2NFQLcJu5QOqNwyC6s0PJvZWJ7Z6mEMTsmtnI77Twacl4duIjkHea9kno5O3b4DLm33ZiwKUN4Du_cOBUSSPwzW-T3xV5JLWjixdl0V3uxwappSiyUfKFv_uYh5YyBjFPAU0Gfad1_1IQeN5PAzO37T1QQKIZ-kZLB3ut_gF4hFx2e8Pbv04l37hvJj1-5SJK7VG5y2HErXY7ng2A16H6yvrNAsizTiCzKO640obYy_-hu2I-zJV97XFRQjkiWXATjyhNe-fdj0oPQFtOhxDzisTkudXt7MWwuFwykpPP3LzXX43dr3WW5q92BlRuo3nL1YN4D5Qc-Lv-g57x5z-KDPiOYRe5Bx8_DUtrHDZzqi7KhNuvTxYYPGpET6qce_B_slXLzQ5iJ2l83eeEawKyo9nMeu6unP__HSnvCc4OpLxPhSPvRqbA_kpWtIKdIlCFsCQLNRG3BR3G0zD0UsXKP4GCTPZEjBC6PaVtP9Hw7FOtJeAror26C0XUQS362tPJ5mTsI0CxECmgrZoVQfQ6xUMsPN47E-mkb4LgogqE6und1Zo-wLOzvt9BV1xMCU36FQOS5mPMdVb022WDznywmCLM-2cnAu7OD31cBJ-2ojzaDlk7rooGAJ4XqJfRj1YTceYzMwPBUonaJDgi8SgghLoxONHjdo76bisymuHhK0RNW6_mnYARvLAM_x0UKtTq-4aBFWJ1wHRL2kjAB_-YrLMET1Q71dqsWGiIPS67eEPQ4vOuK298B_HXTYKDxFRmcueUxHReJZM392CKrNyGLrjX1_qtGnV3D8zAUbXVxBeQ58JgTbWAazJyaA_Y_QGwfwyX3e8mqnDG898kLAUNdJ8DYOQ3ppxMp7PugRGA4ZYY31JyFDRsZYFE3NY29Q5194Ffqs_6908iKpLRdDx436WXnjE3uy7aKZMI-KSfIsNZGbNZFNnK1sKc_7MeA8lS2Mz9lrzRHwJUh3hDH_Qe6YAy9MOvpzFMvBZO_lGdztEHrEhYVEQU8pkOEzNCP2-Nod7beC-4BhuANrPlTsacRTouLqE-rmbt_tk9wA9yQBedBe7kMu8En7PmJQj2Ex8WtMc7khKl7jhubWZR26yNdrRcRJM7NX1way4QsurP5B01U67TATAdpn9fIzYe-wAswc-lNAACO29e1Xm8yMaOmmD-lggUvtsCaEVBADuBM6SdM6hDcZppmp30Y3mVH0vUZpaIW2hD5S_vV0dJbmrRbuQBqmMGRTkGBzHv9_eE-r8fIb1Z7k-f7NPgN_LbsMhzDtZiwh-lOD9oh-qCUD-ygOni9ImOsYLEAXYnEA66V67RmKWzabDDRzklrFVIFzMV8NrFFl10IHPRZyJf3wQfM6QyjbBqOUs29UuKx2muGGQyfJPTRLvPVoJdmK7rg0RncNU2KbFkP-NCgnTb8eJuucts-8XUhhIG8vcqrKGcR5dEUqr2G0YOhCDeZ577aY8aN3Wa58kYswZusf9_jNqYilqi6OZPXdJc-xV8si52Ze898dk1AfVXKy8WqgFytWregPbxO-fc3McGL8wg6SUuKHb3UjU5pvR2AsRNJsiBdMlxMUYsh5gZPXr9SE7-oaZsMEa2BFBbhPd8GtLd5Y4pjjbLUQgFL9RSpIk5AB86_t8DdL9Dye9fvvmXlY3K88pO1Re34V-DYML_qpRdCrXWTZskfP3YxcVhSKL5x2mrRkvk9CoEDucJuGxKNhTay4GJWF5DQSd97-0nNch1u0lZEOWjOqj39D38nW0xz5Iebiufr1JTDL6BFr_ZeO24LGvLz_6ACeHNKuDoCbFr0Gqvm5jZqKvVbDPKLC0V3DpX8H18S3zYLitHi2t4obZB_7ZLAHx3xqrRicGGw5r5zv8w=",
+        "summary": []
+      },
+      {
+        "id": "ws_0756cc656cd8810d006a6b141bb050819b90245230f4dbbdb3",
+        "type": "web_search_call",
+        "status": "completed",
+        "action": {
+          "type": "search",
+          "queries": [
+            "La Roche-Posay Serozinc spray toner sensitive skin zinc sulfate Serozinc review",
+            "Isntree Hyaluronic Acid Toner sensitive skin review ingredients"
+          ],
+          "query": "La Roche-Posay Serozinc spray toner sensitive skin zinc sulfate Serozinc review"
+        }
+      },
+      {
+        "id": "rs_0756cc656cd8810d006a6b141e4670819bba5bda567728753e",
+        "type": "reasoning",
+        "content": [],
+        "encrypted_content": "gAAAAABqaxQzQHSUdqvsMxXYfObgLH0H0SJuDUHgL3PY-BD_kc69an8uIiBWy8RxSpaO2oO7Z08c5VU2exS_sSMdfW2l1kgB4oRaOBrq-vZr9QjznJlYRnEDojUk-nIqGPbFA2flARwqV5x_dYSr1p9xl2RBWZqzgfe5YBMLJKOnOBu2RRfy3m_nkOS8yDkkgknPEv78SnK5A--Ifzhm6aRcYxyyTKsfX6kFJvfXRb3zXD2h_0knEsVrZ7pIeaQFssQXrwNxWmmnW6mKtdKAIAoekTzR-Y7VBMwCUVjgPp0DIOBEcoDZcHf20uRjS4S-ZF09AT8bU3RT4-XV2-O_5thF9tC-kNkOXKlDo5hin7BXipAW3B1YOaVo1HXSn_GH2S7vfuxZMuzdE2KngcDnkokxRhTckjRj1irIoxKU7IDSX-hkprWRR3ara0Gcd8an_5qYTshSJ51tCQ3W0H9kzqenxQnnEhaieX75OMt7V1vBaZA9VtBtIHRXWXAWDKKOWeSjPfbOyXzOS7u9m2FQwy_6Wuxd37s9RTi4jIv003A59qDNGwB4vVhczw1x_PhbgxQDQZn4tbOm1-c0gNdHB7hyLSqXKJhCIU5qcXUpxVFFD-xQO2WNx8Cd_BY-funtZ-U7l8fAcR8i9Fyo4Lkxgl16JiM4l1Dv61L4Sc2eeMyIaL7h9GWx8b5oSfKCSyXfla2IIZo-gyDqQMFqrY2RABGZ2GNf0KtZVSiB29RXaEzyuXWpbZL62XGKpNWdnRAuPYBsW-AjbrDPImTNS6TORXnRIxvXydBF08JolW9uEYfLEF15jcSyOUGBh9UeOvdfZd6c9dV_0ieQ2NVOoiiCE3gYIsFmKni3RAdDYmea9QOt4xNEt17aJadCqPgCRWQGawWgRz-ZUkGDJcYNb-stVlTO814NHILu9bvD7tBqsnYk1k4OL-NWzqUqBhzfyF6FJQwO7fWf0F2VUCaYzRWF8xKirtJ0CpeLOaQCZoDX6qkUSCqypbdAVdJyfAuDxd8HEoBnDQxit5bJS4_uuvsAVG56XM6uyZfMc0lfOwFonD-E2FWDjPcAHR9r0eXMO0iNNV8GY_h70ALZLcH2B5gusJDHKBdMrBvoDxQBRPtoDXKkgJa28Tan-C4oB8pCN5LrzSlcCkLzvdj3CErFkH4rPmOo81bpL6RMaA==",
+        "summary": []
+      },
+      {
+        "id": "ws_0756cc656cd8810d006a6b141e9f28819bb569253e9a078677",
+        "type": "web_search_call",
+        "status": "completed",
+        "action": {
+          "type": "search",
+          "queries": [
+            "CeraVe Hydrating Toner CeraVe toner sensitive skin product",
+            "COSRX hydrium toner sensitive skin review Cosrx hydrium"
+          ],
+          "query": "CeraVe Hydrating Toner CeraVe toner sensitive skin product"
+        }
+      },
+      {
+        "id": "rs_0756cc656cd8810d006a6b1422bf94819b85496146fe622014",
+        "type": "reasoning",
+        "content": [],
+        "encrypted_content": "gAAAAABqaxQzikXK-bSjGW3GzBlDScktUD061WpyYoOfnJrT2hhvTb2xL21hEDzuUrVOhw-3tV4XpmyDM1DyQ54_AUQEVn8oCQbLGTYwZ6mrC8-jewxTfl0fA9fLH500LMsDTWALGmsGgvu7Eg-hc3Rb8EsSIHjLngL63Hmq01RnFbU1zgOigq8-y5JUa8M37RkzKLgOl51ONFvwa40PviXRjnKECa0CgasQd94RKkeLA5XyJ_DMfjJONwDYyP86Vr9jwtIxK-EhLKxW8E8j09wCwIr5AFASWHXIbSjRRb3fCTcX0Y-RruWElOENLg_t5KraZTTsw7I0MQxSZpJsBVmnkEC8D8SdjkDwIHZ1-SzYyIiUmRqJWzqIVr_g5jykKuPpWrbil72jOzia2Db63LdQ63BcJSK8IjfWf-rlM9rad8MLfrvb0-0AwL6g47rCQ5UDKKFFjFcPB-1-mqfj-iJuEgt297YD7xw0Uiru7HfDZf6kJE6T1xGn268n1jv0IB4kV2SeCBeSfzsO39_nPo40EPtR_CiJkA61Qve2tXkFYxLQgoNnRyTdLKbXP38l93ooHWuEZ7gK7yzsuzj5WUCPrGqZp4O7mLcZohqZIDFgaX1CrJsWl1CrB70OLemZTOm1fRFKaNElSuHX7JqODJTBNQncH9_nC3gWduOChBO4ESvFWYVmNImouiT39xnVPiJ7nsnPLgnf1wi_RXeVBhMyEFrHarcGReT5gs3eylCnd5jw__SX-eE_OatJlZUxumqkroFSPn8RKD9Y5sOEtwIZO1RPQW5MjPMgiqlCEushoAFrkBVuiPydY9GxZnfKqvdXc4TJFtbXpgT1fnznOsG21vRxLMCITPGh8R8mY0v8VwIku2bP_yKEpmo2AsIow0FmSGwm976VrBxZDI9gzPEkDtoJsvy6Pvr44gj8SPUTUn_y7DC72vwWLCsipWKVn4-7WUHaETAn8bXRHPcC2HcoNrYJTXeOAWoO-jk7zEJx6IGLbz8LUcOw6c0exAnHBQqb-t3F1TCIDBWBsNwkKj1aLhuljfdloat_zZfPlUsnNVEMbyPXVOJebUz4nuBob33V4QoMcKNc2sRu-VHDMDr43m4ce3uucbeMa9m8lV1AB-26WGeljjai88XiIiG0Mx7Zi73TwZHQWDl1DGpDFP2DsnJq3c6DlZiRQn6QRBd4UXG3ad-UD_dRFnLSDVR4Hwatdzui19he1-Q5fLwcAu-FR5kptkU_hqB26YpdBL8HknINEXiJHZQccjuih9CS7TWN7nU1wQWJeSgmKR0CAMmi0UkpBkyF-IOFZTkt7mpJD7BKnqWZndg4hpuaaNLvPCfaBkf9tFhW",
+        "summary": []
+      },
+      {
+        "id": "ws_0756cc656cd8810d006a6b14236874819b9b17dc049813330c",
+        "type": "web_search_call",
+        "status": "completed",
+        "action": {
+          "type": "search",
+          "queries": [
+            "Hada Labo Gokujyun Lotion sensitive skin hydrating toner review",
+            "Etude Soon Jung pH 5.5 Relief Toner sensitive skin review ingredients"
+          ],
+          "query": "Hada Labo Gokujyun Lotion sensitive skin hydrating toner review"
+        }
+      },
+      {
+        "id": "rs_0756cc656cd8810d006a6b1426cd5c819ba9b4e42dae81fb94",
+        "type": "reasoning",
+        "content": [],
+        "encrypted_content": "gAAAAABqaxQzkvxyuVL_wSKlqbKBoT-ZFLJyNxttYLgehRyrPoylhcN5-DtDXxIEHwLMiQQftOFN_Df8PcLHuRtQNSFTP7ZtP21l8jGTuaIzZbGJoWk0QSDxQKn_ttngCARyHhEx6yIuslnidyVMyCq3T1oT08SevdaM92g72SDJZEjlcmNbdJ2jsssXyWs6EM1ZBFho0HwrFdxZF5gr8-s9xWoxF1CS7E00nj2G7QG9qBUZqGDBLm42WDcxIJ4qsaJc0sYud_5HXiob_jq_e0QB9wo_8WN2su8NLUKyqesZqtfB7SaABA4bRSGaQT3Bswy3-NThA2u-pm4x1FU2QqWefOikU_VyWGXAMjCOlfW1keLKaTrjh6jeTEzlbF9Rz3IDiJaDUndbS5hCAG_uU1oj4wuKjXGkLIBv-IslsIXSNY3VX0vqZ7NW0660IY3d4oNEwk8fUfMTUZEEoUOkeVLP48YyKV2HtrdP_lv1g_ALM_gqrjP1wGKgEZGYwyjfv9BBgFn54P8uYtCfDX-zmFB4gkWdWESv2YVqrWlXBWS808ogYsNJbx06VimY3K73_llLLymnA0HkCecPhqYOcnuuO0zjEzzj24mOKhKkebXoP9mx1oTPTiOFd69NzpqyQg28Qlc-APSVlTMgo-Vn9wEpFP-cqTnA4Z1HzaVi5NGVnMDebXTpOb-oDfB6mqhEgmvbcsTjOoWMEtbefAJKR4IhyKXGmmY_DUTdpZiqI_hyKLxQlA2MWaNvFPV5df_xcs2z8_54qrEq2wzhLRiN8mJ30C1z0JFYrqvfBdnWC9dqrXNa7yufAQQd2xP2FQ082sQdyK--VZ8YjBEB0rt-CDorqwashm1ebo73LcxXgJ0Icm-5uX-EHDy-d5mObOtaAjDEKi1yzXLlkwr57mnLYSxlg21Ukzo2FT-zE-3gcUtADeWUWMLmQ8NE2Wcrjuouff-1PownoA2lXCWdgBqwnYhPczzvv7qYPU7LcLpxsgit5VM3nhnD0yoyygmTt_lJl8GdPBL5MHxiPB2Dlb7WGbWP_sydEsRfTGa4lCvIHbmL69IstTXem3iecmCY-KpmmHBtk6zJaCaaA9MU-_9jhXYDw_w8QjuO03rjmlTLmeXMxzofwKGklh_I5JeVeQDazD6_nTL04FJhi30zyQrEMT5A-tTLE6ODouOnPxaNnJW7jkHbchy2M2_KNa3L2vWZ6YkE1Ule32rGhkHuvUJnLmMjDTDVo5PeahD13NJK8A0476Wa43bn5pRpPFQ3-bpzULu2RfbYPbO-iheSM6YfjFJFqwX3Vc_sBQ1MV7JTVZDqhNGMFetHu_iPxCX-zK75v2lRYRWX4fUC4qS6Y__7i8uBQDPbn4bRpg0C0cxZlfMyZkbyYoPTmm22q5jHaKWLR7PqgNyZ9Y7DBYFrF3ACo0SRlcOPM9w3ukDSeAM-mOv4mVL4ZAYM4NLmq8LhiWbY4Bm_weWjCQm8Fh4eRPrvW8_kXaEiy4pguwhGOME341bpEUsCL5Ex1F2c3Xi1WPz8-MH7-VKCZwDjmZdlt95TusrrFJ8vnFnETmih-Wb1z6YSr0DjDoLTVv9qx5k2So_JP7BqWK9Y-lsfkI-7jQR8Mmc03TzLf-wUwuN35cC9oHtZpzjMVovuhvBIB_FD8Vo-Kqy-R_jBuGRi-eBJ4fUC9KjO6PcRzS7dN9hiVqLRep4JSiCCfcMoi11CSi4CKKGaZRGsWLGfRUdAeVc6_nrgXBVv9Xh1ENnFIpBeRKLHtusclrtL3imf1Y9M26IusBPypxWjVfHLFqe66R44ZUFt2rhzrOR-Zr0p-H6iRsxYPu9QfufS-5mr3XY3P6iwDSivXRdfdGKKID4mZoW9bolcCmWQGjW9pZwMeUE0T67wZu6KU9VHCN3aAPkEv_WDQh2cGNZWMGuw4jhv0Li6HboRKDDYBsg1GT-L53jF-33c1VC-4FlxpQIGII7AM0abUb7g0gn85-JwVi_5CWnN8rt3HTK7U4akEhEqmQ6tVLQw-NtfZzk4G1_qW4EnorbcVC35uSc9CBLefSjRmNdTfalfQzFUg1Ev73vcEDUxUdx_UDJ2aakLWyx3HW1RGeNJhps1di7FZIWzS0ABjHIapyJBzz8nTmHLEAMksuHNw9LKJ9W9u8lfUf2WO9TZzeACLusVM0EAW2j862z56elAPWLCXqua2oiaGvMMLT7jcgpxMIBOZWAfjNJTVFGpUknbo5R0Cz2b6vtU2gtJVJQKq2DlIkl1PKqG9VoGDFozvPlKy1g1RVbNgbR0lJZ6N0hbDif3TIz4QeLiD0rIKmFzu72uJRs_Mk3o4Dy39epva6lxzA6nyCWFFJcGZ4aD2dJP97mbD8YtWKVjgt2zE582adEC8o4t4V8JdcFXT2a-IViF-hgTY5bdKtBy9HqZcT3k6ZW4fDI54OS1FpcYoEiEyHbsu287YuXpHPLuxKALO9WJwibltosG499D3yUwjeQBahzCC4tAzcrn0LjUs8AXCPfMC4K_YFhhDZzjV5N_ASn5_dxdTgPI9LHUDGmH3xYcHMp3GfwAPNtp77pLWYO5I82Z_rbsCJeAXAIr3Xc8XoIDigjI69APWddvrmUIcNQ9f8Zf-lKxUcERivLbnXM84eoe0yxq6kZ7UetiCjSl8TQDkGC7fSUgqWJLzqsJhsFauZjbDlOL1vUI-Ryg46lxAIZ8SeVtn5DqQNDH_qaTafvTzmXq-J-T8FXpMoHfqqW8RGDzUUhHBfT-DhU0Hw0KQWvfAbKy5iI_jlkTmqyA3mEky9Y16X2pNrJXmOUr1KnKlV7o4iBqVdjSvYilznnT625FaLrwjvQsooaZlX-yYGgj-9DZhW8wzbAm4wxSAhASMOjG5UwsrdIQRLI8TzsDMI1XOth-3qAJYJm4BjtznP_w3g5sZ4mxof_u4j9ZHUUqLGFemnSV9EKVhgmbQMjk-wrukMitrynpm-5u2aNPAGKDhsCO24dwgCvU3lFQK5Ug7BTgQ4QzWpdN04o1KS_2KC1I6oFHPM9qHUTzvi2mWbiF07X9RJ-PGNNU8WOnWI6G5IA1946kA-Pcv9tcdzw4XJcO8N2443UZ5SCsOZXRDvvvqWpW2nCvGCvy-I7B5kxcyTdP7pf4T3i4BomNpyR10jt_zWBpf5Yu7tKP89zA6BAUpk7IW7-v9YpkgKJSH7onUKbpXv6PXW1zoJbQ-8Z4oJ5uyvYdvGRR_8o5eYKM5o9aX9xVRcAXgoP7QQSEoBc-9DHKJnfmMyxj-4BzC6AhIL7jvkd2MaOTKYuxSfW9_llit9yR_QbPpGUfTrxXybH4BMLm2_n7kD7qDYt3qNY7lbSndy7CNZvdCOvSGNyixjEMwvgJaGmqBcQlHgsc3pgGhanWxgDC3ztXlwN1eP2LrsTnxqQ_80ARSwjiyzXsA2rtaqOQ-nLbQ3_dVzk9VpdvZ7KsBkV4VtZBvtk9Y5VVxu9PhxkpDnjMZV-w6d_f-ULpRET2ptsFghXL7p0ehc4CvvrsJZlo4ZOvv_wcSflU4bktHoGWlNnxmM7ps950V3CNq7Mvx0nN_JeVcroEdKHVWY9T6M37tcbCOIOCbA4MDWow0mP0gT429OsfbtG8sRDB3Iz8UtFlyREnXcqVoY5Da1tQi-QwwjRyuPqhkStgFa1Blvu9PWCt5df3Qx5SIabjZQL-gc7ldOus6Io90AAHZukbnwbn_eav3sOYtmDIX_a9rnZt-gwVd4VuRXjBRws9JZrgRZEX_v1SaxerDwckIhRCpbv7MXU0wTohfheFun4qZWwSDAwRwX9EnFTMdYll7-7v9vw6LSZNQG3k-C9tIfBgjOnzwytxAD_79szxfQiN_cxuot02fD4JFlQOUjSF1tIKvpffiDoZZcYng7HeWNVZrxFH-tBiSBjF2YDXXpsiGC_oplkQvDRjV-BNpmxr0ijVNkIAFxHRTROn1gMn356gST7Adu7G1U8xgBIeajX5sI9U9JZhHcVMlHBhpAZXkuIhNNi_h6695DtF1JrudY0tnrLDAE7cC9-MmUS0c-6gPATOu0C1LrYxhVN6lL3Aa00I5v7IMqIDVD3QLymwGUMPmEI_J7engSMiDwqrKpgjKDXafjr2i9-Jc84BHtQNZ6uop8nhtGxMu6T0WJXWx9xvzZY6m-8v1fZfkbB4SwtOQeACvgUY0F37LAmB-q3ljzq0X7cpT6eipEAuVNjSsmEsj0C_DGdfQt9dpJ9NdytrlGqJJF6j_zW1_rRM0jWS64kJSehzRotHHacHz9Yj1svI4xpEQRQ_vbN9IwHN1ZbnWkBGw4AP1LfC0Vfa-G3ia_j6kdc91fR-RfqUOyPB_mv8zIXaJ_bcRxmhCpOsgkGYEn1q_FTgGElCHws6P2ny9GCD7eyNt2GzxRTgWCQj-S6mGTm8o2yhke9AwhRpidIZ-XM5J38tSLLzN4PJwMJMp7_fuGhraLUvr_yaZAjhkPXPajKYzxXjUWf0jeVVlFB0G5z8CnUApH03s9av4Txj9QtdecVuj4OUmFWhvpukFg1799FkhUhi86gLCDeVYru9wopGxglYmB_VkusjeyNDgeKr8MtNjefOblCTkg0E41HknYK59V9_V2Hyhtqxr1UaZ5sOrmGWGBqmwj_Dje3L0YAz74NlAMJGnSxmjbWsemtlixzXKH4R8X8i",
+        "summary": []
+      },
+      {
+        "id": "msg_0756cc656cd8810d006a6b142b88ec819b88297c0897f817f3",
+        "type": "message",
+        "status": "completed",
+        "content": [
+          {
+            "type": "output_text",
+            "annotations": [
+              {
+                "type": "url_citation",
+                "end_index": 217,
+                "start_index": 130,
+                "title": "Essence Toner - Pyunkangyul Official",
+                "url": "https://pyunkangyul.shop/products/essence-toner?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 423,
+                "start_index": 291,
+                "title": "SKIN RECOVERY Enriched Calming Toner | Hydrating Facial Toner | Paula's Choice",
+                "url": "https://www.paulaschoice.com/skin-recovery-enriched-calming-toner/125-1250.html?gad_source=1&utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 596,
+                "start_index": 488,
+                "title": "Avène Gentle Toning Lotion Reviews | BeautyOpinions",
+                "url": "https://beautyopinions.com/av%C3%A8ne/gentle-toning-lotion/reviews?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 773,
+                "start_index": 677,
+                "title": "Seronzinc Mattifying Face Mist for Oily Skin | La Roche-Posay",
+                "url": "https://www.laroche-posay.us/serozinc-3433422406728.html?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 954,
+                "start_index": 839,
+                "title": "Hydrating Toner: Balance Your Skin | CeraVe",
+                "url": "https://www.cerave.com/Skincare/Cleansers/hydrating-toner?bvstate=pg%3A2%2Fct%3Ar&utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 1146,
+                "start_index": 1037,
+                "title": "ETUDE - Soonjung pH 5.5 Relief Toner | Ulta Beauty",
+                "url": "https://www.ulta.com/p/soonjung-ph-55-relief-toner-pimprod2049662?sku=2636341&utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 1315,
+                "start_index": 1224,
+                "title": "Isntree Hyaluronic Acid Toner - Isntree",
+                "url": "https://theisntree.com/isntree-hyaluronic-acid-toner/?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 1495,
+                "start_index": 1393,
+                "title": "Hydrium Watery Toner | CosRX | Skincarisma",
+                "url": "https://www.skincarisma.com/products/cosrx/hydrium-watery-toner?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 1706,
+                "start_index": 1575,
+                "title": "Is Facial Toner Necessary? | Paula's Choice",
+                "url": "https://www.paulaschoice.com/expert-advice/skincare-advice/toners/why-you-need-a-toner.html?utm_source=openai"
+              }
+            ],
+            "logprobs": [],
+            "text": "좋아요 — 민감성 피부용 저자극 토너 중 안전하고 반응이 좋은 제품들을 추천할게요. (짧히 이유·핵심 성분 포함)\n\n- Pyunkang Yul Essence Toner — 성분이 7개 내외로 간단하고 자극 적음(진정·보습에 좋음). ([pyunkangyul.shop](https://pyunkangyul.shop/products/essence-toner?utm_source=openai))  \n- Paula’s Choice Skin Recovery / CALM 토너(류) — 민감·홍조 완화에 맞춘 무향·저자극 포뮬러. ([paulaschoice.com](https://www.paulaschoice.com/skin-recovery-enriched-calming-toner/125-1250.html?gad_source=1&utm_source=openai))  \n- Avène Gentle Toning Lotion — 온천수 기반으로 진정 효과가 뛰어나 민감 피부에 인기. ([beautyopinions.com](https://beautyopinions.com/av%C3%A8ne/gentle-toning-lotion/reviews?utm_source=openai))  \n- La Roche-Posay Serozinc(미스트) — 아연 함유 미스트형 토너로 번들거림/트러블 완화에 도움, 민감 피부 사용 가능. ([laroche-posay.us](https://www.laroche-posay.us/serozinc-3433422406728.html?utm_source=openai))  \n- CeraVe Hydrating Toner — 세라마이드·히알루론산 등 장벽 회복·보습 중심의 저자극 포뮬러. ([cerave.com](https://www.cerave.com/Skincare/Cleansers/hydrating-toner?bvstate=pg%3A2%2Fct%3Ar&utm_source=openai))  \n- Etude Soonjung pH 5.5 Relief Toner — pH 균형·판테놀·마데카소사이드 등 진정 성분 위주로 민감 피부에 적합. ([ulta.com](https://www.ulta.com/p/soonjung-ph-55-relief-toner-pimprod2049662?sku=2636341&utm_source=openai))  \n- Isntree Hyaluronic Acid Toner — 다중 분자 히알루론산 기반으로 수분 공급에 초점을 둔 비교적 순한 제형. ([theisntree.com](https://theisntree.com/isntree-hyaluronic-acid-toner/?utm_source=openai))  \n- COSRX Hydrium Watery Toner — 심플한 보습 목적의 워터리 토너로 민감한 피부에 무난하다는 사용자 평이 많음. ([skincarisma.com](https://www.skincarisma.com/products/cosrx/hydrium-watery-toner?utm_source=openai))\n\n간단 사용 팁\n- 성분 우선순위: 무향료·저(또는 무)알코올, 세라마이드·판테놀·히알루ロン산·병풀(센텔라) 등 진정·장벽 강화 성분 추천. ([paulaschoice.com](https://www.paulaschoice.com/expert-advice/skincare-advice/toners/why-you-need-a-toner.html?utm_source=openai))  \n- 새 제품은 귀 뒤나 팔 안쪽에 48시간 패치테스트 후 얼굴에 사용하세요.  \n- 홍조·따가움이 악화되면 즉시 사용 중단 후 피부과 상담 권장.\n\n원하시면 현재 예산대(저가/중가/고가)나 선호 제형(미스트·물토너·에센스형)을 말해주시면 더 좁혀서 추천해드릴게요."
+          }
+        ],
+        "role": "assistant"
+      }
+    ],
+    "parallel_tool_calls": true,
+    "presence_penalty": 0,
+    "previous_response_id": null,
+    "prompt_cache_key": null,
+    "prompt_cache_retention": "in_memory",
+    "reasoning": {
+      "context": "current_turn",
+      "effort": "medium",
+      "mode": "standard",
+      "summary": null
+    },
+    "safety_identifier": null,
+    "service_tier": "default",
+    "store": true,
+    "temperature": 1,
+    "text": {
+      "format": {
+        "type": "text"
+      },
+      "verbosity": "medium"
+    },
+    "tool_choice": "required",
+    "tool_usage": {
+      "image_gen": {
+        "input_tokens": 0,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 0
+        },
+        "output_tokens": 0,
+        "output_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 0
+        },
+        "total_tokens": 0
+      },
+      "web_search": {
+        "num_requests": 4
+      }
+    },
+    "tools": [
+      {
+        "type": "web_search",
+        "return_token_budget": "default",
+        "search_content_types": [
+          "text"
+        ],
+        "search_context_size": "medium",
+        "user_location": {
+          "type": "approximate",
+          "city": null,
+          "country": "US",
+          "region": null,
+          "timezone": null
+        }
+      }
+    ],
+    "top_logprobs": 0,
+    "top_p": 1,
+    "truncation": "disabled",
+    "usage": {
+      "input_tokens": 21894,
+      "input_tokens_details": {
+        "cache_write_tokens": 0,
+        "cached_tokens": 3456
+      },
+      "output_tokens": 2040,
+      "output_tokens_details": {
+        "reasoning_tokens": 1152
+      },
+      "total_tokens": 23934
+    },
+    "user": null,
+    "metadata": {},
+    "output_text": "좋아요 — 민감성 피부용 저자극 토너 중 안전하고 반응이 좋은 제품들을 추천할게요. (짧히 이유·핵심 성분 포함)\n\n- Pyunkang Yul Essence Toner — 성분이 7개 내외로 간단하고 자극 적음(진정·보습에 좋음). ([pyunkangyul.shop](https://pyunkangyul.shop/products/essence-toner?utm_source=openai))  \n- Paula’s Choice Skin Recovery / CALM 토너(류) — 민감·홍조 완화에 맞춘 무향·저자극 포뮬러. ([paulaschoice.com](https://www.paulaschoice.com/skin-recovery-enriched-calming-toner/125-1250.html?gad_source=1&utm_source=openai))  \n- Avène Gentle Toning Lotion — 온천수 기반으로 진정 효과가 뛰어나 민감 피부에 인기. ([beautyopinions.com](https://beautyopinions.com/av%C3%A8ne/gentle-toning-lotion/reviews?utm_source=openai))  \n- La Roche-Posay Serozinc(미스트) — 아연 함유 미스트형 토너로 번들거림/트러블 완화에 도움, 민감 피부 사용 가능. ([laroche-posay.us](https://www.laroche-posay.us/serozinc-3433422406728.html?utm_source=openai))  \n- CeraVe Hydrating Toner — 세라마이드·히알루론산 등 장벽 회복·보습 중심의 저자극 포뮬러. ([cerave.com](https://www.cerave.com/Skincare/Cleansers/hydrating-toner?bvstate=pg%3A2%2Fct%3Ar&utm_source=openai))  \n- Etude Soonjung pH 5.5 Relief Toner — pH 균형·판테놀·마데카소사이드 등 진정 성분 위주로 민감 피부에 적합. ([ulta.com](https://www.ulta.com/p/soonjung-ph-55-relief-toner-pimprod2049662?sku=2636341&utm_source=openai))  \n- Isntree Hyaluronic Acid Toner — 다중 분자 히알루론산 기반으로 수분 공급에 초점을 둔 비교적 순한 제형. ([theisntree.com](https://theisntree.com/isntree-hyaluronic-acid-toner/?utm_source=openai))  \n- COSRX Hydrium Watery Toner — 심플한 보습 목적의 워터리 토너로 민감한 피부에 무난하다는 사용자 평이 많음. ([skincarisma.com](https://www.skincarisma.com/products/cosrx/hydrium-watery-toner?utm_source=openai))\n\n간단 사용 팁\n- 성분 우선순위: 무향료·저(또는 무)알코올, 세라마이드·판테놀·히알루ロン산·병풀(센텔라) 등 진정·장벽 강화 성분 추천. ([paulaschoice.com](https://www.paulaschoice.com/expert-advice/skincare-advice/toners/why-you-need-a-toner.html?utm_source=openai))  \n- 새 제품은 귀 뒤나 팔 안쪽에 48시간 패치테스트 후 얼굴에 사용하세요.  \n- 홍조·따가움이 악화되면 즉시 사용 중단 후 피부과 상담 권장.\n\n원하시면 현재 예산대(저가/중가/고가)나 선호 제형(미스트·물토너·에센스형)을 말해주시면 더 좁혀서 추천해드릴게요."
+  }
+}
