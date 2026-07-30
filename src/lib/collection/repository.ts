@@ -24,6 +24,20 @@ export interface RunStartArgs {
   queries: readonly QueryInput[]
   plan: PlanId
   queryPacks: number
+  /**
+   * **같은 계정의 다른 브랜드**가 이미 등록한 질의 수.
+   *
+   * ★ 질의 한도는 계정 전체의 것이지 브랜드마다 주는 것이 아니다. 이 필드가
+   *   없으면(브랜드별 한도) Business 고객이 3브랜드 × 30질의 = 90질의를 돌린다.
+   *   2026-07-30 실측 단가(질의 1개당 월 1,642원)로 계산하면 월 원가 147,800원,
+   *   **원가율 51%**다. 게다가 Starter와 질의 팩은 질의당 9,000~9,900원인데
+   *   그 방식의 Business만 3,222원이라 가격 체계 자체가 어긋난다.
+   *
+   * ★ 선택 필드로 두지 않는다. 기본값 0을 주면 호출자가 빼먹었을 때 한도가
+   *   조용히 브랜드별로 되돌아간다 — 그게 지금 고치는 바로 그 버그다.
+   *   타입이 강제하게 둔다.
+   */
+  queriesOnOtherBrands: number
 }
 
 /** 수집을 시작하기 전에 검증한다. 한도를 넘은 수집이 돌면 원가가 새어나간다. */
@@ -41,9 +55,14 @@ export function validateRunStart(args: RunStartArgs): void {
   }
 
   const limits = resolveLimits(args.plan, args.queryPacks)
-  if (args.queries.length > limits.maxQueries) {
+  // ★ 음수를 그대로 더하면 한도가 조용히 늘어난다. 호출자가 뺄셈을 잘못한
+  //   경우인데, 그 실수가 원가로 새어나가면 안 된다.
+  const others = Math.max(0, args.queriesOnOtherBrands)
+  const total = others + args.queries.length
+  if (total > limits.maxQueries) {
     throw new Error(
-      `질의 수(${args.queries.length})가 한도(${limits.maxQueries})를 넘습니다 (brandId=${args.brandId})`,
+      `계정 전체 질의 수(${total})가 한도(${limits.maxQueries})를 넘습니다 — ` +
+        `이 브랜드 ${args.queries.length}개 + 다른 브랜드 ${others}개 (brandId=${args.brandId})`,
     )
   }
 }

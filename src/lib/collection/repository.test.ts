@@ -18,7 +18,12 @@ function collected(overrides: Partial<CollectedAnswer> = {}): CollectedAnswer {
 }
 
 describe('validateRunStart', () => {
-  const base = { brandId: 'b1', plan: 'starter' as const, queryPacks: 0 }
+  const base = {
+    brandId: 'b1',
+    plan: 'starter' as const,
+    queryPacks: 0,
+    queriesOnOtherBrands: 0,
+  }
 
   it('질의가 없으면 거부한다', () => {
     expect(() => validateRunStart({ ...base, queries: [] })).toThrowError(/질의/)
@@ -51,6 +56,56 @@ describe('validateRunStart', () => {
   it('오류 메시지에 brandId를 담는다', () => {
     // 여러 브랜드를 돌리는 스케줄러에서 어느 브랜드가 막혔는지 알아야 한다.
     expect(() => validateRunStart({ ...base, queries: [] })).toThrowError(/b1/)
+  })
+
+  // ★ 질의 한도는 **계정 전체**의 것이다. 브랜드마다 따로 주면 Business
+  //   고객이 3브랜드 × 30질의 = 90질의를 돌려 원가율이 51%가 된다
+  //   (2026-07-30 실측 단가 기준). Starter·질의 팩은 질의당 9,000~9,900원인데
+  //   그 방식의 Business만 3,222원이라 가격 체계가 어긋난다.
+  describe('한도는 계정 전체를 센다', () => {
+    it('다른 브랜드가 쓴 질의를 합쳐서 한도를 넘으면 거부한다', () => {
+      const queries = Array.from({ length: 4 }, (_, i) => ({ id: `q${i}`, text: 't' }))
+      // starter 한도 10. 다른 브랜드가 7개를 쓰고 있으면 4개를 더 못 돌린다.
+      expect(() =>
+        validateRunStart({ ...base, queries, queriesOnOtherBrands: 7 }),
+      ).toThrowError(/한도/)
+    })
+
+    it('합계가 한도와 같으면 허용한다', () => {
+      const queries = Array.from({ length: 3 }, (_, i) => ({ id: `q${i}`, text: 't' }))
+      expect(() =>
+        validateRunStart({ ...base, queries, queriesOnOtherBrands: 7 }),
+      ).not.toThrow()
+    })
+
+    it('오류 메시지가 합계와 한도를 함께 보여준다', () => {
+      // "질의 4개인데 한도 10을 넘는다"만 나오면 운영자도 고객도 이해 못 한다.
+      const queries = Array.from({ length: 4 }, (_, i) => ({ id: `q${i}`, text: 't' }))
+      let message = ''
+      try {
+        validateRunStart({ ...base, queries, queriesOnOtherBrands: 7 })
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error)
+      }
+      expect(message).toContain('11') // 7 + 4
+      expect(message).toContain('10') // 한도
+      expect(message).toMatch(/다른 브랜드|계정/)
+    })
+
+    it('질의 팩은 계정 전체 한도를 늘린다', () => {
+      const queries = Array.from({ length: 10 }, (_, i) => ({ id: `q${i}`, text: 't' }))
+      expect(() =>
+        validateRunStart({ ...base, queries, queriesOnOtherBrands: 10, queryPacks: 1 }),
+      ).not.toThrow()
+    })
+
+    it('음수는 한도를 늘리는 데 쓸 수 없다', () => {
+      // 호출자가 뺄셈을 잘못해 음수를 넘기면 한도가 조용히 늘어난다.
+      const queries = Array.from({ length: 11 }, (_, i) => ({ id: `q${i}`, text: 't' }))
+      expect(() =>
+        validateRunStart({ ...base, queries, queriesOnOtherBrands: -5 }),
+      ).toThrowError(/한도/)
+    })
   })
 })
 

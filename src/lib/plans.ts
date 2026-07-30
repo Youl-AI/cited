@@ -82,6 +82,26 @@ export const WEEKS_PER_MONTH = 4.3
 
 export interface PlanLimits {
   maxBrands: number
+  /**
+   * **계정 전체**의 질의 한도. 브랜드마다 주는 것이 아니다.
+   *
+   * ★ 2026-07-30 결정. 브랜드별로 주면 Business가 3브랜드 × 30질의 = 90질의가
+   *   되고, 실측 단가(질의 1개당 월 1,642원 — 답변당 LLM 38.68원 · SERP 37.45원,
+   *   samples LLM 3회 · SERP 2회 × 4.3주)로 월 원가 147,800원, **원가율 51%**다.
+   *
+   *   더 결정적인 근거는 다른 가격과의 정합성이다. 질의당 받는 돈이
+   *     Starter  99,000 ÷ 10 = 9,900원
+   *     질의 팩  90,000 ÷ 10 = 9,000원
+   *     Business(브랜드별, 90) = 3,222원   ← 혼자만 1/3
+   *     Business(계정 전체, 30) = 9,667원  ← 줄이 맞는다
+   *   즉 브랜드별 해석은 대량 할인이 아니라 가격표의 사고였다.
+   *
+   *   계정 전체로 두면 Business 원가율은 17%로 Starter(17.2%)와 같아지고,
+   *   **요금제 화면의 "질의 30개"를 바꾸지 않아도 된다.** 브랜드를 하나만 쓰는
+   *   고객은 지금 광고하는 것과 정확히 같은 것을 받는다.
+   *
+   *   강제하는 곳은 `validateRunStart`의 `queriesOnOtherBrands`다.
+   */
   maxQueries: number
   maxCompetitors: number
   engines: readonly EngineId[]

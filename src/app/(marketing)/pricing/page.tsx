@@ -94,7 +94,24 @@ function historyCell(months: number | null): React.ReactNode {
 
 const ROWS: readonly { label: string; value: (id: PlanId) => React.ReactNode }[] = [
   { label: '월 요금', value: (id) => priceCell(PLANS[id].priceKrw) },
-  { label: '측정 질의', value: (id) => countCell(PLANS[id].maxQueries, '개') },
+  // ★ 질의 한도는 계정 전체다 — 브랜드마다 주는 것이 아니다(`plans.ts` 참고).
+  //   브랜드가 여럿인 플랜에서 그 사실을 여기 적지 않으면, 고객은 브랜드마다
+  //   받는다고 읽는다. 나중에 "3개 등록했는데 왜 90개가 아니냐"가 된다.
+  {
+    label: '측정 질의',
+    value: (id) =>
+      PLANS[id].maxBrands > 1 ? (
+        <>
+          {countCell(PLANS[id].maxQueries, '개')}
+          <span className="block text-xs text-muted-foreground">
+            브랜드 <span className="font-mono tabular-nums">{PLANS[id].maxBrands}</span>개에 나눠
+            사용
+          </span>
+        </>
+      ) : (
+        countCell(PLANS[id].maxQueries, '개')
+      ),
+  },
   { label: '측정 횟수', value: cadenceCell },
   { label: '엔진', value: (id) => engineLabels(PLANS[id].engines).join(', ') },
   { label: '경쟁사', value: (id) => countCell(PLANS[id].maxCompetitors, '개') },
