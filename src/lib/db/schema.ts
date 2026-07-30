@@ -406,8 +406,41 @@ export const detections = pgTable(
 // 무료 진단
 // ─────────────────────────────────────────────────────────────
 
-export const AUDIT_STATUSES = ['queued', 'running', 'succeeded', 'failed', 'waitlisted'] as const
+/**
+ * 무료 진단 상태.
+ *
+ * ★ 기존 값(queued/running/succeeded/failed/waitlisted)은 **자동 실행을 전제한**
+ *   이름이었다. 2026-07-30 설계 변경으로 무료 진단이 수동 배송이 되어
+ *   신청 → 인증 → 운영자 실행 → 발송 순서가 되었으므로 이름을 바꿨다.
+ *   `free_audits`는 아직 0행이라 데이터 마이그레이션이 필요 없었다.
+ *
+ * 상태 전이는 이 하나뿐이다:
+ *
+ *   requested ──인증──> verified ──운영자 실행──> running ──┬──> sent
+ *                                                            └──> failed ──재실행──> running
+ *        └──운영자 거부──> rejected
+ */
+export const AUDIT_STATUSES = [
+  'requested', // 신청됨. 이메일 미인증 — 이 상태에서는 어떤 API도 호출하지 않는다
+  'verified', // 인증 완료. 운영자 실행 대기
+  'running', // 운영자가 실행 중
+  'sent', // 리포트 발송 완료
+  'failed', // 실행 실패. 재실행 가능
+  'rejected', // 운영자가 거부 (스팸·장난 신청)
+] as const
 export type AuditStatus = (typeof AUDIT_STATUSES)[number]
+
+/**
+ * 이 신청이 어디서 들어왔는가.
+ *
+ * ★ 크몽 주문은 이메일 인증을 건너뛴다(`audit:new`). 결제가 이미 확인됐으므로
+ *   남용 위험이 없지만, **그 사실을 행에 남겨야 한다.** 없으면 나중에
+ *   `email_verified = true`인 행 중 어느 것이 실제로 링크를 눌렀고 어느 것이
+ *   운영자가 통과시킨 것인지 구분할 수가 없다 — 인증 게이트가 실제로 작동하는지
+ *   감사할 수 없게 된다.
+ */
+export const AUDIT_SOURCES = ['web', 'kmong', 'manual'] as const
+export type AuditSource = (typeof AUDIT_SOURCES)[number]
 
 export const freeAudits = pgTable(
   'free_audits',
@@ -415,25 +448,57 @@ export const freeAudits = pgTable(
     id: text('id').primaryKey(),
     brandName: text('brand_name').notNull(),
     category: text('category').notNull(),
-    /** 결과 확인 후 게이트에서 입력받는다. 진단 시작 시점에는 null */
-    email: text('email'),
+    /**
+     * ★ notNull이다. 최초 설계는 결과를 보여준 **뒤** 이메일을 받아서 nullable
+     * 이었는데, 그 순서 때문에 이메일 인증이 비용을 전혀 방어하지 못했다.
+     * 이제는 신청 시점에 받고, 인증 전에는 아무것도 실행하지 않는다.
+     */
+    email: text('email').notNull(),
     emailVerified: boolean('email_verified').notNull().default(false),
-    status: text('status').$type<AuditStatus>().notNull().default('queued'),
-    /** 진단 결과 요약 — 지표·증거·순위 */
+    /** 경쟁사. 비어 있으면 Share of Voice는 "측정 없음"이 된다 */
+    competitors: jsonb('competitors').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    /**
+     * 고객 사이트 호스트명(`parseHostname`이 정규화한 값). 인용 출처의 소유
+     * 판정에 쓴다.
+     *
+     * ★ 비어 있으면 소유 판정을 **하지 않는다.** 브랜드명에서 추측하지 않는다 —
+     *   틀린 추측이 "당신 사이트는 한 번도 인용되지 않았습니다"라는 리포트의
+     *   가장 강한 문장을 근거 없이 만든다.
+     */
+    selfDomains: jsonb('self_domains').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    /**
+     * 이 측정에 쓴 자기 브랜드 별칭.
+     *
+     * ★ 저장한다. 별칭이 측정 결과를 좌우하므로(영문 별칭이 없으면 ChatGPT
+     *   언급률이 구조적으로 0%가 된다), 나중에 "왜 이 리포트가 0%였나"를
+     *   물었을 때 어떤 표기로 쟀는지 알아야 한다. 실행 조건을 남기지 않으면
+     *   리포트를 재현할 수 없다.
+     */
+    aliases: jsonb('aliases').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    status: text('status').$type<AuditStatus>().notNull().default('requested'),
+    /** 유입 경로. 'web'이 아니면 이메일 인증을 운영자가 통과시킨 것이다 */
+    source: text('source').$type<AuditSource>().notNull().default('web'),
+    /** 진단 결과 — AuditResult. 발송 전에는 null */
     result: jsonb('result').$type<unknown>(),
-    /** IP 원문을 저장하지 않는다. HMAC 해시만. */
+    /** 실패 사유. 운영자가 재실행 여부를 판단하는 근거 */
+    failureReason: text('failure_reason'),
+    /** IP 원문을 저장하지 않는다. HMAC 해시만. 스팸 관측용 */
     ipHash: text('ip_hash').notNull(),
-    /** 결과 화면 노출 순서 실험 — 'cba' | 'abc' 등 */
-    variant: text('variant').notNull().default('cba'),
-    /** 전환 결과 — 이메일 입력했는가, 가입했는가 */
-    convertedEmailAt: timestamp('converted_email_at', { withTimezone: true }),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    // `variant`(결과 화면 노출 순서 실험)와 `convertedEmailAt`은 지웠다.
+    // 전자는 결과가 메일로 바뀌어 실험할 화면이 없고, 후자는 이메일이 신청
+    // 시점에 들어오므로 "이메일을 입력했는가"라는 전환 지표가 무의미해졌다.
+    /** 전환 결과 — 리포트를 받은 뒤 가입했는가 */
     convertedSignupAt: timestamp('converted_signup_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index('audits_iphash_created_idx').on(t.ipHash, t.createdAt),
-    index('audits_brand_created_idx').on(t.brandName, t.createdAt),
+    // 운영자 대기 목록이 status로 조회한다. brandName 인덱스는 소비자가 없었다.
+    index('audits_status_created_idx').on(t.status, t.createdAt),
     enumCheck('free_audits_status_check', t.status, AUDIT_STATUSES),
+    enumCheck('free_audits_source_check', t.source, AUDIT_SOURCES),
   ],
 )
 

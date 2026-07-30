@@ -15,6 +15,20 @@
       "when": 1785322430275,
       "tag": "0001_nervous_susan_delgado",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785405987070,
+      "tag": "0002_lyrical_golden_guardian",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785406004153,
+      "tag": "0003_condemned_silhouette",
+      "breakpoints": true
     }
   ]
 }

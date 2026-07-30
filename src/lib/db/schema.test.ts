@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { ENGINE_TIER, PLANS } from '@/lib/plans'
 import {
   answers,
+  AUDIT_SOURCES,
   AUDIT_STATUSES,
   brands,
   collectionRuns,
@@ -65,11 +66,27 @@ describe('설계 ②의 핵심 필드', () => {
     expect(Object.keys(getTableColumns(queries))).toContain('source')
   })
 
-  it('free_audits가 A/B variant와 ipHash를 기록한다', () => {
+  it('free_audits가 수동 배송 플로우의 필드를 갖는다', () => {
+    // ★ 2026-07-30 설계 변경으로 `variant`(결과 화면 노출 순서 A/B)와
+    //   `convertedEmailAt`이 사라졌다. 결과가 메일로 바뀌어 실험할 화면이 없고,
+    //   이메일은 신청 시점에 받으므로 "이메일을 입력했는가"가 전환 지표가 아니다.
     const cols = Object.keys(getTableColumns(freeAudits))
-    expect(cols).toContain('variant')
+    expect(cols).not.toContain('variant')
+    expect(cols).not.toContain('convertedEmailAt')
+
     expect(cols).toContain('ipHash')
     expect(cols).toContain('email')
+    // 운영자 실행 경로
+    expect(cols).toContain('verifiedAt')
+    expect(cols).toContain('sentAt')
+    expect(cols).toContain('failureReason')
+    // 인증 게이트 감사용 — 'web'이 아니면 운영자가 통과시킨 것이다
+    expect(cols).toContain('source')
+    // 리포트 구성 입력
+    expect(cols).toContain('competitors')
+    expect(cols).toContain('selfDomains')
+    // 측정 조건 — 별칭이 언급률을 좌우하므로 재현에 필요하다
+    expect(cols).toContain('aliases')
   })
 })
 
@@ -143,6 +160,13 @@ describe('CHECK 제약이 의도한 컬럼에 의도한 값 목록으로 걸려 
       'free_audits_status_check',
       '"free_audits"."status"',
       AUDIT_STATUSES,
+    ],
+    [
+      'free_audits.source',
+      freeAudits,
+      'free_audits_source_check',
+      '"free_audits"."source"',
+      AUDIT_SOURCES,
     ],
     ['payments.status', payments, 'payments_status_check', '"payments"."status"', PAYMENT_STATUSES],
   ] as const)(
