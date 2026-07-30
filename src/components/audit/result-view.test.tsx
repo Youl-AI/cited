@@ -313,6 +313,90 @@ describe('증거 표시', () => {
   })
 })
 
+describe('유료 확장', () => {
+  it('가이드가 있으면 개선 가이드 섹션을 렌더한다', () => {
+    render(
+      <ResultView
+        result={base}
+        tier="deluxe"
+        guide={'## 첫 번째로 할 일\n\n티스토리에 후기 글을 쓰세요'}
+      />,
+    )
+    expect(screen.getByRole('heading', { name: /개선 가이드/ })).toBeInTheDocument()
+    expect(screen.getByText('티스토리에 후기 글을 쓰세요')).toBeInTheDocument()
+  })
+
+  it('가이드가 없으면 섹션 자체가 없다 — 빈 약속을 보여주지 않는다', () => {
+    render(<ResultView result={base} tier="standard" />)
+    expect(screen.queryByRole('heading', { name: /개선 가이드/ })).not.toBeInTheDocument()
+  })
+
+  it('가이드 마크다운의 HTML을 실행 가능한 형태로 넣지 않는다', () => {
+    // 가이드는 운영자가 쓰지만, 렌더 경로가 raw HTML을 살리면 그 보증이
+    // 사람의 실수 하나에 걸린다. react-markdown은 rehype-raw 없이는 HTML
+    // 노드를 렌더하지 않는다 — 그 사실을 여기 못박는다.
+    render(
+      <ResultView
+        result={base}
+        tier="deluxe"
+        guide={'주의: <script>alert(1)</script>안전한 텍스트'}
+      />,
+    )
+    expect(document.querySelector('script')).toBeNull()
+    expect(screen.getByText(/안전한 텍스트/)).toBeInTheDocument()
+  })
+
+  it('전후 비교가 있으면 이전 측정과 나란히 보여준다', () => {
+    const before = { ...base, citedRate: wilsonInterval(1, 60) }
+    const after = { ...base, citedRate: wilsonInterval(30, 60) }
+    const { container } = render(
+      <ResultView result={after} tier="premium" compare={{ before, beforeDate: '2026-07-01' }} />,
+    )
+    expect(screen.getByText(/전후 비교/)).toBeInTheDocument()
+    expect(screen.getByText('2026-07-01')).toBeInTheDocument()
+    // 두 측정값이 함께 보인다 — 이전과 이번.
+    const text = visibleText(container)
+    expect(text).toContain(formatInterval(before.citedRate))
+    expect(text).toContain(formatInterval(after.citedRate))
+  })
+
+  it('전후 신뢰구간이 겹치면 "측정 오차 범위"라고 정직하게 말한다', () => {
+    const before = { ...base, citedRate: wilsonInterval(5, 6) }
+    render(
+      <ResultView result={base} tier="premium" compare={{ before, beforeDate: '2026-07-01' }} />,
+    )
+    expect(screen.getByText(/오차 범위/)).toBeInTheDocument()
+    expect(screen.queryByText(/유의미한 (상승|하락)/)).not.toBeInTheDocument()
+  })
+
+  it('전후 신뢰구간이 겹치지 않으면 유의미한 변화라고 판정한다', () => {
+    const before = { ...base, citedRate: wilsonInterval(1, 60) }
+    const after = { ...base, citedRate: wilsonInterval(30, 60) }
+    render(
+      <ResultView result={after} tier="premium" compare={{ before, beforeDate: '2026-07-01' }} />,
+    )
+    expect(screen.getByText(/유의미한 상승/)).toBeInTheDocument()
+  })
+
+  it('엔진 구성이 다르면 변화 판정을 하지 않는다', () => {
+    // 숫자가 떨어진 이유가 실제 하락인지 엔진 누락인지 알 수 없다.
+    const before = { ...base, engines: ['chatgpt'], citedRate: wilsonInterval(1, 60) }
+    const after = { ...base, citedRate: wilsonInterval(30, 60) }
+    render(
+      <ResultView result={after} tier="premium" compare={{ before, beforeDate: '2026-07-01' }} />,
+    )
+    expect(screen.getByText(/비교할 수 없/)).toBeInTheDocument()
+    expect(screen.queryByText(/유의미한 (상승|하락)/)).not.toBeInTheDocument()
+  })
+
+  it('유료 리포트는 "무료 진단"이라고 말하지 않는다', () => {
+    // 표제·해석 문구가 무료 전용 카피를 그대로 쓰면 산 것과 받은 것이 다르다.
+    const { container } = render(<ResultView result={base} tier="standard" />)
+    expect(visibleText(container)).not.toContain('무료 진단')
+    expect(visibleText(container)).toContain('정밀 진단 리포트')
+  })
+})
+
 describe('우리 브랜드와 경쟁사를 구분해서 표시한다', () => {
   it('두 표시가 서로 다르게 보인다', () => {
     // ★ 표시가 같아 보이면 이 화면의 요점이 사라진다 — 밑줄이 내 브랜드인지

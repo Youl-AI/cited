@@ -28,5 +28,25 @@ export default async function AuditReportPage({
   //   운영자가 `--dry`로 확인하는 중인 미완성 결과가 새어 나가면 안 된다.
   if (!audit || audit.status !== 'sent' || !audit.result) notFound()
 
-  return <ResultView result={audit.result as AuditResult} />
+  // PREMIUM 재측정이면 원본을 불러 전후 비교를 만든다. 원본이 아직 발송 전이거나
+  // 결과가 없으면 비교 없이 그린다 — 반쪽 비교를 보여주지 않는다.
+  let compare: { before: AuditResult; beforeDate: string } | undefined
+  if (audit.parentId) {
+    const parent = await getAudit(audit.parentId)
+    if (parent?.result && parent.sentAt) {
+      compare = {
+        before: parent.result as AuditResult,
+        beforeDate: parent.sentAt.toISOString().slice(0, 10),
+      }
+    }
+  }
+
+  return (
+    <ResultView
+      result={audit.result as AuditResult}
+      tier={audit.tier}
+      {...(audit.guideMd ? { guide: audit.guideMd } : {})}
+      {...(compare ? { compare } : {})}
+    />
+  )
 }
