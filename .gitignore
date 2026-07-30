@@ -47,3 +47,6 @@ next-env.d.ts
 # Playwright — 실행 산출물(트레이스·스크린샷)이다. 실패 때만 쌓이고 재실행마다 커진다.
 /test-results/
 /playwright-report/
+
+# 질의 검수용 임시 파일 (audit:queries가 만든다). 고객 데이터라 커밋 금지.
+/audit-queries.*.json

@@ -20,6 +20,7 @@ import { createCostMeter } from '@/lib/audit/cost'
 import { executeAudit } from '@/lib/audit/execute'
 import { parseBaseUrlFlag, reportUrl, resolveReportBaseUrl } from '@/lib/audit/report-url'
 import { getAudit, markFailed, markRunning, markSent } from '@/lib/audit/repository'
+import { AUDIT_TIERS } from '@/lib/audit/tiers'
 import { sendEmail } from '@/lib/email/send'
 import { auditReportEmail } from '@/lib/email/templates'
 import { env } from '@/lib/env'
@@ -64,7 +65,9 @@ if (audit.status === 'sent' && !dry) {
   process.exit(1)
 }
 
-console.log(`실행: ${audit.brandName} (${audit.category})${dry ? ' [dry]' : ''}`)
+console.log(
+  `실행: ${audit.brandName} (${audit.category}) · ${AUDIT_TIERS[audit.tier].label}${dry ? ' [dry]' : ''}`,
+)
 console.log(`경쟁사: ${audit.competitors.join(', ') || '없음'}`)
 console.log(`우리 도메인: ${audit.selfDomains.join(', ') || '없음 (소유 판정 생략)'}`)
 
@@ -97,6 +100,9 @@ try {
       category: audit.category,
       competitors: audit.competitors,
       selfDomains: audit.selfDomains,
+      tier: audit.tier,
+      ...(audit.region ? { region: audit.region } : {}),
+      ...(audit.queries ? { frozenQueries: audit.queries } : {}),
     },
     {
       judge,

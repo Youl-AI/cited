@@ -26,6 +26,8 @@
     "probe:aliases": "tsx --conditions=react-server --env-file=.env.local scripts/probe-aliases.mts",
     "audit:list": "tsx --conditions=react-server --env-file=.env.local scripts/audit-list.mts",
     "audit:new": "tsx --conditions=react-server --env-file=.env.local scripts/audit-new.mts",
+    "audit:queries": "tsx --conditions=react-server --env-file=.env.local scripts/audit-queries.mts",
+    "audit:remeasure": "tsx --conditions=react-server --env-file=.env.local scripts/audit-remeasure.mts",
     "audit:run": "tsx --conditions=react-server --env-file=.env.local scripts/audit-run.mts",
     "audit:reject": "tsx --conditions=react-server --env-file=.env.local scripts/audit-reject.mts",
     "audit:resend": "tsx --conditions=react-server --env-file=.env.local scripts/audit-resend.mts",

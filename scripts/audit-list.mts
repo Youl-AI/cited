@@ -7,6 +7,7 @@
  *   "영업일 1일 이내"라는 약속이 조용히 깨진다.
  */
 import { listPendingAudits, listRecentAudits } from '@/lib/audit/repository'
+import { AUDIT_TIERS } from '@/lib/audit/tiers'
 import { maskEmail } from '@/lib/email/mask'
 
 const pending = await listPendingAudits()
@@ -21,7 +22,7 @@ if (pending.length === 0) {
     const flag = a.status === 'failed' ? ' [실패·재실행 필요]' : ''
     console.log(`  ${a.id}`)
     console.log(
-      `    ${a.brandName} · ${a.category} · 경쟁사 ${a.competitors.length}개 · ` +
+      `    ${a.brandName} · ${a.category} · ${AUDIT_TIERS[a.tier].label} · 경쟁사 ${a.competitors.length}개 · ` +
         `${maskEmail(a.email)} · ${waited}시간 경과${flag}`,
     )
     // 도메인이 없으면 리포트에서 "우리 사이트 인용 여부" 줄이 빠진다.
