@@ -25,7 +25,12 @@ const REQUIRED_FROM_FIRST_COLLECTION = ['privacyOfficer', 'phone'] as const
  *
  * 2026-07-30 사업자 등록 완료 (372-31-02135).
  */
-const FILLED_AFTER_REGISTRATION = ['businessNumber', 'representative'] as const
+const FILLED_AFTER_REGISTRATION = [
+  'companyName',
+  'representative',
+  'businessNumber',
+  'address',
+] as const
 
 /**
  * 전자상거래법 제10조 제1항(통신판매업자의 신원정보 표시).
@@ -33,18 +38,14 @@ const FILLED_AFTER_REGISTRATION = ['businessNumber', 'representative'] as const
  * 이쪽 의무는 **판매를 시작하는 시점**에 발생한다. 무료 서비스만 제공하는
  * 동안은 신고 의무 자체가 없으므로 skip을 유지한다.
  *
- * `mailOrderNumber`(통신판매업 신고번호)는 사업자 등록과 **별개 절차**다.
- * 등록증이 나왔다고 생기지 않는다 — 관할 시·군·구청에 따로 신고해야 한다.
+ * 남은 것은 `mailOrderNumber` 하나다. 사업자 등록과 **별개 절차**로, 등록증이
+ * 나왔다고 생기지 않는다 — 관할 시·군·구청에 따로 신고해야 한다.
  *
- * TODO(phase-4): 통신판매업 신고가 끝나고 상호·주소를 채우면 아래 describe.skip을
- * describe로 되돌린다. `business-info.ts` 상단과 4단계 계획서 "착수 전 확인"에도
- * 같은 마커가 있다.
+ * TODO(phase-4): 통신판매업 신고가 끝나면 아래 describe.skip을 describe로
+ * 되돌린다. `business-info.ts` 상단과 4단계 계획서 "착수 전 확인"에도 같은
+ * 마커가 있다.
  */
-const REQUIRED_BEFORE_PAID_LAUNCH = [
-  'companyName',
-  'mailOrderNumber',
-  'address',
-] as const
+const REQUIRED_BEFORE_PAID_LAUNCH = ['mailOrderNumber'] as const
 
 describe('BUSINESS_INFO — 개인정보 수집 시점부터 필수', () => {
   it.each(REQUIRED_FROM_FIRST_COLLECTION)(
