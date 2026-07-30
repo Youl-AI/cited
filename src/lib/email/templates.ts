@@ -5,6 +5,7 @@
 //   `@/lib/env`가 이 모듈에 딸려 들어와 순수성이 깨진다. 마스킹 함수는
 //   그래서 './mask'에 따로 있다.
 import type { AuditResult } from '@/lib/audit/result'
+import { engineLabel } from '@/lib/plans'
 import { formatInterval, formatPercent } from '@/lib/stats/wilson'
 import { maskEmail } from './mask'
 
@@ -130,7 +131,7 @@ export function auditReportEmail(params: { result: AuditResult; url: string }): 
     .map(
       (e) => `<div style="margin:0 0 14px;padding:14px;border:1px solid #e8e6e1;border-radius:8px">
   <div style="margin:0 0 6px;font-size:13px;color:#8a8580">
-    질문: ${escapeHtml(e.query)} · ${escapeHtml(e.engineId)}
+    질문: ${escapeHtml(e.query)} · ${escapeHtml(engineLabel(e.engineId))}
     ${e.mentioned ? '<span style="color:#1f7a4d">· 언급됨</span>' : '<span style="color:#8a8580">· 언급 없음</span>'}
   </div>
   <div style="white-space:pre-wrap;line-height:1.6">${escapeHtml(e.text)}</div>
@@ -200,7 +201,7 @@ ${selfLine}
     subject: `[Cited] ${result.brandName} AI 언급률 ${rate} — 진단 리포트`,
     html: layout(
       `<h1 style="margin:0 0 8px;font-size:22px;letter-spacing:-0.02em">${brand} 진단 리포트</h1>
-<p style="margin:0 0 24px;color:#8a8580;font-size:14px">${escapeHtml(result.category)} 카테고리 · ${escapeHtml(result.engines.join(', '))} · ${escapeHtml(result.measuredAt.slice(0, 10))} 측정</p>
+<p style="margin:0 0 24px;color:#8a8580;font-size:14px">${escapeHtml(result.category)} 카테고리 · ${escapeHtml(result.engines.map(engineLabel).join(', '))} · ${escapeHtml(result.measuredAt.slice(0, 10))} 측정</p>
 
 <div style="margin:0 0 20px;padding:20px;background:#faf9f7;border-radius:10px">
   <div style="font-size:34px;font-weight:700;line-height:1.1;letter-spacing:-0.03em">${rate}</div>

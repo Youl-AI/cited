@@ -15,8 +15,12 @@ export default defineConfig({
     },
   },
   test: {
+    // ★ 기본은 node다. 컴포넌트 테스트(`.tsx`)만 파일 상단 docblock
+    //   `// @vitest-environment jsdom`으로 개별 전환한다. 전부 jsdom으로
+    //   바꾸면 순수 함수·DB 테스트까지 DOM을 세우느라 느려지고, 얻는 게 없다.
+    //   (`environmentMatchGlobs`는 vitest 3에서 폐기됐으므로 쓰지 않는다.)
     environment: 'node',
-    include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'tests/**/*.test.ts'],
     // tests/golden/**은 실제 판정 API를 부른다(돈이 든다). 별도 설정으로
     // 분리해 `pnpm test:golden`과 CI에서만 돌린다 — vitest.golden.config.ts 참고.
     exclude: ['**/*.smoke.test.ts', '**/node_modules/**', 'tests/e2e/**', 'tests/golden/**'],

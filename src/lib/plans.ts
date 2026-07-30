@@ -9,6 +9,25 @@ export const ENGINE_TIER: Record<EngineId, EngineTier> = {
   google_aio: 'serp',
 }
 
+/**
+ * 고객에게 보여줄 엔진 이름.
+ *
+ * ★ `EngineId`를 화면에 그대로 쓰면 안 된다. `google_aio`·`chatgpt`는 내부
+ *   식별자다 — 실제로 랜딩에 "무료 진단은 chatgpt · gemini만 봅니다"가 찍혀
+ *   나갔다. 식별자와 표시 이름을 갈라 두면 다음에도 같은 실수를 안 한다.
+ */
+export const ENGINE_LABEL: Record<EngineId, string> = {
+  chatgpt: 'ChatGPT',
+  gemini: 'Gemini',
+  naver: '네이버 AI 브리핑',
+  google_aio: 'Google AI 개요',
+}
+
+/** 엔진 목록을 고객이 읽을 문장으로 만든다. */
+export function engineLabels(engines: readonly EngineId[]): string[] {
+  return engines.map((id) => ENGINE_LABEL[id])
+}
+
 export interface PlanConfig {
   /** 월 구독료(원). 무료 진단은 0 */
   priceKrw: number
@@ -122,4 +141,15 @@ export function expectedSerpCallsPerMonth(plan: PlanId, queryCount: number): num
   const { engines, samples } = PLANS[plan]
   const serpEngines = engines.filter((id) => ENGINE_TIER[id] === 'serp').length
   return Math.round(queryCount * serpEngines * samples.serp * WEEKS_PER_MONTH)
+}
+
+/**
+ * 저장된 문자열을 표시 이름으로 바꾼다.
+ *
+ * ★ `AuditResult.engines`·`EvidenceItem.engineId`는 `string`이다(리포트가 jsonb로
+ *   저장되므로 과거 리포트에 지금 없는 엔진이 들어 있을 수 있다). 모르는 값은
+ *   지우지 않고 원문을 돌려준다 — 지우면 과거 리포트에서 엔진 이름이 사라진다.
+ */
+export function engineLabel(id: string): string {
+  return id in ENGINE_LABEL ? ENGINE_LABEL[id as EngineId] : id
 }

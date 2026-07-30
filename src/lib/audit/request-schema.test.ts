@@ -192,3 +192,35 @@ describe('parseHostname', () => {
     expect(parseHostname('mailto:contact@musinsa.com')).toBe('musinsa.com')
   })
 })
+
+describe('오류 메시지', () => {
+  // ★ 라우트가 첫 이슈의 메시지를 그대로 응답에 담고 폼이 그것을 그대로 띄운다.
+  //   zod 기본값으로 두면 한국 고객에게 `Invalid email address`가 보인다 —
+  //   브라우저에서 실제로 그렇게 나왔다.
+  function firstMessage(input: unknown): string {
+    try {
+      parseAuditRequest(input)
+    } catch (error) {
+      const issues = (error as { issues?: { message: string }[] }).issues
+      return issues?.[0]?.message ?? ''
+    }
+    return ''
+  }
+
+  it('전부 한국어다', () => {
+    const cases: unknown[] = [
+      { ...valid, email: 'not-an-email' },
+      { ...valid, brandName: '' },
+      { ...valid, category: '' },
+      { ...valid, brandName: 'ㄱ'.repeat(101) },
+      { ...valid, competitors: ['a', 'b', 'c', 'd'] },
+      { ...valid, siteUrl: '무신사' },
+    ]
+    for (const input of cases) {
+      const message = firstMessage(input)
+      expect(message, JSON.stringify(input).slice(0, 60)).not.toBe('')
+      // 라틴 문자로만 이루어진 메시지는 zod 기본값이 새어 나온 것이다.
+      expect(message, message).toMatch(/[가-힣]/)
+    }
+  })
+})

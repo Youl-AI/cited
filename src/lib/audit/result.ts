@@ -31,6 +31,14 @@ export interface EvidenceItem {
   /** 2차 판정의 한 줄 요약. 미언급이면 null */
   context: string | null
   sentiment: Sentiment | null
+  /**
+   * 이 답변에서 우리 브랜드가 **몇 번째로 언급된 브랜드인가**. 1부터.
+   *
+   * ★ 이미 재고 있던 값인데 리포트에 담지 않았다. 화면이 답변 원문에 밑줄만
+   *   긋고 순서를 못 보여주면, 랜딩이 보여준 것과 배송물이 달라진다.
+   *   미언급이거나 판정기가 순서를 모르면 null이다.
+   */
+  position: number | null
 }
 
 export interface RankingItem {
@@ -167,6 +175,7 @@ export function buildAuditResult(args: BuildAuditResultArgs): AuditResult {
       mentioned: d?.mentioned ?? false,
       context: d?.mentioned ? (d.context ?? null) : null,
       sentiment: d?.mentioned ? (d.sentiment ?? null) : null,
+      position: d?.mentioned ? (d.position ?? null) : null,
     }
   })
 

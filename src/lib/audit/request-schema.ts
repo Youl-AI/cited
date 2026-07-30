@@ -12,8 +12,19 @@ import { PLANS } from '@/lib/plans'
 /** 무료 플랜의 경쟁사 한도와 같아야 한다. 다르면 화면과 제품이 어긋난다. */
 export const MAX_COMPETITORS = PLANS.free.maxCompetitors
 
-/** 브랜드명·카테고리·경쟁사명 공통. 100자 제한이 없으면 신청 테이블에 소설이 들어온다. */
-const name = z.string().trim().min(1).max(100)
+/**
+ * 브랜드명·카테고리·경쟁사명 공통. 100자 제한이 없으면 신청 테이블에 소설이 들어온다.
+ *
+ * ★ 메시지를 한국어로 준다. 라우트가 **첫 이슈의 메시지를 그대로 응답에 담고**
+ *   폼이 그것을 그대로 띄우므로, 기본값으로 두면 한국 고객에게
+ *   `Invalid email address`가 보인다(실제로 그랬다).
+ */
+const nameField = (label: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, `${label}을(를) 입력해 주세요`)
+    .max(100, `${label}은(는) 100자를 넘을 수 없습니다`)
 
 /**
  * 사용자 입력에서 호스트명만 뽑는다.
@@ -57,12 +68,19 @@ export function parseHostname(input: string): string | null {
 
 export const auditRequestSchema = z
   .object({
-    brandName: name,
-    category: name,
-    email: z.string().trim().toLowerCase().pipe(z.email()),
+    brandName: nameField('브랜드명'),
+    category: nameField('업종'),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .pipe(z.email('이메일 주소 형식이 올바르지 않습니다')),
     // 개별 값의 trim·중복 제거는 아래 transform이 한다. 여기서는 길이만 막는다 —
-    // `name`을 쓰면 빈 칸을 남긴 사용자가 거부당한다.
-    competitors: z.array(z.string().max(100)).optional().default([]),
+    // `nameField`를 쓰면 빈 칸을 남긴 사용자가 거부당한다.
+    competitors: z
+      .array(z.string().max(100, '경쟁사 이름은 100자를 넘을 수 없습니다'))
+      .optional()
+      .default([]),
     /** 고객 사이트 주소. 선택. `https://` 유무·경로·`www.`가 섞여 들어온다 */
     siteUrl: z.string().trim().optional().default(''),
   })

@@ -25,6 +25,7 @@ const result: AuditResult = {
       mentioned: true,
       context: '첫 번째로 언급',
       sentiment: 'recommended',
+      position: 1,
     },
   ],
   byEngine: { gemini: wilsonInterval(1, 3) },
@@ -98,6 +99,7 @@ describe('auditReportEmail', () => {
           mentioned: false,
           context: null,
           sentiment: null,
+          position: null,
         },
       ],
     }
