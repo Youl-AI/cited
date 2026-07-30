@@ -1,5 +1,5 @@
 import { createHmac, randomBytes } from 'node:crypto'
-import { and, desc, eq, gte, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, ne, sql } from 'drizzle-orm'
 import type { AuditTier } from '@/lib/audit/tiers'
 import { db, schema } from '@/lib/db'
 import type { AuditSource, FreeAudit } from '@/lib/db/schema'
@@ -202,4 +202,31 @@ export async function countRecentByIpHash(ipHash: string, sinceHours: number): P
     .from(schema.freeAudits)
     .where(and(eq(schema.freeAudits.ipHash, ipHash), gte(schema.freeAudits.createdAt, since)))
   return rows[0]?.n ?? 0
+}
+
+/**
+ * 검수 끝난 질의를 동결한다.
+ *
+ * ★ 발송 전(status가 'sent'가 아닐 때)에만 허용한다. 발송 후에 질의를 바꾸면
+ *   저장된 결과와 질의가 어긋나고, 재측정(전후 비교)의 근거가 사라진다.
+ */
+export async function freezeQueries(auditId: string, queries: string[]): Promise<void> {
+  const rows = await db
+    .update(schema.freeAudits)
+    .set({ queries })
+    .where(and(eq(schema.freeAudits.id, auditId), ne(schema.freeAudits.status, 'sent')))
+    .returning({ id: schema.freeAudits.id })
+  if (rows.length === 0) {
+    throw new Error(`동결 실패: ${auditId} — 없는 건이거나 이미 발송됐습니다`)
+  }
+}
+
+/** 개선 가이드 저장. 발송 후에도 허용한다 — 가이드는 측정 조건이 아니라 해설이다 */
+export async function saveGuide(auditId: string, guideMd: string): Promise<void> {
+  const rows = await db
+    .update(schema.freeAudits)
+    .set({ guideMd })
+    .where(eq(schema.freeAudits.id, auditId))
+    .returning({ id: schema.freeAudits.id })
+  if (rows.length === 0) throw new Error(`가이드 저장 실패: 없는 건입니다 (${auditId})`)
 }
