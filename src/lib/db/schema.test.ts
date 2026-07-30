@@ -88,6 +88,23 @@ describe('설계 ②의 핵심 필드', () => {
     // 측정 조건 — 별칭이 언급률을 좌우하므로 재현에 필요하다
     expect(cols).toContain('aliases')
   })
+
+  it('tier는 기본값 free에 enum check가 걸려 있다', () => {
+    const config = getTableConfig(freeAudits)
+    const tier = config.columns.find((c) => c.name === 'tier')
+    expect(tier?.notNull).toBe(true)
+    expect(tier?.default).toBeDefined()
+    expect(config.checks.some((c) => c.name === 'free_audits_tier_check')).toBe(true)
+  })
+
+  it('queries·guide_md·parent_id·region은 nullable이다 — 무료 진단은 채우지 않는다', () => {
+    const config = getTableConfig(freeAudits)
+    for (const name of ['queries', 'guide_md', 'parent_id', 'region']) {
+      const col = config.columns.find((c) => c.name === name)
+      expect(col, name).toBeDefined()
+      expect(col?.notNull, name).toBe(false)
+    }
+  })
 })
 
 // ─────────────────────────────────────────────────────────────
