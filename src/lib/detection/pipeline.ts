@@ -2,6 +2,7 @@ import { computeMetrics } from '@/lib/stats/metrics'
 import type { AnswerRecord, BrandMetrics, DetectionRecord } from '@/lib/stats/metrics'
 import type { JudgeFn } from '@/lib/judge/types'
 import { detectMentions } from './index'
+import { SELF_SUBJECT, competitorSubject } from './subject'
 import type { BrandProfile, DetectionResult } from './types'
 
 /**
@@ -141,8 +142,8 @@ export async function runDetection(
   }
 
   const metrics = computeMetrics(answerRecords, detectionRecords, {
-    self: 'self',
-    competitors: input.competitors.map((c) => `competitor:${c.canonical}`),
+    self: SELF_SUBJECT,
+    competitors: input.competitors.map((c) => competitorSubject(c.canonical)),
   })
 
   return {

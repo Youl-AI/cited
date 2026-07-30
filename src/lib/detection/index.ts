@@ -1,12 +1,15 @@
 import type { JudgeFn, JudgeRequest } from '@/lib/judge/types'
 import { stage1Match } from './stage1'
 import { runStage2 } from './stage2'
+import { SELF_SUBJECT, competitorSubject } from './subject'
 import type { BrandProfile, DetectionResult } from './types'
 
 export * from './types'
 export { stage1Match } from './stage1'
 export { runStage2 } from './stage2'
 export { normalizeKo } from './normalize'
+export { SELF_SUBJECT, competitorSubject, parseSubject } from './subject'
+export type { ParsedSubject } from './subject'
 
 /**
  * 판정 로직 버전.
@@ -82,9 +85,9 @@ export async function detectMentions(
 
   for (const input of inputs) {
     const subjects: { subject: string; brand: BrandProfile }[] = [
-      { subject: 'self', brand: input.self },
+      { subject: SELF_SUBJECT, brand: input.self },
       ...input.competitors.map((c) => ({
-        subject: `competitor:${c.canonical}`,
+        subject: competitorSubject(c.canonical),
         brand: c,
       })),
     ]

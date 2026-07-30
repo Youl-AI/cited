@@ -3208,9 +3208,48 @@ IP 상한(24시간 10회)은 비용 방어가 아니라 신청 테이블이 스�
 > `owner`는 전부 `third-party`가 되며, 화면은 "우리 사이트 인용 여부" 줄을
 > 숨긴다 — 모른다는 것을 0회라고 말하지 않는다.
 
+> ### ★ 2026-07-30(3) — 이 태스크의 코드에 실제 버그가 있었다 (실행 완료)
+>
+> **`subject`는 표시용 브랜드명이 아니다.** 아래 Step 3의 구현은
+> `d.subject === args.brandName`으로 자기 판정을 찾고
+> `mentionCount('29CM')`으로 경쟁사를 센다. 그런데 판정 파이프라인이 쓰는 값은
+> `'self'`와 `` `competitor:${canonical}` ``이다
+> (`src/lib/detection/types.ts`, `detection/index.ts:87`, `stats/metrics.ts:32`).
+>
+> 그대로 두면 **모든 언급 수가 0으로 집계된다.** 그런데 `citedRate`·
+> `shareOfVoice`는 `computeMetrics`가 이미 subject 공간에서 계산해 정상이므로,
+> **"언급률 33%인데 순위표에는 아무도 언급되지 않음"인 리포트가 고객에게
+> 나간다.** 타입은 둘 다 `string`이라 typecheck가 잡지 못한다.
+> Step 1의 테스트 픽스처도 `subject: '무신사'`로 되어 있어 같은 실수를
+> 통과시킨다 — 테스트가 실제 파이프라인과 다른 것을 재고 있었다.
+>
+> **수정:** `src/lib/detection/subject.ts`를 만들어 조립·해체를 한곳에 뒀다
+> (`SELF_SUBJECT`, `competitorSubject`, `parseSubject`). `` `competitor:${…}` ``
+> 템플릿이 세 군데에 흩어져 있던 것이 이 버그의 원인이므로
+> `detection/index.ts`·`detection/pipeline.ts`도 이 함수를 쓰게 바꿨다.
+> `buildAuditResult`는 그 함수로 subject를 조립해 조회하고, 순위표에는
+> **표시용 이름만** 담는다. 테스트 픽스처도 subject 공간으로 고쳤다.
+>
+> **그 밖에 고친 것:**
+> - Step 1의 "증거 원문을 600자로 자른다"는 **자르기를 지워도 통과했다.**
+>   긴 답변을 배열 맨 앞에 넣고 `evidence[0]`을 보는데, 언급된 답변이 먼저
+>   정렬되므로 `evidence[0]`은 짧은 a2다. 긴 답변을 찾아서 길이와 말줄임표를
+>   확인하도록 바꿨다.
+> - Step 1의 "입력을 변형하지 않는다"도 **복사를 지워도 통과했다.** 공유
+>   픽스처를 쓰기 때문에 앞선 테스트가 이미 제자리 정렬해 둔 상태였다.
+>   매번 새 배열을 만들고 순서를 명시적으로 단언한다.
+> - 미언급 판정의 `context`/`sentiment`를 버리는 동작에 테스트가 없었다.
+>   2차 판정은 미언급(`isBrandReference: false`)에도 근거 문장을 채워 주므로,
+>   그대로 노출하면 "이렇게 언급됐습니다: 동명이의 지명으로 판단됨"이 된다.
+> - 한 답변에 self 판정이 둘 이상 올 때(재판정으로 행이 추가되는 경우)
+>   언급된 쪽을 남긴다. 나중 항목으로 덮어쓰면 언급 증거가 미언급으로 보인다.
+>
+> 변이 18건 전부 잡힘 (5건 예정이었으나 subject 규약 관련 3건을 추가했다).
+
 **Files:**
-- Create: `src/lib/audit/result.ts`
-- Test: `src/lib/audit/result.test.ts`
+- Create: `src/lib/audit/result.ts`, `src/lib/detection/subject.ts`
+- Modify: `src/lib/detection/index.ts`, `src/lib/detection/pipeline.ts`
+- Test: `src/lib/audit/result.test.ts`, `src/lib/detection/subject.test.ts`
 
 **Interfaces:**
 - Consumes: `BrandMetrics` (2단계), `Interval`·`formatInterval` (2단계),
