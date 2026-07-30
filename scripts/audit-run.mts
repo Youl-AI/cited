@@ -1,0 +1,158 @@
+/**
+ * 진단 1건을 실행하고 리포트를 메일로 보낸다.
+ *
+ *   pnpm audit:run aud_xxx          실행 후 발송
+ *   pnpm audit:run aud_xxx --dry    실행만 하고 발송하지 않는다 (결과 확인용)
+ *
+ * ★ --dry를 먼저 써라. 초기에는 리포트를 눈으로 보고 나서 보내야 한다.
+ *   자동 공개로 넘어가는 기준이 "손으로 고칠 게 없어진 시점"이다.
+ *
+ * ★ --dry도 **돈이 든다.** 수집과 판정을 실제로 부른다. 저장과 발송만 건너뛴다.
+ */
+import { executeAudit } from '@/lib/audit/execute'
+import { getAudit, markFailed, markRunning, markSent } from '@/lib/audit/repository'
+import { sendEmail } from '@/lib/email/send'
+import { auditReportEmail } from '@/lib/email/templates'
+import { env } from '@/lib/env'
+import { claudeJudge } from '@/lib/judge/claude'
+import { formatInterval, formatPercent } from '@/lib/stats/wilson'
+
+const [auditId, ...flags] = process.argv.slice(2)
+const dry = flags.includes('--dry')
+
+if (!auditId) {
+  console.error('사용법: pnpm audit:run <auditId> [--dry]')
+  process.exit(1)
+}
+
+const audit = await getAudit(auditId)
+if (!audit) {
+  console.error(`신청을 찾을 수 없습니다: ${auditId}`)
+  process.exit(1)
+}
+if (!audit.emailVerified) {
+  // ★ 인증 전에는 절대 실행하지 않는다. 이 게이트가 유일한 방어선이다 —
+  //   인증 없이 실행하면 남의 이메일로 신청한 건에 우리 돈을 쓴다.
+  console.error(`이메일이 인증되지 않았습니다 (status=${audit.status}). 실행하지 않습니다.`)
+  process.exit(1)
+}
+if (audit.status === 'sent' && !dry) {
+  console.error(
+    `이미 발송된 진단입니다 (${audit.sentAt?.toISOString() ?? '시각 불명'}).` +
+      ' 다시 보내려면 --dry로 확인 후 수동 처리하세요.',
+  )
+  process.exit(1)
+}
+
+console.log(`실행: ${audit.brandName} (${audit.category})${dry ? ' [dry]' : ''}`)
+console.log(`경쟁사: ${audit.competitors.join(', ') || '없음'}`)
+console.log(`우리 도메인: ${audit.selfDomains.join(', ') || '없음 (소유 판정 생략)'}`)
+
+if (!dry) await markRunning(audit.id)
+
+const started = Date.now()
+const judgeErrors: string[] = []
+let result
+try {
+  result = await executeAudit(
+    {
+      id: audit.id,
+      brandName: audit.brandName,
+      category: audit.category,
+      competitors: audit.competitors,
+      selfDomains: audit.selfDomains,
+    },
+    {
+      judge: claudeJudge,
+      onProgress: (done, total) => process.stdout.write(`\r  수집 ${done}/${total}`),
+      onStats: (s) =>
+        console.log(
+          `\n  수집 원가 ${(s.costMilliKrw / 1000).toFixed(1)}원 · ` +
+            `${(s.durationMs / 1000).toFixed(1)}초 · 답변 ${s.answers}/${s.attempted}`,
+        ),
+      // ★ 미판정 숫자만 남기면 원인을 모른다. rate limit이면 재실행하면 되고
+      //   스키마 오류면 코드를 고쳐야 한다 — 그 판단에 필요하다.
+      onJudgeError: (error, ids) => {
+        const reason = error instanceof Error ? error.message : String(error)
+        judgeErrors.push(`${ids.length}건: ${reason}`)
+      },
+    },
+  )
+} catch (error) {
+  const reason = error instanceof Error ? error.message : String(error)
+  console.error(`\n실패: ${reason}`)
+  if (!dry) await markFailed(audit.id, reason)
+  process.exit(1)
+}
+
+console.log(`\n총 소요 ${Math.round((Date.now() - started) / 1000)}초`)
+console.log(`언급률 ${formatPercent(result.citedRate.point)} (${formatInterval(result.citedRate)})`)
+console.log(`답변 ${result.totalAnswers}개 · 미판정 ${result.unresolved}건`)
+for (const line of judgeErrors) console.warn(`  판정 실패 — ${line}`)
+
+// ★ 별칭을 반드시 출력한다. 빈 별칭으로 돌면 ChatGPT가 0%로 나오는데, 그것을
+//   실제 결과로 착각해 발송하면 첫 리포트가 틀린 채로 나간다.
+if (result.aliases.length > 0) {
+  console.log(`별칭: ${result.aliases.join(', ')}`)
+} else {
+  console.warn('[경고] 별칭이 비어 있습니다. 별칭 생성이 실패했을 수 있습니다.')
+  console.warn('  ChatGPT 언급률이 0%로 나오면 측정 결과가 아니라 이 문제입니다. 재실행하세요.')
+}
+
+// ★ 엔진별 언급률을 찍는다. "ChatGPT 0% / Gemini 양수"가 별칭 문제의 지문이다.
+console.log('\n엔진별:')
+for (const [engineId, ci] of Object.entries(result.byEngine)) {
+  console.log(`  ${engineId.padEnd(10)} ${formatPercent(ci.point).padStart(5)} (${formatInterval(ci)})`)
+}
+
+console.log('\n순위:')
+for (const r of result.ranking) {
+  console.log(`  ${r.isSelf ? '>' : ' '} ${r.name.padEnd(16)} ${r.mentions}회`)
+}
+
+console.log('\n증거:')
+for (const e of result.evidence) {
+  console.log(`  [${e.mentioned ? '언급' : '미언급'}] ${e.query} · ${e.engineId}`)
+  console.log(`    ${e.text.slice(0, 120)}…`)
+}
+
+console.log(
+  `\nAI가 읽는 출처 — 답변 ${result.sourceSummary.totalAnswers}개 중` +
+    ` ${result.sourceSummary.answersWithCitations}개에 인용 · 도메인 ${result.sourceSummary.distinctDomains}개`,
+)
+for (const s of result.sources.slice(0, 8)) {
+  const tag = s.owner === 'self' ? ' [우리]' : s.owner === 'competitor' ? ' [경쟁사]' : ''
+  console.log(
+    `  ${String(s.answers).padStart(2)}개 ${formatPercent(s.share.point).padStart(6)} ${s.domain}${tag}`,
+  )
+}
+// ★ 도메인을 모르는 것과 0회 인용은 다르다. 섞어서 말하지 않는다.
+if (result.hasSelfDomains) {
+  console.log(
+    result.sourceSummary.selfAnswers > 0
+      ? `  우리 사이트: ${result.sourceSummary.selfAnswers}개 답변에서 인용됨`
+      : '  우리 사이트: 한 번도 인용되지 않음 <- 리포트의 핵심 문장',
+  )
+} else {
+  console.log('  (우리 도메인 미지정 — 소유 판정 없음)')
+}
+
+if (dry) {
+  console.log('\n--dry 모드입니다. 저장·발송하지 않았습니다.')
+  process.exit(0)
+}
+
+const url = `${env.NEXT_PUBLIC_APP_URL}/audit/${audit.id}`
+// ★ 측정에 쓴 별칭을 함께 저장한다. 별칭이 언급률을 좌우하므로, 남기지 않으면
+//   나중에 "이 숫자가 왜 이렇게 낮았나"에 답할 수 없다.
+await markSent(audit.id, result, result.aliases)
+
+const sent = await sendEmail({ to: audit.email, content: auditReportEmail({ result, url }) })
+if (!sent.ok) {
+  // 결과는 이미 저장됐다. 메일만 실패했으므로 링크를 직접 전달할 수 있다.
+  console.error(`\n리포트는 저장했지만 메일 발송에 실패했습니다: ${sent.reason}`)
+  console.error(`수동 전달용 링크: ${url}`)
+  process.exit(1)
+}
+
+console.log(`\n발송 완료 -> ${url}`)

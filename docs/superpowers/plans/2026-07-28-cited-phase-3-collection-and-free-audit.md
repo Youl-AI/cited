@@ -4324,9 +4324,61 @@ sanitizeAliases가 방어하는 것은 오탐이 아니라 100%다. 별칭에 '�
 > **③ `scripts/audit-new.mts`를 추가한다.** 크몽 주문은 웹 폼을 거치지 않는다.
 > Step 8에 CLI 세 개가 된다.
 
+> ### ★ 2026-07-30(3) — 실행 완료. 계획서 코드가 컴파일되지 않았다
+>
+> 아래 본문의 코드에는 **실제 API와 어긋나는 곳이 다섯 군데** 있었다.
+>
+> **① 수집 횟수가 3이 아니라 6이다.** Step 1의 `expect(deps.runOne).toHaveBeenCalledTimes(3)`이
+> 틀렸다. `buildFanout`은 엔진마다 팬아웃하므로 질의 3 × 엔진 2 × 샘플 1 = 6이다.
+> 계획서 Step 9의 설명 자체가 "3질의 × 2엔진 × 1샘플 = 6회"였다 — 테스트와
+> 설명이 서로 달랐다.
+>
+> **② Step 1의 `fakeAnswer`가 answerId를 겹치게 만든다.** `engineId`를
+> `'gemini'`로 고정하고 `queryId`를 `queryText`로 바꾸는데, 그러면 chatgpt
+> 항목과 gemini 항목의 `answerId`가 같아진다. 그 상태에서 `computeMetrics`는
+> 분모를 `answers.length`(6)로 잡고 분자는 answerId 집합(3)으로 세므로
+> **언급률이 정확히 절반으로 나온다.** 리포트는 정상처럼 보이고 숫자만 틀린다.
+> 픽스처가 팬아웃 항목을 그대로 되돌려주도록 고쳤고, 같은 사고를 프로덕션에서
+> 막기 위해 `executeAudit`에 **식별자 중복 검사**를 넣었다.
+>
+> **③ `runDetection`은 `id`가 있는 답변을 요구한다.** 계획서는
+> `collected.answers`를 그대로 넘기는데 `CollectedAnswer`에는 `id`가 없다.
+> `toResultAnswer`로 변환한 배열을 넘긴다.
+>
+> **④ `markSent`는 인자가 3개다** (`auditId, result, aliases`). 계획서의
+> `audit-run.mts`는 2개만 넘긴다. 별칭을 저장하지 않으면 나중에 "이 숫자가 왜
+> 이렇게 낮았나"에 답할 수 없다.
+>
+> **⑤ `hashIp`는 `@/lib/audit/repository`에 있다.** 계획서의 `audit-new.mts`는
+> `@/lib/audit/token`에서 import한다.
+>
+> **그 밖에 추가한 것:**
+> - **`pnpm audit:reject <id> "<사유>"`** — Produces에는 있는데 Step 8에
+>   스크립트가 없었다. 스팸·중복·테스트 행을 대기 목록에서 빼야 하고, 빼지
+>   않으면 `audit:list`가 영원히 "24시간 초과"를 경고해 **진짜 늦은 신청을
+>   못 본다.** 행은 지우지 않고 상태만 바꾼다.
+> - **`onStats`** — `runCollection`이 `costMilliKrw`·`durationMs`를 돌려주는데
+>   계획서는 그것을 버린다. 건당 228원이 실제로 나가므로 운영자가 그 숫자를
+>   봐야 무료 진단을 계속 제공할지 판단할 수 있다.
+> - **`onJudgeError`** — `unresolved` 숫자만 남기면 원인을 모른다. rate limit이면
+>   재실행하면 되고 스키마 오류면 코드를 고쳐야 한다.
+> - **엔진별 언급률 출력** — "ChatGPT 0% / Gemini 양수"가 별칭 문제의 지문이라고
+>   계획서가 적어 뒀는데, CLI가 그 값을 찍지 않아 확인할 수 없었다.
+> - `audit-new`가 폼과 같은 경쟁사 정규화(중복·자기 자신 제거, 상한)를 한다.
+>   이 경로는 폼을 거치지 않는다.
+>
+> **Step 9 실측 완료** — `docs/superpowers/notes/2026-07-30-first-audit-actuals.md`.
+> 핵심: **ChatGPT 100% / Gemini 67%로 역전됐다.** 별칭 생성이 구조적 0%를
+> 없앴다는 것을 처음으로 실제 파이프라인에서 확인했다. 6/6 수집, 223.3원,
+> 42초, 도메인 20개, 우리 사이트 1건 인용.
+>
+> 변이 19건 중 17건 잡힘. 나머지 2건은 동등 변이(`selfDomains ?? []`)와
+> 이 경로에서 관측 불가한 값(스냅샷의 `competitors` — 무료 진단은 스냅샷을
+> 저장하지 않는다)이며, 둘 다 코드에 이유를 적었다.
+
 **Files:**
 - Create: `src/lib/audit/execute.ts`, `scripts/audit-list.mts`,
-  `scripts/audit-new.mts`, `scripts/audit-run.mts`
+  `scripts/audit-new.mts`, `scripts/audit-run.mts`, `scripts/audit-reject.mts`
 - Modify: `src/lib/email/templates.ts`, `package.json`
 - Test: `src/lib/audit/execute.test.ts`, `src/lib/email/audit-report.test.ts`
 

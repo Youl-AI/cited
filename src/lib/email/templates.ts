@@ -4,6 +4,8 @@
 // ★ `./send`를 import하지 않는다. 그러면 Resend SDK와 server-only인
 //   `@/lib/env`가 이 모듈에 딸려 들어와 순수성이 깨진다. 마스킹 함수는
 //   그래서 './mask'에 따로 있다.
+import type { AuditResult } from '@/lib/audit/result'
+import { formatInterval, formatPercent } from '@/lib/stats/wilson'
 import { maskEmail } from './mask'
 
 export interface EmailContent {
@@ -105,6 +107,123 @@ ${row('신청자', maskEmail(audit.email))}
 <p style="margin:0 0 8px">실행 명령:</p>
 <pre style="margin:0 0 16px;padding:12px;background:#faf9f7;border:1px solid #e8e6e1;border-radius:6px;font-size:13px;overflow-x:auto">pnpm audit:run ${escapeHtml(audit.id)}</pre>
 <p style="margin:0;color:#8a8580;font-size:13px">영업일 1일 이내 발송을 약속했습니다.</p>`,
+    ),
+  }
+}
+
+/**
+ * 무료 진단 리포트 메일.
+ *
+ * ★ 리포트의 실질을 **메일 본문에 담는다.** 링크만 보내면 대부분은 안 누른다.
+ *   특히 인용 출처는 0% 고객이 유일하게 집행할 수 있는 정보이므로 본문에 넣는다.
+ *
+ * ★ 신뢰구간을 숨기지 않는다. "33%"만 쓰면 거짓말이다 — 3회 측정 1건의 구간은
+ *   [2%, 87%]다. 이 넓이가 곧 유료 전환의 근거이고, 숨기면 첫 유료 리포트에서
+ *   숫자가 달라졌을 때 답할 수가 없다.
+ */
+export function auditReportEmail(params: { result: AuditResult; url: string }): EmailContent {
+  const { result, url } = params
+  const brand = escapeHtml(result.brandName)
+  const rate = formatPercent(result.citedRate.point)
+
+  const evidence = result.evidence
+    .map(
+      (e) => `<div style="margin:0 0 14px;padding:14px;border:1px solid #e8e6e1;border-radius:8px">
+  <div style="margin:0 0 6px;font-size:13px;color:#8a8580">
+    질문: ${escapeHtml(e.query)} · ${escapeHtml(e.engineId)}
+    ${e.mentioned ? '<span style="color:#1f7a4d">· 언급됨</span>' : '<span style="color:#8a8580">· 언급 없음</span>'}
+  </div>
+  <div style="white-space:pre-wrap;line-height:1.6">${escapeHtml(e.text)}</div>
+</div>`,
+    )
+    .join('')
+
+  const ranking = result.ranking
+    .map(
+      (r) => `<tr>
+  <td style="padding:6px 12px 6px 0">${r.isSelf ? `<strong>${escapeHtml(r.name)}</strong>` : escapeHtml(r.name)}</td>
+  <td style="padding:6px 0;color:#8a8580">${r.mentions}회 / ${result.totalAnswers}개 답변</td>
+</tr>`,
+    )
+    .join('')
+
+  // ★ 경쟁사가 없으면 Share of Voice를 통째로 뺀다. n=0은 "측정 없음"이고,
+  //   0%로 보이면 거짓 정보가 된다. 경쟁사 목록을 함께 쓰는 것도 필수다 —
+  //   경쟁사를 적게 등록할수록 이 숫자가 높아지므로, 숫자만 두면 성과로 읽힌다.
+  const sov =
+    result.shareOfVoice.n > 0
+      ? `<p style="margin:0 0 20px"><strong>Share of Voice ${formatPercent(result.shareOfVoice.point)}</strong> — 등록한 경쟁사(${escapeHtml(result.competitors.join(', '))}) 대비 언급 점유율입니다. 경쟁사를 더 등록하면 이 값은 달라집니다.</p>`
+      : ''
+
+  const unresolved =
+    result.unresolved > 0
+      ? `<p style="margin:0 0 16px;color:#a0651a">${result.unresolved}건은 판정하지 못해 결과에서 제외했습니다.</p>`
+      : ''
+
+  const sourceRows = result.sources
+    .slice(0, 8)
+    .map((s) => {
+      const badge =
+        s.owner === 'self'
+          ? ' <span style="color:#1f7a4d">[우리]</span>'
+          : s.owner === 'competitor'
+            ? ' <span style="color:#a0651a">[경쟁사]</span>'
+            : ''
+      return `<tr>
+  <td style="padding:6px 12px 6px 0">${escapeHtml(s.domain)}${badge}</td>
+  <td style="padding:6px 0;color:#8a8580">${s.answers}개 답변 (${formatPercent(s.share.point)})</td>
+</tr>`
+    })
+    .join('')
+
+  // ★ `hasSelfDomains`가 false면 `selfAnswers === 0`은 "모른다"는 뜻이다.
+  //   그것을 "한 번도 인용되지 않았습니다"로 쓰면 근거 없는 단정이 된다.
+  //   침묵하지도 않는다 — 왜 그 줄이 없는지 고객이 알 수 없으므로 요청으로 바꾼다.
+  const selfLine = !result.hasSelfDomains
+    ? `<p style="margin:0 0 14px;color:#8a8580;font-size:14px">사이트 주소를 알려주시면 다음 측정에서 <strong>${brand} 사이트가 인용되는지</strong> 함께 확인해 드립니다.</p>`
+    : result.sourceSummary.selfAnswers > 0
+      ? `<p style="margin:0 0 14px;color:#1f7a4d;font-size:14px">${brand} 사이트는 ${result.sourceSummary.selfAnswers}개 답변에서 인용됐습니다.</p>`
+      : `<p style="margin:0 0 14px;color:#a0651a;font-size:14px"><strong>${brand} 사이트는 한 번도 인용되지 않았습니다.</strong> AI는 아래 사이트들을 읽고 답을 만들고 있습니다.</p>`
+
+  // ★ 0% 고객에게 유일하게 집행 가능한 정보다. 인용이 하나도 없으면 절을 뺀다 —
+  //   빈 표를 보여주면 측정이 실패한 것처럼 보인다.
+  const sources =
+    result.sources.length > 0
+      ? `<h2 style="margin:0 0 12px;font-size:17px">AI가 읽는 출처</h2>
+<p style="margin:0 0 12px;color:#8a8580;font-size:14px">답변 ${result.sourceSummary.totalAnswers}개 중 ${result.sourceSummary.answersWithCitations}개에 인용이 있었고, 도메인 ${result.sourceSummary.distinctDomains}개가 나왔습니다.</p>
+${selfLine}
+<table style="border-collapse:collapse;margin:0 0 28px;font-size:14px">${sourceRows}</table>`
+      : ''
+
+  return {
+    // 제목은 평문 헤더다 — 이스케이프하지 않는다 (auditVerificationEmail 참고).
+    subject: `[Cited] ${result.brandName} AI 언급률 ${rate} — 진단 리포트`,
+    html: layout(
+      `<h1 style="margin:0 0 8px;font-size:22px;letter-spacing:-0.02em">${brand} 진단 리포트</h1>
+<p style="margin:0 0 24px;color:#8a8580;font-size:14px">${escapeHtml(result.category)} 카테고리 · ${escapeHtml(result.engines.join(', '))} · ${escapeHtml(result.measuredAt.slice(0, 10))} 측정</p>
+
+<div style="margin:0 0 20px;padding:20px;background:#faf9f7;border-radius:10px">
+  <div style="font-size:34px;font-weight:700;line-height:1.1;letter-spacing:-0.03em">${rate}</div>
+  <div style="margin-top:6px;color:#8a8580">답변 ${result.totalAnswers}개 중 ${result.citedRate.k}개에서 언급 · 신뢰구간 ${formatInterval(result.citedRate)}</div>
+</div>
+
+<p style="margin:0 0 24px;padding:14px;border-left:3px solid #e8e6e1;color:#5a5652;font-size:14px">무료 진단은 <strong>질의 3개를 1회</strong> 측정합니다. 그래서 신뢰구간이 ${formatInterval(result.citedRate)}로 넓습니다 — 이 범위 안 어디든 될 수 있다는 뜻입니다. 유료 플랜은 <strong>주 3회</strong> 측정해 이 구간을 좁히고 주간 변화를 판정합니다. 1회 측정으로는 변화를 알 수 없습니다.</p>
+
+${sov}
+${unresolved}
+
+<h2 style="margin:0 0 12px;font-size:17px">브랜드별 언급 횟수</h2>
+<table style="border-collapse:collapse;margin:0 0 28px;font-size:14px">${ranking}</table>
+
+<h2 style="margin:0 0 12px;font-size:17px">실제 AI 답변</h2>
+<p style="margin:0 0 14px;color:#8a8580;font-size:14px">같은 질문을 직접 물어보시면 비슷한 답을 확인하실 수 있습니다.</p>
+${evidence}
+
+${sources}
+
+<p style="margin:20px 0 0;color:#8a8580;font-size:12px">측정 표기: ${escapeHtml([result.brandName, ...result.aliases].join(', '))} · 빠진 표기가 있으면 알려주세요. 표기가 빠지면 언급률이 실제보다 낮게 나옵니다.</p>
+
+<p style="margin:24px 0 0"><a href="${escapeHtml(url)}" style="display:inline-block;background:#1a1a1a;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">전체 리포트 보기</a></p>`,
     ),
   }
 }
