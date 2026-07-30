@@ -50,9 +50,13 @@ function formAlert(page: import('@playwright/test').Page) {
 }
 
 async function fillRequired(page: import('@playwright/test').Page) {
-  await page.getByLabel('브랜드명').fill(FORM.brandName)
-  await page.getByLabel('업종').fill(FORM.category)
-  await page.getByLabel('이메일').fill(FORM.email)
+  // ★ 폼 안으로 범위를 좁힌다. 랜딩에는 질의 프로토콜 카드의 업종 탭
+  //   (`aria-label="업종 선택"`)이 있어서, 페이지 전체에서 '업종'을 찾으면
+  //   부분 일치로 둘이 잡힌다.
+  const form = page.locator('form')
+  await form.getByLabel('브랜드명').fill(FORM.brandName)
+  await form.getByLabel('업종').fill(FORM.category)
+  await form.getByLabel('이메일').fill(FORM.email)
 }
 
 test('랜딩에서 진단을 신청하면 확인 안내로 이동한다', async ({ page }) => {
@@ -88,6 +92,25 @@ test('랜딩에서 진단을 신청하면 확인 안내로 이동한다', async 
     siteUrl: '',
     competitors: ['29CM'],
   })
+})
+
+test('랜딩이 실제 측정 질의를 공개하고 표본과 잇는다', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: '무엇을 묻는지 공개합니다' })).toBeVisible()
+
+  // 패션 템플릿의 실제 질의. `queries.ts`를 고치면 여기도 같이 고쳐야 한다 —
+  // 그게 맞다. 고객에게 공개한 질문이 조용히 바뀌면 안 된다.
+  await expect(page.getByText('가성비 좋은 온라인 패션 쇼핑몰 추천해줘')).toBeVisible()
+
+  // ★ 히어로 표본을 만든 질의에 표식이 붙어 있어야 한다. 표식은 표본 문구와
+  //   템플릿이 문자열까지 일치할 때만 그려지므로, 이 단언이 "위 답변은 이
+  //   질문에서 나왔다"는 랜딩의 주장을 지킨다. 어긋나면 여기서 걸린다.
+  await expect(page.getByText('위 표본의 질문')).toBeVisible()
+
+  // 업종 탭 — 다른 업종의 질의로 바뀐다
+  await page.getByRole('button', { name: '화장품' }).click()
+  await expect(page.getByText('건성 피부에 맞는 수분크림 추천해줘')).toBeVisible()
+  await expect(page.getByText('가성비 좋은 온라인 패션 쇼핑몰 추천해줘')).not.toBeVisible()
 })
 
 test('머리글의 무료 진단 버튼이 신청 페이지로 보낸다', async ({ page }) => {

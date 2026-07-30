@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { AnswerSpecimen } from '@/components/audit/answer-specimen'
 import { AUDIT_FLOW } from '@/components/audit/flow'
+import { QueryProtocol } from '@/components/audit/query-protocol'
 import { RequestForm } from '@/components/audit/request-form'
 import { Button } from '@/components/ui/button'
 import { PLANS, engineLabels } from '@/lib/plans'
@@ -172,6 +173,36 @@ export default function HomePage() {
             </p>
             <RequestForm />
           </div>
+        </div>
+      </section>
+
+      {/* ── 검증 — 질의 프로토콜 ──────────────────────────────
+          "직접 물어서 확인하실 수 있습니다"라는 약속을 실행 가능하게 만드는
+          섹션이다. 질의는 고정 템플릿이라 공개해도 잃을 것이 없고, 방문자가
+          30초 안에 본인 손으로 검증하는 것이 어떤 문구보다 강하다.
+          여기 질의는 측정 파이프라인과 **같은 함수**가 만든다 — 어긋날 수 없다. */}
+      <section className="border-t border-border">
+        <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            무엇을 묻는지 공개합니다
+          </h2>
+          <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
+            질문은 업종마다 고정된 템플릿이고, <strong className="font-medium text-foreground">브랜드명을
+            넣지 않습니다</strong> — 이름을 대고 물으면 AI는 당연히 그 브랜드를 말하니까요.
+            그대로 복사해 ChatGPT에 붙여넣어 보세요.
+          </p>
+
+          <div className="mt-8 max-w-3xl">
+            <QueryProtocol specimenQuery={SPECIMEN.query} />
+          </div>
+
+          {/* ★ 반전 카피. 직접 검증한 사람의 답은 우리 표본과 다를 수 있고,
+              그 순간 "틀렸네?"가 되면 섹션이 역효과다. 그 차이가 바로 이 제품이
+              측정하는 대상(변동성)임을 먼저 말해 둔다. */}
+          <p className="mt-6 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            받은 답이 위 표본과 달라도 정상입니다. AI 답변은 물을 때마다 바뀝니다 — 한 번의
+            측정에 신뢰구간을 붙이는 이유가 그것입니다.
+          </p>
         </div>
       </section>
 
