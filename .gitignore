@@ -43,3 +43,7 @@ next-env.d.ts
 
 # Claude Code 로컬 도구 설정 (플러그인 활성화 등) — 개인 환경 설정이라 공유하지 않는다
 .claude/
+
+# Playwright — 실행 산출물(트레이스·스크린샷)이다. 실패 때만 쌓이고 재실행마다 커진다.
+/test-results/
+/playwright-report/
