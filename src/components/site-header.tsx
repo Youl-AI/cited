@@ -67,8 +67,12 @@ export function SiteHeader({ user }: { user?: HeaderUser }) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-6">
+        {/* ★ 로그인 상태에서도 `/`로 간다. 원래는 `/dashboard`였는데, 지금
+            대시보드는 5단계 전까지 빈 스텁이라 **거기서 나갈 길이 없었다** —
+            로고를 눌러도 제자리, 설정·결제는 "준비 중". 실제로 그렇게 갇혔다.
+            대시보드가 내용을 갖게 되면 `user ? '/dashboard' : '/'`로 되돌린다. */}
         <Link
-          href={user ? '/dashboard' : '/'}
+          href="/"
           className="group inline-flex items-baseline gap-px rounded-sm text-lg font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
         >
           Cited
@@ -113,12 +117,22 @@ export function SiteHeader({ user }: { user?: HeaderUser }) {
             </Button>
           </nav>
         ) : (
+          // ★ 기본 버튼이 `시작하기`(회원가입)였다. 그게 화면에서 가장 강한
+          //   CTA인데, 가입해도 볼 것이 없고(대시보드는 5단계) 결제는 열려
+          //   있지도 않다. 즉 **실제 제품인 무료 진단과 경쟁하면서 빈 곳으로
+          //   보내고 있었다.** 게다가 진단 신청 뒤 "메일함을 확인해 주세요"
+          //   화면 위에 `시작하기`가 떠 있어서, 신청이 회원가입인지 아닌지
+          //   헷갈리게 만들었다.
+          //
+          //   유료가 열리면 되돌린다 — 그때는 `시작하기`가 진짜 시작이 된다.
           <nav className="flex items-center gap-2 text-sm">
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/sign-in">로그인</Link>
+              {/* 로그인 화면이 하단에서 회원가입으로 보낸다. 두 버튼으로 나누면
+                  "나는 어느 쪽이지"를 머리글에서 판단하게 만든다. */}
+              <Link href="/sign-in">로그인 · 회원가입</Link>
             </Button>
             <Button size="sm" asChild>
-              <Link href="/sign-up">시작하기</Link>
+              <Link href="/audit/new">무료 진단 받기</Link>
             </Button>
           </nav>
         )}

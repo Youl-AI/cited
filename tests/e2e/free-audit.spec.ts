@@ -90,6 +90,32 @@ test('랜딩에서 진단을 신청하면 확인 안내로 이동한다', async 
   })
 })
 
+test('머리글의 무료 진단 버튼이 신청 페이지로 보낸다', async ({ page }) => {
+  // ★ 예전에는 이 자리가 `시작하기`(회원가입)였다. 가입해도 볼 것이 없고
+  //   결제도 안 열려 있어서, 화면에서 가장 강한 버튼이 빈 곳으로 보내면서
+  //   실제 제품인 무료 진단과 경쟁했다.
+  await page.goto('/pricing')
+  await page.getByRole('link', { name: '무료 진단 받기' }).click()
+  await expect(page).toHaveURL(/\/audit\/new/)
+  await expect(page.getByRole('button', { name: '무료 진단 신청하기' })).toBeVisible()
+})
+
+test('신청 페이지에서도 신청이 되고, 순서 안내가 함께 보인다', async ({ page }) => {
+  await page.route('**/api/audit/request', (route) => route.fulfill({ json: { ok: true } }))
+  await page.goto('/audit/new')
+
+  // ★ 순서 안내와 "계정 없음"은 폼 **안에** 있다. 폼이 그려지는 곳이면
+  //   어디든 따라와야 한다 — 랜딩에만 있으면 이 페이지로 들어온 사람은
+  //   확인 메일을 회원가입 인증으로 읽는다.
+  await expect(page.getByText(/가입이나 로그인은 필요 없습니다/)).toBeVisible()
+  await expect(page.getByText('메일 확인')).toBeVisible()
+
+  await fillRequired(page)
+  await page.getByRole('button', { name: '무료 진단 신청하기' }).click()
+  await expect(page).toHaveURL(/\/audit\/requested/)
+  await expect(page.getByText(/가입이나 로그인은 필요 없습니다/)).toBeVisible()
+})
+
 test('잘못된 이메일은 제출되지 않는다', async ({ page }) => {
   await page.goto('/')
   await fillRequired(page)

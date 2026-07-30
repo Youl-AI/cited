@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AnswerSpecimen } from '@/components/audit/answer-specimen'
+import { AUDIT_FLOW } from '@/components/audit/flow'
 import { RequestForm } from '@/components/audit/request-form'
 import { Button } from '@/components/ui/button'
 import { PLANS, engineLabels } from '@/lib/plans'
@@ -82,12 +83,9 @@ const MEASURED = {
   ],
 } as const
 
-/** 신청부터 수신까지. **이건 실제 순서**이고 순서가 정보이므로 번호를 붙인다. */
-const FLOW = [
-  { label: '신청', body: '브랜드명·업종·이메일을 넣습니다. 카드 정보는 받지 않습니다.' },
-  { label: '메일 확인', body: '확인 링크를 누르기 전에는 아무것도 실행되지 않습니다.' },
-  { label: '리포트 수신', body: '영업일 1일 이내에 메일로 보내드립니다.' },
-] as const
+// 신청 순서는 `components/audit/flow.tsx`에 한 벌만 둔다 — 폼 안의 압축판과
+// 아래 섹션이 갈리면 "영업일 1일"이 한쪽에서만 사라지는 식으로 약속이
+// 조용히 달라진다.
 
 export default function HomePage() {
   return (
@@ -200,7 +198,7 @@ export default function HomePage() {
       <section className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
         <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">신청하면</h2>
         <ol className="mt-10 grid gap-8 sm:grid-cols-3">
-          {FLOW.map((step, index) => (
+          {AUDIT_FLOW.map((step, index) => (
             <li key={step.label} className="border-t border-foreground/15 pt-4">
               <span className="font-mono text-xs tabular-nums text-muted-foreground">
                 {String(index + 1).padStart(2, '0')}

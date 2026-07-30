@@ -20,17 +20,21 @@ const PLAN_META: Record<PlanId, { name: string; tagline: string; cta: { href: st
   free: {
     name: '무료 진단',
     tagline: '지금 어디쯤인지 한 번 확인합니다.',
-    cta: { href: '/', label: '무료로 신청하기' },
+    cta: { href: '/audit/new', label: '무료로 신청하기' },
   },
+  // ★ 유료 두 칸의 CTA가 `/sign-up`이었다. 결제가 열려 있지 않으므로 가입해도
+  //   대시보드에 볼 것이 없다 — 요금제 화면 아래에서 스스로 "결제는 아직 열리지
+  //   않았습니다"라고 말하면서 가입으로 보내고 있었다. 지금 실제로 받을 수 있는
+  //   것으로 보낸다. 결제가 열리면 `/sign-up`으로 되돌린다.
   starter: {
     name: 'Starter',
     tagline: '변화를 판정할 수 있는 최소 구성입니다.',
-    cta: { href: '/sign-up', label: '시작하기' },
+    cta: { href: '/audit/new', label: '무료 진단부터 받기' },
   },
   business: {
     name: 'Business',
     tagline: '브랜드가 여럿이거나 질의를 넓게 봐야 할 때.',
-    cta: { href: '/sign-up', label: '시작하기' },
+    cta: { href: '/audit/new', label: '무료 진단부터 받기' },
   },
 }
 

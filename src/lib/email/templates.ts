@@ -64,6 +64,7 @@ export function auditVerificationEmail(params: { url: string; brandName: string 
 <p style="margin:24px 0"><a href="${url}" style="display:inline-block;background:#1a1a1a;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">이메일 확인하기</a></p>
 <p style="margin:0 0 8px;color:#8a8580;font-size:13px">버튼이 동작하지 않으면 이 주소를 복사해 브라우저에 붙여넣으세요:<br>${url}</p>
 <p style="margin:16px 0 8px">확인이 끝나면 <strong>영업일 1일 이내</strong>에 진단 리포트를 이 주소로 보내드립니다. 측정은 실제 AI 서비스에 직접 질문해 수행하므로 시간이 걸립니다.</p>
+<p style="margin:0 0 8px;color:#8a8580;font-size:13px"><strong>이 메일은 회원가입 인증이 아닙니다.</strong> 계정은 만들어지지 않았고, 리포트를 보는 데 로그인도 필요 없습니다. 권한 없이 남의 주소로 신청하는 것을 막기 위한 본인 확인입니다.</p>
 <p style="margin:0;color:#8a8580;font-size:13px">본인이 신청하지 않았다면 이 메일을 무시하셔도 됩니다. 확인하지 않으면 아무것도 실행되지 않습니다.</p>`,
     ),
   }

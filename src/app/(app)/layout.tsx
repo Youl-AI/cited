@@ -1,3 +1,4 @@
+import { SiteFooter } from '@/components/site-footer'
 import { SiteHeader } from '@/components/site-header'
 import { requireUser } from '@/lib/session'
 
@@ -31,6 +32,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       >
         {children}
       </main>
+      {/* ★ 푸터에는 전자상거래법 제10조가 요구하는 사업자 표시가 들어 있다.
+          `SiteShell`(공개 화면)에는 붙어 있는데 여기만 빠져 있었다 — 로그인
+          구간 세 화면에서 그 표시가 통째로 없었다는 뜻이다. */}
+      <SiteFooter />
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { NO_ACCOUNT_NOTE } from '@/components/audit/flow'
 import { Button } from '@/components/ui/button'
 
 /**
@@ -18,10 +19,13 @@ const STATES = {
     step: '1 / 2',
     eyebrow: '',
     title: '메일함을 확인해 주세요',
-    body: '방금 보낸 확인 메일의 링크를 눌러야 진단이 시작됩니다. 확인하지 않으면 아무것도 실행되지 않습니다.',
+    // ★ "가입 인증이 아니다"를 여기서 말한다. 이 화면 위에 머리글이 함께
+    //   보이므로, 안 밝히면 방금 한 것이 회원가입인지 아닌지 판단할 근거가
+    //   없다 — 실제로 헷갈렸다.
+    body: '방금 보낸 확인 메일의 링크를 눌러야 진단이 시작됩니다. 확인하지 않으면 아무것도 실행되지 않습니다. 가입 인증이 아니라 본인 확인입니다.',
     note: '몇 분 안에 도착하지 않으면 스팸함을 확인해 주세요. 그래도 없으면 다시 신청해 주세요.',
     tone: 'neutral',
-    action: { href: '/', label: '다시 신청하기' },
+    action: { href: '/audit/new', label: '다시 신청하기' },
   },
   verified: {
     step: '2 / 2',
@@ -49,7 +53,7 @@ const STATES = {
     body: '확인 링크는 발송 후 7일간 유효합니다. 링크가 메일 클라이언트에서 잘렸을 수도 있습니다.',
     note: '다시 신청하시면 새 확인 메일을 보내드립니다.',
     tone: 'error',
-    action: { href: '/', label: '다시 신청하기' },
+    action: { href: '/audit/new', label: '다시 신청하기' },
   },
 } as const
 
@@ -93,6 +97,10 @@ export default async function AuditRequestedPage({
       <p className="mt-4 border-l-2 border-border pl-4 text-sm text-muted-foreground">
         {view.note}
       </p>
+
+      {/* ★ 계정이 없다는 사실을 모든 상태에서 말한다. 머리글에 로그인 버튼이
+          있으므로, 안 밝히면 "로그인해야 결과를 보나?"가 남는다. */}
+      <p className="mt-6 text-sm text-muted-foreground">{NO_ACCOUNT_NOTE}</p>
 
       {view.action && (
         <Button variant="outline" className="mt-8" asChild>

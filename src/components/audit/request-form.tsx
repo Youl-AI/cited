@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
+import { FlowStrip, NO_ACCOUNT_NOTE } from '@/components/audit/flow'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -206,15 +207,20 @@ export function RequestForm() {
         </p>
       )}
 
-      <div className="space-y-3">
-        <Button type="submit" size="lg" className="w-full" disabled={pending}>
-          {pending ? '신청 중…' : '무료 진단 신청하기'}
-        </Button>
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          확인 메일을 보내드립니다. 확인 후 <strong className="font-medium">영업일 1일 이내</strong>에
-          리포트를 메일로 보내드립니다. 카드 정보는 받지 않습니다.
+      {/* ★ 순서를 **누르기 전에** 보여준다. 이게 없으면 확인 메일이 회원가입
+          인증처럼 읽힌다 — 실제로 그렇게 읽혔다. 폼 안에 두는 이유는 폼이
+          렌더링되는 모든 곳(랜딩·`/audit/new`)에서 빠질 수 없게 하기 위함이다. */}
+      <div className="rounded-lg border border-border bg-muted/30 p-4">
+        <FlowStrip className="space-y-2" />
+        <p className="mt-3 border-t border-border pt-3 text-xs leading-relaxed text-muted-foreground">
+          <strong className="font-medium text-foreground">{NO_ACCOUNT_NOTE}</strong> 확인 메일은
+          가입 인증이 아니라 본인 확인입니다. 카드 정보는 받지 않습니다.
         </p>
       </div>
+
+      <Button type="submit" size="lg" className="w-full" disabled={pending}>
+        {pending ? '신청 중…' : '무료 진단 신청하기'}
+      </Button>
     </form>
   )
 }

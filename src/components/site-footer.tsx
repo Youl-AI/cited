@@ -37,8 +37,6 @@ const BUSINESS_ROWS: [string, string][] = (
  * 링크보다 눈에 띄어야 "어디서 개인정보 처리 내용을 확인할 수 있는지"가
  * 분명해진다.
  *
- * `/pricing`은 아직 라우트가 없어 링크를 넣지 않는다(요금은 랜딩 페이지에서
- * 확인할 수 있다) — 나중에 요금제 페이지가 생기면 여기 추가한다.
  */
 export function SiteFooter() {
   return (
@@ -58,13 +56,24 @@ export function SiteFooter() {
                 [1]
               </span>
             </Link>
+            {/* ★ 지금 실제로 하는 것만 적는다. 이전 문구는 "네이버 AI 브리핑 ·
+                Google AI Overviews에서 브랜드 언급을 **매주 자동 추적**"이었는데,
+                그 두 엔진은 아직 붙지 않았고 정기 측정도 열리지 않았다. 이용약관은
+                이미 "현재 제공되는 것은 무료 진단"이라고 고쳤으므로, 모든 화면에
+                깔리는 이 줄만 앞서 나가 있었다. 유료가 열리면 되돌린다. */}
             <p className="max-w-md text-sm text-muted-foreground">
-              ChatGPT · Gemini · 네이버 AI 브리핑 · Google AI Overviews에서 브랜드 언급을 매주
-              자동 추적하는 한국어 GEO 모니터링 도구.
+              ChatGPT와 Gemini에 직접 물어보고, 답변에 브랜드가 나왔는지 세어 기록하는 한국어
+              GEO 모니터링 도구. 지금은 무료 진단을 제공합니다.
             </p>
           </div>
 
           <nav className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            <Link
+              href="/pricing"
+              className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            >
+              요금제
+            </Link>
             <Link
               href="/legal/terms"
               className="text-muted-foreground underline underline-offset-4 hover:text-foreground"
