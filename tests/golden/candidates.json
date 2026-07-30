@@ -49,11 +49,26 @@
         }
       ],
       "labels": {
-        "무신사": null,
-        "29CM": null,
-        "지그재그": null,
-        "에이블리": null,
-        "W컨셉": null
+        "무신사": {
+          "mentioned": true,
+          "position": null
+        },
+        "29CM": {
+          "mentioned": true,
+          "position": null
+        },
+        "지그재그": {
+          "mentioned": true,
+          "position": null
+        },
+        "에이블리": {
+          "mentioned": true,
+          "position": null
+        },
+        "W컨셉": {
+          "mentioned": true,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -105,11 +120,26 @@
         }
       ],
       "labels": {
-        "무신사": null,
-        "29CM": null,
-        "지그재그": null,
-        "에이블리": null,
-        "W컨셉": null
+        "무신사": {
+          "mentioned": true,
+          "position": null
+        },
+        "29CM": {
+          "mentioned": true,
+          "position": null
+        },
+        "지그재그": {
+          "mentioned": false,
+          "position": null
+        },
+        "에이블리": {
+          "mentioned": false,
+          "position": null
+        },
+        "W컨셉": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -161,11 +191,26 @@
         }
       ],
       "labels": {
-        "무신사": null,
-        "29CM": null,
-        "지그재그": null,
-        "에이블리": null,
-        "W컨셉": null
+        "무신사": {
+          "mentioned": true,
+          "position": null
+        },
+        "29CM": {
+          "mentioned": false,
+          "position": null
+        },
+        "지그재그": {
+          "mentioned": false,
+          "position": null
+        },
+        "에이블리": {
+          "mentioned": false,
+          "position": null
+        },
+        "W컨셉": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -217,11 +262,26 @@
         }
       ],
       "labels": {
-        "무신사": null,
-        "29CM": null,
-        "지그재그": null,
-        "에이블리": null,
-        "W컨셉": null
+        "무신사": {
+          "mentioned": true,
+          "position": null
+        },
+        "29CM": {
+          "mentioned": true,
+          "position": null
+        },
+        "지그재그": {
+          "mentioned": true,
+          "position": null
+        },
+        "에이블리": {
+          "mentioned": true,
+          "position": null
+        },
+        "W컨셉": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -273,11 +333,26 @@
         }
       ],
       "labels": {
-        "무신사": null,
-        "29CM": null,
-        "지그재그": null,
-        "에이블리": null,
-        "W컨셉": null
+        "무신사": {
+          "mentioned": false,
+          "position": null
+        },
+        "29CM": {
+          "mentioned": false,
+          "position": null
+        },
+        "지그재그": {
+          "mentioned": false,
+          "position": null
+        },
+        "에이블리": {
+          "mentioned": false,
+          "position": null
+        },
+        "W컨셉": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -329,11 +404,26 @@
         }
       ],
       "labels": {
-        "무신사": null,
-        "29CM": null,
-        "지그재그": null,
-        "에이블리": null,
-        "W컨셉": null
+        "무신사": {
+          "mentioned": true,
+          "position": null
+        },
+        "29CM": {
+          "mentioned": false,
+          "position": null
+        },
+        "지그재그": {
+          "mentioned": false,
+          "position": null
+        },
+        "에이블리": {
+          "mentioned": false,
+          "position": null
+        },
+        "W컨셉": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -385,11 +475,26 @@
         }
       ],
       "labels": {
-        "무신사": null,
-        "29CM": null,
-        "지그재그": null,
-        "에이블리": null,
-        "W컨셉": null
+        "무신사": {
+          "mentioned": true,
+          "position": null
+        },
+        "29CM": {
+          "mentioned": false,
+          "position": null
+        },
+        "지그재그": {
+          "mentioned": false,
+          "position": null
+        },
+        "에이블리": {
+          "mentioned": false,
+          "position": null
+        },
+        "W컨셉": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -441,11 +546,26 @@
         }
       ],
       "labels": {
-        "무신사": null,
-        "29CM": null,
-        "지그재그": null,
-        "에이블리": null,
-        "W컨셉": null
+        "무신사": {
+          "mentioned": true,
+          "position": null
+        },
+        "29CM": {
+          "mentioned": false,
+          "position": null
+        },
+        "지그재그": {
+          "mentioned": false,
+          "position": null
+        },
+        "에이블리": {
+          "mentioned": false,
+          "position": null
+        },
+        "W컨셉": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -500,11 +620,26 @@
         }
       ],
       "labels": {
-        "아식스": null,
-        "나이키": null,
-        "뉴발란스": null,
-        "호카": null,
-        "아디다스": null
+        "아식스": {
+          "mentioned": true,
+          "position": null
+        },
+        "나이키": {
+          "mentioned": true,
+          "position": null
+        },
+        "뉴발란스": {
+          "mentioned": true,
+          "position": null
+        },
+        "호카": {
+          "mentioned": true,
+          "position": null
+        },
+        "아디다스": {
+          "mentioned": true,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -559,11 +694,26 @@
         }
       ],
       "labels": {
-        "아식스": null,
-        "나이키": null,
-        "뉴발란스": null,
-        "호카": null,
-        "아디다스": null
+        "아식스": {
+          "mentioned": true,
+          "position": null
+        },
+        "나이키": {
+          "mentioned": false,
+          "position": null
+        },
+        "뉴발란스": {
+          "mentioned": true,
+          "position": null
+        },
+        "호카": {
+          "mentioned": true,
+          "position": null
+        },
+        "아디다스": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -618,11 +768,26 @@
         }
       ],
       "labels": {
-        "아식스": null,
-        "나이키": null,
-        "뉴발란스": null,
-        "호카": null,
-        "아디다스": null
+        "아식스": {
+          "mentioned": true,
+          "position": null
+        },
+        "나이키": {
+          "mentioned": true,
+          "position": null
+        },
+        "뉴발란스": {
+          "mentioned": true,
+          "position": null
+        },
+        "호카": {
+          "mentioned": false,
+          "position": null
+        },
+        "아디다스": {
+          "mentioned": true,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -677,11 +842,26 @@
         }
       ],
       "labels": {
-        "아식스": null,
-        "나이키": null,
-        "뉴발란스": null,
-        "호카": null,
-        "아디다스": null
+        "아식스": {
+          "mentioned": true,
+          "position": null
+        },
+        "나이키": {
+          "mentioned": true,
+          "position": null
+        },
+        "뉴발란스": {
+          "mentioned": true,
+          "position": null
+        },
+        "호카": {
+          "mentioned": true,
+          "position": null
+        },
+        "아디다스": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -736,11 +916,26 @@
         }
       ],
       "labels": {
-        "아식스": null,
-        "나이키": null,
-        "뉴발란스": null,
-        "호카": null,
-        "아디다스": null
+        "아식스": {
+          "mentioned": true,
+          "position": null
+        },
+        "나이키": {
+          "mentioned": true,
+          "position": null
+        },
+        "뉴발란스": {
+          "mentioned": true,
+          "position": null
+        },
+        "호카": {
+          "mentioned": false,
+          "position": null
+        },
+        "아디다스": {
+          "mentioned": true,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -795,11 +990,26 @@
         }
       ],
       "labels": {
-        "아식스": null,
-        "나이키": null,
-        "뉴발란스": null,
-        "호카": null,
-        "아디다스": null
+        "아식스": {
+          "mentioned": true,
+          "position": null
+        },
+        "나이키": {
+          "mentioned": false,
+          "position": null
+        },
+        "뉴발란스": {
+          "mentioned": true,
+          "position": null
+        },
+        "호카": {
+          "mentioned": true,
+          "position": null
+        },
+        "아디다스": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -854,11 +1064,26 @@
         }
       ],
       "labels": {
-        "아식스": null,
-        "나이키": null,
-        "뉴발란스": null,
-        "호카": null,
-        "아디다스": null
+        "아식스": {
+          "mentioned": true,
+          "position": null
+        },
+        "나이키": {
+          "mentioned": true,
+          "position": null
+        },
+        "뉴발란스": {
+          "mentioned": true,
+          "position": null
+        },
+        "호카": {
+          "mentioned": true,
+          "position": null
+        },
+        "아디다스": {
+          "mentioned": true,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -913,11 +1138,26 @@
         }
       ],
       "labels": {
-        "아식스": null,
-        "나이키": null,
-        "뉴발란스": null,
-        "호카": null,
-        "아디다스": null
+        "아식스": {
+          "mentioned": true,
+          "position": null
+        },
+        "나이키": {
+          "mentioned": true,
+          "position": null
+        },
+        "뉴발란스": {
+          "mentioned": false,
+          "position": null
+        },
+        "호카": {
+          "mentioned": false,
+          "position": null
+        },
+        "아디다스": {
+          "mentioned": true,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -965,11 +1205,26 @@
         }
       ],
       "labels": {
-        "당근": null,
-        "크림": null,
-        "번개장터": null,
-        "중고나라": null,
-        "헬로마켓": null
+        "당근": {
+          "mentioned": true,
+          "position": null
+        },
+        "크림": {
+          "mentioned": false,
+          "position": null
+        },
+        "번개장터": {
+          "mentioned": true,
+          "position": null
+        },
+        "중고나라": {
+          "mentioned": true,
+          "position": null
+        },
+        "헬로마켓": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1017,11 +1272,26 @@
         }
       ],
       "labels": {
-        "당근": null,
-        "크림": null,
-        "번개장터": null,
-        "중고나라": null,
-        "헬로마켓": null
+        "당근": {
+          "mentioned": true,
+          "position": null
+        },
+        "크림": {
+          "mentioned": false,
+          "position": null
+        },
+        "번개장터": {
+          "mentioned": true,
+          "position": null
+        },
+        "중고나라": {
+          "mentioned": true,
+          "position": null
+        },
+        "헬로마켓": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1069,11 +1339,26 @@
         }
       ],
       "labels": {
-        "당근": null,
-        "크림": null,
-        "번개장터": null,
-        "중고나라": null,
-        "헬로마켓": null
+        "당근": {
+          "mentioned": false,
+          "position": null
+        },
+        "크림": {
+          "mentioned": true,
+          "position": null
+        },
+        "번개장터": {
+          "mentioned": false,
+          "position": null
+        },
+        "중고나라": {
+          "mentioned": false,
+          "position": null
+        },
+        "헬로마켓": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1121,11 +1406,26 @@
         }
       ],
       "labels": {
-        "당근": null,
-        "크림": null,
-        "번개장터": null,
-        "중고나라": null,
-        "헬로마켓": null
+        "당근": {
+          "mentioned": true,
+          "position": null
+        },
+        "크림": {
+          "mentioned": false,
+          "position": null
+        },
+        "번개장터": {
+          "mentioned": true,
+          "position": null
+        },
+        "중고나라": {
+          "mentioned": true,
+          "position": null
+        },
+        "헬로마켓": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1173,11 +1473,26 @@
         }
       ],
       "labels": {
-        "당근": null,
-        "크림": null,
-        "번개장터": null,
-        "중고나라": null,
-        "헬로마켓": null
+        "당근": {
+          "mentioned": true,
+          "position": null
+        },
+        "크림": {
+          "mentioned": false,
+          "position": null
+        },
+        "번개장터": {
+          "mentioned": true,
+          "position": null
+        },
+        "중고나라": {
+          "mentioned": true,
+          "position": null
+        },
+        "헬로마켓": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1225,11 +1540,26 @@
         }
       ],
       "labels": {
-        "당근": null,
-        "크림": null,
-        "번개장터": null,
-        "중고나라": null,
-        "헬로마켓": null
+        "당근": {
+          "mentioned": true,
+          "position": null
+        },
+        "크림": {
+          "mentioned": false,
+          "position": null
+        },
+        "번개장터": {
+          "mentioned": true,
+          "position": null
+        },
+        "중고나라": {
+          "mentioned": true,
+          "position": null
+        },
+        "헬로마켓": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1277,11 +1607,26 @@
         }
       ],
       "labels": {
-        "당근": null,
-        "크림": null,
-        "번개장터": null,
-        "중고나라": null,
-        "헬로마켓": null
+        "당근": {
+          "mentioned": false,
+          "position": null
+        },
+        "크림": {
+          "mentioned": false,
+          "position": null
+        },
+        "번개장터": {
+          "mentioned": false,
+          "position": null
+        },
+        "중고나라": {
+          "mentioned": false,
+          "position": null
+        },
+        "헬로마켓": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1329,11 +1674,26 @@
         }
       ],
       "labels": {
-        "당근": null,
-        "크림": null,
-        "번개장터": null,
-        "중고나라": null,
-        "헬로마켓": null
+        "당근": {
+          "mentioned": true,
+          "position": null
+        },
+        "크림": {
+          "mentioned": false,
+          "position": null
+        },
+        "번개장터": {
+          "mentioned": true,
+          "position": null
+        },
+        "중고나라": {
+          "mentioned": true,
+          "position": null
+        },
+        "헬로마켓": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1385,11 +1745,26 @@
         }
       ],
       "labels": {
-        "토스": null,
-        "카카오뱅크": null,
-        "케이뱅크": null,
-        "뱅크샐러드": null,
-        "신한은행": null
+        "토스": {
+          "mentioned": true,
+          "position": null
+        },
+        "카카오뱅크": {
+          "mentioned": true,
+          "position": null
+        },
+        "케이뱅크": {
+          "mentioned": false,
+          "position": null
+        },
+        "뱅크샐러드": {
+          "mentioned": false,
+          "position": null
+        },
+        "신한은행": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1441,11 +1816,26 @@
         }
       ],
       "labels": {
-        "토스": null,
-        "카카오뱅크": null,
-        "케이뱅크": null,
-        "뱅크샐러드": null,
-        "신한은행": null
+        "토스": {
+          "mentioned": true,
+          "position": null
+        },
+        "카카오뱅크": {
+          "mentioned": true,
+          "position": null
+        },
+        "케이뱅크": {
+          "mentioned": true,
+          "position": null
+        },
+        "뱅크샐러드": {
+          "mentioned": false,
+          "position": null
+        },
+        "신한은행": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1497,11 +1887,26 @@
         }
       ],
       "labels": {
-        "토스": null,
-        "카카오뱅크": null,
-        "케이뱅크": null,
-        "뱅크샐러드": null,
-        "신한은행": null
+        "토스": {
+          "mentioned": true,
+          "position": null
+        },
+        "카카오뱅크": {
+          "mentioned": false,
+          "position": null
+        },
+        "케이뱅크": {
+          "mentioned": false,
+          "position": null
+        },
+        "뱅크샐러드": {
+          "mentioned": true,
+          "position": null
+        },
+        "신한은행": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1553,11 +1958,26 @@
         }
       ],
       "labels": {
-        "토스": null,
-        "카카오뱅크": null,
-        "케이뱅크": null,
-        "뱅크샐러드": null,
-        "신한은행": null
+        "토스": {
+          "mentioned": true,
+          "position": null
+        },
+        "카카오뱅크": {
+          "mentioned": true,
+          "position": null
+        },
+        "케이뱅크": {
+          "mentioned": false,
+          "position": null
+        },
+        "뱅크샐러드": {
+          "mentioned": false,
+          "position": null
+        },
+        "신한은행": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1609,11 +2029,26 @@
         }
       ],
       "labels": {
-        "토스": null,
-        "카카오뱅크": null,
-        "케이뱅크": null,
-        "뱅크샐러드": null,
-        "신한은행": null
+        "토스": {
+          "mentioned": true,
+          "position": null
+        },
+        "카카오뱅크": {
+          "mentioned": true,
+          "position": null
+        },
+        "케이뱅크": {
+          "mentioned": true,
+          "position": null
+        },
+        "뱅크샐러드": {
+          "mentioned": false,
+          "position": null
+        },
+        "신한은행": {
+          "mentioned": true,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1665,11 +2100,26 @@
         }
       ],
       "labels": {
-        "토스": null,
-        "카카오뱅크": null,
-        "케이뱅크": null,
-        "뱅크샐러드": null,
-        "신한은행": null
+        "토스": {
+          "mentioned": true,
+          "position": null
+        },
+        "카카오뱅크": {
+          "mentioned": true,
+          "position": null
+        },
+        "케이뱅크": {
+          "mentioned": false,
+          "position": null
+        },
+        "뱅크샐러드": {
+          "mentioned": false,
+          "position": null
+        },
+        "신한은행": {
+          "mentioned": true,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1721,11 +2171,26 @@
         }
       ],
       "labels": {
-        "토스": null,
-        "카카오뱅크": null,
-        "케이뱅크": null,
-        "뱅크샐러드": null,
-        "신한은행": null
+        "토스": {
+          "mentioned": true,
+          "position": null
+        },
+        "카카오뱅크": {
+          "mentioned": true,
+          "position": null
+        },
+        "케이뱅크": {
+          "mentioned": false,
+          "position": null
+        },
+        "뱅크샐러드": {
+          "mentioned": false,
+          "position": null
+        },
+        "신한은행": {
+          "mentioned": true,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1777,11 +2242,26 @@
         }
       ],
       "labels": {
-        "토스": null,
-        "카카오뱅크": null,
-        "케이뱅크": null,
-        "뱅크샐러드": null,
-        "신한은행": null
+        "토스": {
+          "mentioned": true,
+          "position": null
+        },
+        "카카오뱅크": {
+          "mentioned": false,
+          "position": null
+        },
+        "케이뱅크": {
+          "mentioned": false,
+          "position": null
+        },
+        "뱅크샐러드": {
+          "mentioned": false,
+          "position": null
+        },
+        "신한은행": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1832,11 +2312,26 @@
         }
       ],
       "labels": {
-        "라운드랩": null,
-        "토리든": null,
-        "아누아": null,
-        "닥터지": null,
-        "이니스프리": null
+        "라운드랩": {
+          "mentioned": true,
+          "position": null
+        },
+        "토리든": {
+          "mentioned": true,
+          "position": null
+        },
+        "아누아": {
+          "mentioned": false,
+          "position": null
+        },
+        "닥터지": {
+          "mentioned": true,
+          "position": null
+        },
+        "이니스프리": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1887,11 +2382,26 @@
         }
       ],
       "labels": {
-        "라운드랩": null,
-        "토리든": null,
-        "아누아": null,
-        "닥터지": null,
-        "이니스프리": null
+        "라운드랩": {
+          "mentioned": false,
+          "position": null
+        },
+        "토리든": {
+          "mentioned": false,
+          "position": null
+        },
+        "아누아": {
+          "mentioned": false,
+          "position": null
+        },
+        "닥터지": {
+          "mentioned": true,
+          "position": null
+        },
+        "이니스프리": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1942,11 +2452,26 @@
         }
       ],
       "labels": {
-        "라운드랩": null,
-        "토리든": null,
-        "아누아": null,
-        "닥터지": null,
-        "이니스프리": null
+        "라운드랩": {
+          "mentioned": false,
+          "position": null
+        },
+        "토리든": {
+          "mentioned": false,
+          "position": null
+        },
+        "아누아": {
+          "mentioned": false,
+          "position": null
+        },
+        "닥터지": {
+          "mentioned": false,
+          "position": null
+        },
+        "이니스프리": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -1997,11 +2522,26 @@
         }
       ],
       "labels": {
-        "라운드랩": null,
-        "토리든": null,
-        "아누아": null,
-        "닥터지": null,
-        "이니스프리": null
+        "라운드랩": {
+          "mentioned": true,
+          "position": null
+        },
+        "토리든": {
+          "mentioned": true,
+          "position": null
+        },
+        "아누아": {
+          "mentioned": false,
+          "position": null
+        },
+        "닥터지": {
+          "mentioned": true,
+          "position": null
+        },
+        "이니스프리": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -2052,11 +2592,26 @@
         }
       ],
       "labels": {
-        "라운드랩": null,
-        "토리든": null,
-        "아누아": null,
-        "닥터지": null,
-        "이니스프리": null
+        "라운드랩": {
+          "mentioned": true,
+          "position": null
+        },
+        "토리든": {
+          "mentioned": false,
+          "position": null
+        },
+        "아누아": {
+          "mentioned": false,
+          "position": null
+        },
+        "닥터지": {
+          "mentioned": true,
+          "position": null
+        },
+        "이니스프리": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -2107,11 +2662,26 @@
         }
       ],
       "labels": {
-        "라운드랩": null,
-        "토리든": null,
-        "아누아": null,
-        "닥터지": null,
-        "이니스프리": null
+        "라운드랩": {
+          "mentioned": false,
+          "position": null
+        },
+        "토리든": {
+          "mentioned": false,
+          "position": null
+        },
+        "아누아": {
+          "mentioned": false,
+          "position": null
+        },
+        "닥터지": {
+          "mentioned": false,
+          "position": null
+        },
+        "이니스프리": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -2162,11 +2732,26 @@
         }
       ],
       "labels": {
-        "라운드랩": null,
-        "토리든": null,
-        "아누아": null,
-        "닥터지": null,
-        "이니스프리": null
+        "라운드랩": {
+          "mentioned": false,
+          "position": null
+        },
+        "토리든": {
+          "mentioned": true,
+          "position": null
+        },
+        "아누아": {
+          "mentioned": false,
+          "position": null
+        },
+        "닥터지": {
+          "mentioned": false,
+          "position": null
+        },
+        "이니스프리": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     },
@@ -2217,11 +2802,26 @@
         }
       ],
       "labels": {
-        "라운드랩": null,
-        "토리든": null,
-        "아누아": null,
-        "닥터지": null,
-        "이니스프리": null
+        "라운드랩": {
+          "mentioned": true,
+          "position": null
+        },
+        "토리든": {
+          "mentioned": true,
+          "position": null
+        },
+        "아누아": {
+          "mentioned": false,
+          "position": null
+        },
+        "닥터지": {
+          "mentioned": false,
+          "position": null
+        },
+        "이니스프리": {
+          "mentioned": false,
+          "position": null
+        }
       },
       "note": ""
     }

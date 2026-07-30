@@ -37,6 +37,22 @@ jobs:
             git --no-pager diff -- drizzle
             exit 1
           fi
+      # 판정 정확도 게이트. recall < 95% 또는 precision < 90%면 빌드가 막힌다.
+      # 설계 ③: 검증하지 않은 숫자는 주장일 뿐이다. 판정기가 틀리면 고객에게
+      # 보내는 숫자 전체가 거짓말이고, 고객은 자기 브랜드니까 금방 알아챈다.
+      #
+      # ★ 이 스텝은 **실제 판정 API를 부르므로 실행마다 돈이 나간다** (라벨
+      #   200건 = 약 20원). 그래서 pnpm test와 분리해 두었다.
+      #   조용히 건너뛰지 않는다 — 키가 없으면 실패한다. 게이트가 꺼진 채
+      #   초록불이 뜨는 것이 게이트가 없는 것보다 나쁘다.
+      #
+      #   저장소 Settings > Secrets and variables > Actions 에
+      #   ANTHROPIC_API_KEY를 등록해야 한다.
+      - name: 골드 라벨 회귀 (판정 정확도 게이트)
+        timeout-minutes: 15
+        run: pnpm test:golden
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       - run: pnpm build
         env:
           # 빌드만 통과시키기 위한 더미. 실제 값이 아니어야 한다.

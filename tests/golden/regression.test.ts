@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { detectMentions } from '@/lib/detection'
 import { mistakes, score } from '@/lib/detection/evaluate'
 import type { BrandProfile } from '@/lib/detection/types'
-import { claudeJudge } from '@/lib/judge/claude'
+import { estimateJudgeCostKrw } from '@/lib/engines/pricing'
+import { createClaudeJudge } from '@/lib/judge/claude'
 
 /**
  * 골드 라벨 회귀 — 판정 정확도 게이트.
@@ -63,6 +64,17 @@ describe('골드 라벨 회귀 — 판정 정확도 게이트', () => {
   it(`recall ≥ ${MIN_RECALL * 100}% · precision ≥ ${MIN_PRECISION * 100}%`, async () => {
     const labels = loadLabels()
 
+    // 이 게이트는 CI에서 매 PR마다 돌고 **실제로 돈이 나간다.** 원가를 출력해
+    // 두면 라벨을 늘렸을 때 CI 비용이 어떻게 변하는지 바로 보인다.
+    let tokensIn = 0
+    let tokensOut = 0
+    const judge = createClaudeJudge({
+      onUsage: (u) => {
+        tokensIn += u.tokensIn
+        tokensOut += u.tokensOut
+      },
+    })
+
     // 라벨 한 건 = (답변 1개 × 브랜드 1개). detectMentions에는 주체 하나짜리
     // 입력으로 넣는다 — 라벨이 그 단위로 붙어 있기 때문이다.
     const results = await detectMentions(
@@ -72,7 +84,7 @@ describe('골드 라벨 회귀 — 판정 정확도 게이트', () => {
         self: l.brand,
         competitors: [],
       })),
-      claudeJudge,
+      judge,
       { batchSize: 20, onBatchError: (e, ids) => console.error('배치 실패', ids.length, e) },
     )
 
@@ -85,7 +97,9 @@ describe('골드 라벨 회귀 — 판정 정확도 게이트', () => {
     console.log(
       `\n판정 정확도  recall ${pct(s.recall)} · precision ${pct(s.precision)}\n` +
         `TP ${s.tp} / FP ${s.fp} / FN ${s.fn} / TN ${s.tn}` +
-        (s.missing.length > 0 ? ` / 미측정 ${s.missing.length}` : ''),
+        (s.missing.length > 0 ? ` / 미측정 ${s.missing.length}` : '') +
+        `\n라벨 ${labels.length}건 · 판정 원가 ${estimateJudgeCostKrw(tokensIn, tokensOut)}원` +
+        ` (in ${tokensIn} / out ${tokensOut})`,
     )
 
     const wrong = mistakes(labels, predicted)
