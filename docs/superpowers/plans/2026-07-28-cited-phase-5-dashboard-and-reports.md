@@ -45,8 +45,36 @@
 | `src/components/dashboard/trend-chart.tsx` | 추이 차트 (신뢰구간 띠) |
 | `src/components/dashboard/completeness-badge.tsx` | 불완전 수집 배지 |
 | `src/components/dashboard/brand-switcher.tsx` | Business 브랜드 전환 |
+| `src/components/dashboard/sources-card.tsx` | **AI가 읽는 출처 (아래 ★ 참고)** |
 | `src/app/api/export/[brandId]/route.ts` | CSV 내보내기 |
 | `src/app/(app)/settings/**` | 브랜드·질의·별칭·경쟁사 편집 |
+
+---
+
+## ★ 2026-07-30(2) 추가 — 「AI가 읽는 출처」 카드가 빠져 있다
+
+이 계획에는 인용 출처가 **한 번도 나오지 않는다.** 2단계에서
+`src/lib/stats/sources.ts`를 만들었고(`aggregateSources`·`summarizeSources`),
+3단계 무료 진단 리포트에는 들어간다. 유료 대시보드에 없으면 **무료 리포트가
+유료 대시보드보다 많은 것을 알려주는** 상태가 된다.
+
+**이 카드가 유료에서 더 중요한 이유:** 무료는 1회 측정이라 출처가 스냅샷이지만,
+유료는 주 3회씩 쌓인다. 그러면 **출처가 시간에 따라 바뀌는 것**을 볼 수 있다 —
+"3주 전부터 `namu.wiki` 대신 `oo블로그`가 인용되기 시작했다"는 무료로는 원리적으로
+줄 수 없는 정보이고, 언급률 변화보다 먼저 움직이는 선행 지표다.
+
+**Task 3(대시보드 화면)에 카드를 하나 더 넣는다.** 지켜야 할 것:
+
+- `aggregateSources`를 그대로 쓴다. 대시보드가 자체 집계 로직을 만들지 않는다
+  (화살표를 `judgeChange`만 쓰는 것과 같은 이유다)
+- **분모는 그 기간의 전체 답변 수다.** 인용이 있는 답변만 분모로 잡으면 비율이
+  뻥튀겨진다
+- **`brands.selfDomains`가 비어 있으면 소유 판정을 하지 않는다.**
+  `selfAnswers === 0`은 "인용되지 않았다"와 "도메인을 몰라서 못 셌다" 두 가지
+  뜻이고, 후자를 "한 번도 인용되지 않았습니다"로 쓰면 근거 없는 단정이 된다.
+  대신 설정으로 유도한다 — 4단계 온보딩에서 받지만 건너뛴 고객이 있다
+- **CSV 내보내기(Task 5)에 출처 시트를 포함한다.** Business 고객이 이것을 가장
+  많이 가공한다 — 어느 사이트에 콘텐츠를 넣을지가 실제 집행 항목이다
 
 ---
 

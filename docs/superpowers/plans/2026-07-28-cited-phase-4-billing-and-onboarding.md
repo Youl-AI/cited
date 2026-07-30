@@ -1851,14 +1851,51 @@ orderId 멱등키로 이중 청구를 막고, 실패해도 즉시 끊지 않는�
 
 ### Task 6: 온보딩 생성기
 
+> ### ★ 2026-07-30(2) 조정 — 별칭 생성기를 여기서 새로 만들지 않는다
+>
+> 3단계에 **Task 6-2 `src/lib/audit/aliases.ts`**가 생겼다(2026-07-30 실측
+> 반영). 아래 본문의 `generateAliases`는 그것과 **이름이 같고 시그니처가
+> 다르다** — 본문 것은 브랜드 1개(`brandName, category`), 3단계 것은 여러 개를
+> 한 번에 받는다(`brands, category`).
+>
+> **3단계 것을 쓴다. 여기서 다시 만들지 마라.** 이유는 취향이 아니다:
+>
+> - 무료 진단과 유료 측정이 **다른 별칭으로** 측정되면 전환한 고객의 언급률이
+>   달라지고, "무료에선 33%였는데 유료는 18%네요"에 답할 수가 없다. 이는
+>   `judgeChange`가 엔진 구성이 다른 주끼리 `incomparable`을 돌려주는 것과
+>   **정확히 같은 이유**다.
+> - **경쟁사 별칭도 필요하다.** 본문의 단일 브랜드 시그니처로는 경쟁사에 별칭을
+>   줄 수가 없고, 경쟁사 별칭이 없으면 경쟁사가 과소 계상되어 Share of Voice가
+>   **우리에게 유리한 쪽으로** 틀린다.
+> - 프롬프트가 두 곳에 갈리면 한쪽만 고쳐지고 그 차이를 아무도 못 본다.
+>   3단계 `aliases.ts`의 `SYSTEM_PROMPT`는 **측정 도구의 일부**다.
+>
+> **이 태스크에서 할 일:**
+>
+> 1. `generateAliases`를 **만들지 않는다.** `@/lib/audit/aliases`의
+>    `createAliasGenerator`·`generateAliases`·`toBrandProfiles`를 재export하거나
+>    직접 import한다. 아래 본문의 별칭 관련 Step·테스트(`parseAliasResponse`,
+>    "별칭이 20개를 넘으면 자른다" 등)는 3단계에서 이미
+>    `sanitizeAliases`로 검증했으므로 **중복이다 — 옮기지 않는다.**
+> 2. 온보딩은 **자기 브랜드와 경쟁사를 한 번에** 넘긴다. 경쟁사 확정 단계 뒤에
+>    한 번 더 부르는 것이 아니라, 경쟁사가 정해진 시점에 함께 생성한다.
+> 3. 생성 결과를 **고객이 보고 고칠 수 있게** 한다(아래 본문의 별칭 확인
+>    단계는 그대로 유지). 고객이 자기 브랜드 표기를 가장 잘 알고, 그 수정이
+>    다음 측정의 정확도를 올린다.
+> 4. `brands.aliases`에 저장할 때 `sanitizeAliases`를 **한 번 더 거친다.**
+>    고객이 손으로 `패션`을 넣을 수 있고, 그러면 언급률이 100%가 된다.
+>
+> `generateQueries`·`suggestCompetitors`는 3단계에 없다 — 아래 본문대로 만든다.
+
 **Files:**
 - Create: `src/lib/onboarding/generate.ts`, `src/lib/onboarding/prompt.ts`
 - Test: `src/lib/onboarding/generate.test.ts`
 
 **Interfaces:**
-- Consumes: `@anthropic-ai/sdk`, `generateAuditQueries` (3단계)
+- Consumes: `@anthropic-ai/sdk`, `generateAuditQueries` (3단계),
+  **`generateAliases`·`sanitizeAliases`·`toBrandProfiles` (3단계 Task 6-2)**
 - Produces:
-  - `generateAliases(brandName, category): Promise<{ aliases: string[]; ambiguous: boolean }>`
+  - ~~`generateAliases(brandName, category)`~~ — **3단계 것을 쓴다** (위 ★ 참고)
   - `generateQueries(brandName, category, count): Promise<string[]>`
   - `suggestCompetitors(auditResult, brandName): string[]` — 순수 함수
   - 온보딩 마법사가 소비한다

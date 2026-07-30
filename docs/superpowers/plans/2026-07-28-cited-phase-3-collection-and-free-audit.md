@@ -71,6 +71,75 @@
 
 ---
 
+## ★ 2026-07-30(2) 2단계 실측 반영 — 세 가지를 더 바꾼다
+
+위 설계 변경은 **배송 방식**을 바꿨다. 이 절은 2단계를 실제 API로 끝까지 돌려
+보고 나서 드러난 **측정 자체의 결함**을 반영한다. 근거는
+`docs/superpowers/notes/2026-07-30-pipeline-actuals.md`와
+`2026-07-30-citation-sources.md`에 실측치로 남아 있다.
+
+### ① 별칭 없이는 ChatGPT 언급률이 구조적으로 0%다 (치명)
+
+같은 질의, 같은 시스템 프롬프트인데 두 엔진이 브랜드명을 **서로 다른 문자로
+쓴다.** 실측에서 예외가 한 건도 없었다.
+
+| 엔진 | 아식스 | ASICS |
+| --- | --- | --- |
+| ChatGPT (`gpt-5-mini`) | ✗ | ✓ |
+| Gemini (`gemini-3.5-flash-lite`) | ✓ | ✗ |
+
+```
+별칭 없음:  ChatGPT  0%   Gemini 100%   전체 50%
+별칭 있음:  ChatGPT 50%   Gemini 100%   전체 75%
+```
+
+**Task 7의 `executeAudit`은 `aliases: []`를 넘기도록 적혀 있다.** 그대로
+구현하면 모든 무료 진단 리포트가 "ChatGPT에서는 한 번도 나오지 않습니다"라고
+말한다. 그건 측정 결과가 아니라 우리 버그이고, 첫 고객에게 보내는 첫 리포트가
+틀린 채로 나간다.
+
+→ **새 Task 6-2(별칭 생성)를 추가한다.** 자기 브랜드와 **경쟁사 모두**에 적용
+한다. 실측에서 경쟁사에 별칭을 주지 않아 나이키가 ChatGPT 답변에서 과소
+계상됐다(`Nike`로만 등장). 경쟁사 언급 수가 낮게 나오면 Share of Voice가
+우리에게 **유리한 쪽으로** 틀린다 — 알아채기 가장 어려운 방향의 오류다.
+
+### ② 소규모 브랜드에게 언급률 0%는 아무 정보가 아니다 → 인용 출처를 리포트에 넣는다
+
+무료 진단의 대다수 결과는 0%다. 0%짜리 리포트에 언급률·순위·Share of Voice만
+있으면 고객이 받아드는 것은 "당신은 없습니다" 한 줄이고, **할 수 있는 일이
+없다.** 유료로 전환할 이유도 같이 사라진다.
+
+2단계에서 `src/lib/stats/sources.ts`를 이미 만들어 뒀다. 실측: 답변 4개에서
+도메인 17개, `tistory.com`이 4개 중 2개에 반복 등장. 이것이 0% 고객에게 주는
+**유일하게 집행 가능한 정보**다 — "AI가 당신 카테고리를 답할 때 이 5개 사이트를
+읽는다. 당신 사이트는 0회다."
+
+→ **Task 6의 `AuditResult`에 `sources`·`sourceSummary`를 추가한다.**
+API 호출이 늘지 않는다. 이미 수집한 `citations`를 집계하는 것뿐이다.
+
+### ③ 크몽 주문은 웹 폼을 거치지 않는다 → `audit:new` CLI가 필요하다
+
+Task 5의 신청 폼 → 이메일 인증 → `audit:run` 경로는 **랜딩 방문자**를 위한
+것이다. 크몽 고객은 크몽 메시지로 브랜드명을 알려주고, 운영자가 그것을 대신
+입력한다. 지금 계획에는 그 입구가 없어서 운영자가 DB에 직접 INSERT하게 된다.
+
+→ **Task 7에 `scripts/audit-new.mts`를 추가한다.** 이미 인증된 상태로 신청을
+만들고 바로 `audit:run`을 안내한다. 크몽에서 결제가 이미 확인됐으므로 이메일
+인증 게이트를 통과시켜도 남용 위험이 없다 — **다만 그 사실을 행에 기록한다**
+(`source: 'kmong'`), 그렇지 않으면 나중에 인증을 건너뛴 행과 방문자 행을 구분할
+수 없다.
+
+### 이 절이 바꾸는 것 요약
+
+| 항목 | 위 계획 | 이 절 |
+| --- | --- | --- |
+| 별칭 | `aliases: []` | **Task 6-2 `generateAliases` 한·영 양방 · 경쟁사 포함** |
+| 인용 출처 | 없음 | **`AuditResult.sources` (Task 6)** |
+| 크몽 주문 입구 | 없음 (수동 INSERT) | **`pnpm audit:new` (Task 7)** |
+| `free_audits` 스키마 | `source` 없음 | **`source` 컬럼 추가 (Task 4)** |
+
+---
+
 ## Global Constraints
 
 로드맵 공통 제약 + 이 단계 전용:
@@ -86,6 +155,10 @@
 - **무료 진단은 이메일 인증 전에 어떤 API도 호출하지 않는다**
 - **무료 진단과 유료 측정은 같은 모델·같은 엔진을 쓴다.** `GEMINI_MODEL` 하나만
   둔다 (2단계 `FREE_AUDIT_PRICING`은 **단가표일 뿐 모델 분기가 아니다**)
+- **`aliases: []`로 측정을 돌리지 않는다.** 자기 브랜드와 경쟁사 **모두** 별칭을
+  생성해서 넘긴다. 한글 표기만 넘기면 ChatGPT 언급률이 구조적으로 0%가 된다
+  (2026-07-30 실측 — 위 ★ 절 ①)
+- **0% 리포트에서도 집행 가능한 정보를 준다.** 인용 출처 섹션을 반드시 포함한다
 - 각 태스크의 마지막 Step은 커밋
 
 ## 이 단계의 파일 구조
@@ -99,6 +172,7 @@
 | `src/lib/collection/repository.ts` | 수집 결과 DB 저장 (유료 경로) |
 | `src/lib/detection/pipeline.ts` | **판정·집계 코어** — 1차→2차→지표 |
 | `src/lib/audit/queries.ts` | 카테고리별 기본 질의 3개 생성 |
+| `src/lib/audit/aliases.ts` | **`generateAliases` — 한·영 양방 별칭 생성 (Task 6-2)** |
 | `src/lib/audit/token.ts` | 진단 이메일 인증 토큰 (HMAC) |
 | `src/lib/audit/repository.ts` | 진단 신청 CRUD |
 | `src/lib/audit/result.ts` | `buildAuditResult` — 리포트 구성 (순수) |
@@ -112,6 +186,7 @@
 | `src/components/audit/request-form.tsx` | 신청 폼 |
 | `src/components/audit/result-view.tsx` | 리포트 본문 (메일·웹 공용) |
 | `scripts/audit-list.mts` | 운영자 CLI — 대기 목록 |
+| `scripts/audit-new.mts` | **운영자 CLI — 크몽 주문 직접 등록 (Task 7)** |
 | `scripts/audit-run.mts` | 운영자 CLI — 실행·발송 |
 | `tests/e2e/free-audit.spec.ts` | E2E |
 
@@ -529,7 +604,10 @@ git commit -m "feat(collection): planSnapshot · 팬아웃 · completeness (순�
 >   engineId: EngineId
 >   sampleIndex: number
 >   text: string
->   citations: { url: string; title: string }[]
+>   // ★ `domain`을 빼면 안 된다. Gemini의 인용 URI는 리다이렉트 프록시라
+>   //   URL에서 호스트명을 뽑으면 출처 17개가 `vertexaisearch.cloud.google.com`
+>   //   하나로 전부 뭉개진다. 2단계 `Citation`을 그대로 쓴다.
+>   citations: import('@/lib/engines/types').Citation[]
 >   raw: unknown
 >   usage: { calls: number; searches?: number; tokensIn?: number; tokensOut?: number; tokensThinking?: number }
 >   costMilliKrw: number
@@ -1720,7 +1798,9 @@ git commit -m "feat(collection): 판정 배치 잡 · 집계 잡 · 주간 리�
   - `createVerifyToken(auditId, email): string`
   - `readVerifyToken(token): { auditId: string; email: string } | null`
   - `generateAuditQueries(category, brandName): string[]` — 정확히 3개
-  - `createAuditRequest(args): Promise<FreeAudit>`
+  - `AUDIT_SOURCES = ['web','kmong','manual']` · `AuditSource`
+  - `createAuditRequest(args): Promise<FreeAudit>` — 폼 경로 (`source: 'web'`)
+  - `createVerifiedAudit(args): Promise<FreeAudit>` — 운영자 경로. `'web'` 거부
   - `markVerified(auditId, email): Promise<FreeAudit | null>`
   - `listPendingAudits(): Promise<FreeAudit[]>`
   - `markRunning/markSent/markFailed(auditId, ...)`
@@ -1753,6 +1833,18 @@ export const AUDIT_STATUSES = [
 ] as const
 export type AuditStatus = (typeof AUDIT_STATUSES)[number]
 
+/**
+ * 이 신청이 어디서 들어왔는가.
+ *
+ * ★ 크몽 주문은 이메일 인증을 건너뛴다(`audit:new`, Task 7). 결제가 이미
+ *   확인됐으므로 남용 위험이 없지만, **그 사실을 행에 남겨야 한다.** 없으면
+ *   나중에 `email_verified = true`인 행 중 어느 것이 실제로 링크를 눌렀고
+ *   어느 것이 운영자가 통과시킨 것인지 구분할 수가 없다 — 인증 게이트가
+ *   실제로 작동하는지 감사할 수 없게 된다.
+ */
+export const AUDIT_SOURCES = ['web', 'kmong', 'manual'] as const
+export type AuditSource = (typeof AUDIT_SOURCES)[number]
+
 export const freeAudits = pgTable(
   'free_audits',
   {
@@ -1768,7 +1860,26 @@ export const freeAudits = pgTable(
     emailVerified: boolean('email_verified').notNull().default(false),
     /** 경쟁사. 비어 있으면 Share of Voice는 "측정 없음"이 된다 */
     competitors: jsonb('competitors').$type<string[]>().notNull().default([]),
+    /**
+     * 고객 사이트 호스트명 (`parseHostname`이 정규화한 값). 인용 출처의 소유
+     * 판정에 쓴다.
+     *
+     * ★ 비어 있으면 소유 판정을 **하지 않는다.** 브랜드명에서 추측하지 않는다 —
+     *   틀린 추측이 "당신 사이트는 한 번도 인용되지 않았습니다"라는 리포트의
+     *   가장 강한 문장을 근거 없이 만든다.
+     */
+    selfDomains: jsonb('self_domains').$type<string[]>().notNull().default([]),
     status: text('status').$type<AuditStatus>().notNull().default('requested'),
+    /** 유입 경로. 'web'이 아니면 이메일 인증을 운영자가 통과시킨 것이다 */
+    source: text('source').$type<AuditSource>().notNull().default('web'),
+    /**
+     * 생성된 별칭 (Task 6-2). 자기 브랜드 것만.
+     *
+     * ★ 저장한다. 별칭이 측정 결과를 좌우하므로(없으면 ChatGPT 0%), 나중에
+     *   "왜 이 리포트가 0%였나"를 물었을 때 어떤 별칭으로 재봤는지 알아야 한다.
+     *   실행 조건을 남기지 않으면 리포트를 재현할 수 없다.
+     */
+    aliases: jsonb('aliases').$type<string[]>().notNull().default([]),
     /** 진단 결과 — AuditResult (Task 6). 발송 전에는 null */
     result: jsonb('result').$type<unknown>(),
     /** 실패 사유. 운영자가 재실행 여부를 판단하는 근거 */
@@ -1785,6 +1896,7 @@ export const freeAudits = pgTable(
     index('audits_iphash_created_idx').on(t.ipHash, t.createdAt),
     index('audits_status_created_idx').on(t.status, t.createdAt),
     enumCheck('free_audits_status_check', t.status, AUDIT_STATUSES),
+    enumCheck('free_audits_source_check', t.source, AUDIT_SOURCES),
   ],
 )
 ```
@@ -1800,8 +1912,9 @@ pnpm db:migrate
 ```
 
 Expected: `free_audits` 테이블에 `competitors`·`failure_reason`·`verified_at`·
-`sent_at` 추가, `variant`·`converted_email_at` 삭제, `email`이 NOT NULL,
-`free_audits_status_check` 제약이 새 6개 값으로 교체.
+`sent_at`·`source`·`aliases`·`self_domains` 추가, `variant`·`converted_email_at` 삭제,
+`email`이 NOT NULL, `free_audits_status_check` 제약이 새 6개 값으로 교체,
+`free_audits_source_check` 제약 신규.
 
 적용 후 확인:
 
@@ -2150,11 +2263,57 @@ export async function createAuditRequest(args: {
   category: string
   email: string
   competitors: string[]
+  /** `parseHostname`이 정규화한 호스트명. 없으면 소유 판정을 하지 않는다 */
+  selfDomains: string[]
   ipHash: string
 }): Promise<FreeAudit> {
   const rows = await db
     .insert(schema.freeAudits)
+    // source는 'web' 기본값을 그대로 쓴다 — 이 함수는 폼 경로 전용이다.
     .values({ id: newAuditId(), status: 'requested', ...args })
+    .returning()
+  const created = rows[0]
+  if (!created) throw new Error('진단 신청을 저장하지 못했습니다')
+  return created
+}
+
+/**
+ * ★ 2026-07-30(2) 추가 — 운영자가 직접 등록하는 신청 (`audit:new`, Task 7).
+ *
+ * 크몽 주문은 웹 폼을 거치지 않는다. 결제가 이미 확인됐으므로 이메일 인증을
+ * 건너뛰어도 남용 위험이 없다.
+ *
+ * ★ `markVerified`를 재사용하지 않는다. 그 함수는 **토큰의 이메일이 저장된
+ *   이메일과 같은지** 검사하는 것이 존재 이유다. 거기에 우회 옵션을 뚫으면
+ *   웹 경로에서도 우회될 수 있다. 인증을 건너뛰는 경로는 별도 함수로 두고,
+ *   그 함수가 `source`를 강제하게 한다.
+ *
+ * ★ `source: 'web'`을 거부한다. CLI로 만든 행에 'web'이 붙으면 나중에
+ *   `email_verified = true`인 행 중 어느 것이 실제로 링크를 눌렀는지 구분할 수
+ *   없고, 인증 게이트가 작동하는지 감사할 수 없게 된다.
+ */
+export async function createVerifiedAudit(args: {
+  brandName: string
+  category: string
+  email: string
+  competitors: string[]
+  selfDomains: string[]
+  source: Exclude<AuditSource, 'web'>
+  ipHash: string
+}): Promise<FreeAudit> {
+  if ((args.source as AuditSource) === 'web') {
+    throw new Error("운영자 등록에 source='web'을 쓸 수 없습니다")
+  }
+  const now = new Date()
+  const rows = await db
+    .insert(schema.freeAudits)
+    .values({
+      id: newAuditId(),
+      status: 'verified',
+      emailVerified: true,
+      verifiedAt: now,
+      ...args,
+    })
     .returning()
   const created = rows[0]
   if (!created) throw new Error('진단 신청을 저장하지 못했습니다')
@@ -2400,8 +2559,35 @@ describe('parseAuditRequest', () => {
       expect(() => parseAuditRequest(bad)).toThrow()
     }
   })
+
+  // ★ 2026-07-30(2) — 사이트 주소 (인용 출처의 소유 판정용)
+  it('사이트 주소를 생략할 수 있다', () => {
+    expect(parseAuditRequest(valid).selfDomains).toEqual([])
+  })
+
+  it('여러 형태의 주소에서 호스트명만 뽑는다', () => {
+    const cases: [string, string][] = [
+      ['musinsa.com', 'musinsa.com'],
+      ['https://www.musinsa.com', 'musinsa.com'],
+      ['http://musinsa.com/kr/main', 'musinsa.com'],
+      ['WWW.Musinsa.CO.KR', 'musinsa.co.kr'],
+      ['  https://corp.musinsa.com/about  ', 'corp.musinsa.com'],
+    ]
+    for (const [input, expected] of cases) {
+      expect(parseAuditRequest({ ...valid, siteUrl: input }).selfDomains, input).toEqual([expected])
+    }
+  })
+
+  it('알아볼 수 없는 주소를 거부한다 (조용히 버리지 않는다)', () => {
+    // ★ 조용히 버리면 고객은 넣었다고 믿고, 리포트에는 그 줄이 없다.
+    for (const bad of ['무신사', 'localhost', 'not a url', 'http://']) {
+      expect(() => parseAuditRequest({ ...valid, siteUrl: bad }), bad).toThrow()
+    }
+  })
 })
 ```
+
+`valid`에 `siteUrl`을 넣지 않는다 — 선택 항목임을 테스트가 함께 증명한다.
 
 - [ ] **Step 3: 실패 확인**
 
@@ -2424,12 +2610,40 @@ export const MAX_COMPETITORS = PLANS.free.maxCompetitors
 
 const name = z.string().trim().min(1).max(100)
 
+/**
+ * 사용자 입력에서 호스트명만 뽑는다.
+ *
+ * ★ 2026-07-30(2) 추가. 인용 출처의 소유 판정에 쓴다(Task 6). 브랜드명에서
+ *   도메인을 **추측하지 않는 이유**가 여기 있다 — `무신사`가 `musinsa.com`인지
+ *   `musinsa.co.kr`인지 알 수 없고, 틀린 추측은 "당신 사이트는 한 번도 인용되지
+ *   않았습니다"라는 리포트의 가장 강한 문장을 근거 없이 만든다.
+ *
+ * ★ 파싱 실패를 조용히 버리지 않는다. 아래 스키마가 거부하고 폼이 알려준다 —
+ *   조용히 버리면 고객은 넣었다고 믿고, 리포트에는 그 줄이 없다.
+ */
+export function parseHostname(input: string): string | null {
+  const value = input.trim()
+  if (!value) return null
+  try {
+    // 스킴이 없으면 URL이 던진다. 붙여서 다시 시도한다.
+    const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`)
+    const host = url.hostname
+    // 점이 없으면 호스트명이 아니다 ('무신사', 'localhost').
+    if (!host.includes('.')) return null
+    return host.startsWith('www.') ? host.slice(4) : host
+  } catch {
+    return null
+  }
+}
+
 export const auditRequestSchema = z
   .object({
     brandName: name,
     category: name,
     email: z.string().trim().toLowerCase().email(),
     competitors: z.array(z.string()).optional().default([]),
+    /** 고객 사이트 주소. 선택. `https://` 유무·경로·`www.`가 섞여 들어온다 */
+    siteUrl: z.string().trim().optional().default(''),
   })
   .transform((v) => ({
     ...v,
@@ -2442,10 +2656,16 @@ export const auditRequestSchema = z
           .filter((c) => c.length > 0 && c !== v.brandName.trim()),
       ),
     ],
+    // 빈 값은 통과시키고(선택 항목), 값이 있는데 파싱이 안 되면 아래에서 거부한다.
+    selfDomains: v.siteUrl ? [parseHostname(v.siteUrl)].filter((h): h is string => h !== null) : [],
   }))
   .refine((v) => v.competitors.length <= MAX_COMPETITORS, {
     message: `경쟁사는 최대 ${MAX_COMPETITORS}개까지 등록할 수 있습니다`,
     path: ['competitors'],
+  })
+  .refine((v) => !v.siteUrl || v.selfDomains.length > 0, {
+    message: '사이트 주소를 알아볼 수 없습니다. 예: musinsa.com',
+    path: ['siteUrl'],
   })
 
 export type AuditRequestInput = z.infer<typeof auditRequestSchema>
@@ -2461,7 +2681,7 @@ export function parseAuditRequest(input: unknown): AuditRequestInput {
 pnpm vitest run src/lib/audit/request-schema.test.ts
 ```
 
-Expected: PASS (11 passed)
+Expected: PASS (14 passed)
 
 - [ ] **Step 6: 메일 템플릿 실패 테스트**
 
@@ -2664,7 +2884,10 @@ export async function POST(request: Request): Promise<Response> {
     )
   }
 
-  const audit = await createAuditRequest({ ...input, ipHash })
+  // ★ `siteUrl`은 컬럼이 아니다 — `selfDomains`로 정규화된 뒤의 원본 입력이므로
+  //   여기서 떼어낸다. 스프레드로 통째로 넘기면 스키마에 없는 키가 들어간다.
+  const { siteUrl: _raw, ...values } = input
+  const audit = await createAuditRequest({ ...values, ipHash })
 
   const token = createVerifyToken(audit.id, audit.email)
   const url = `${env.NEXT_PUBLIC_APP_URL}/api/audit/verify?token=${encodeURIComponent(token)}`
@@ -2873,15 +3096,38 @@ IP 상한(24시간 10회)은 비용 방어가 아니라 신청 테이블이 스�
 
 ### Task 6: 진단 리포트 구성
 
+> ### ★ 2026-07-30(2) 조정 — 인용 출처가 리포트에 들어간다
+>
+> 무료 진단 결과의 대다수는 **0%**다. 언급률·순위·Share of Voice만 있으면
+> 0% 고객이 받아드는 것은 "당신은 없습니다" 한 줄이고 할 수 있는 일이 없다.
+> 유료로 전환할 이유도 같이 사라진다.
+>
+> 2단계에서 `src/lib/stats/sources.ts`를 만들어 뒀다(`aggregateSources`,
+> `summarizeSources`). **이미 수집한 `citations`를 집계하는 것이므로 API 호출이
+> 한 건도 늘지 않는다.** 실측: 답변 4개에서 도메인 17개, `tistory.com`이 4개 중
+> 2개에 반복 등장 — 이것이 0% 고객에게 주는 유일하게 집행 가능한 정보다.
+>
+> 아래 본문의 인터페이스·구현·테스트는 이 조정을 **이미 반영해 두었다.**
+> `sources`·`sourceSummary` 필드가 그것이다.
+>
+> **`selfDomains`는 신청 폼에서 받지 않는다.** 브랜드명으로 도메인을 추측하면
+> 틀리고(`무신사` → `musinsa.com`? `musinsa.co.kr`?), 틀린 추측은 "당신 사이트는
+> 한 번도 인용되지 않았습니다"라는 **가장 강한 문장을 근거 없이** 만들어낸다.
+> 운영자가 `audit:new --domains`로 넣거나(크몽), 웹 신청은 폼에 사이트 주소 칸을
+> 하나 두어 받는다(Task 8). **비어 있으면 소유 판정을 아예 하지 않고**
+> `owner`는 전부 `third-party`가 되며, 화면은 "우리 사이트 인용 여부" 줄을
+> 숨긴다 — 모른다는 것을 0회라고 말하지 않는다.
+
 **Files:**
 - Create: `src/lib/audit/result.ts`
 - Test: `src/lib/audit/result.test.ts`
 
 **Interfaces:**
 - Consumes: `BrandMetrics` (2단계), `Interval`·`formatInterval` (2단계),
-  `DetectionResult` (2단계)
+  `DetectionResult` (2단계), `aggregateSources`·`summarizeSources`·`Citation`
+  (2단계 `src/lib/stats/sources.ts`)
 - Produces:
-  - `interface AuditResult { brandName; category; competitors; totalAnswers; citedRate; shareOfVoice; ranking; evidence; byEngine; byQuery; measuredAt; engines; unresolved }`
+  - `interface AuditResult { brandName; category; competitors; totalAnswers; citedRate; shareOfVoice; ranking; evidence; byEngine; byQuery; sources; sourceSummary; measuredAt; engines; aliases; unresolved }`
   - `buildAuditResult(args): AuditResult` — 순수 함수
   - `AUDIT_RESULT_VERSION`
   - Task 7의 CLI와 Task 8의 화면이 소비한다
@@ -2922,9 +3168,12 @@ const metrics = {
 }
 
 const answers = [
-  { id: 'a1', queryText: '러닝화 추천', engineId: 'gemini', text: '나이키와 아디다스를 추천합니다.' },
-  { id: 'a2', queryText: '운동화 브랜드', engineId: 'gemini', text: '무신사에서 파는 제품이 좋습니다.' },
-  { id: 'a3', queryText: '러닝화 추천', engineId: 'gemini', text: '아식스도 괜찮습니다.' },
+  { id: 'a1', queryText: '러닝화 추천', engineId: 'gemini', text: '나이키와 아디다스를 추천합니다.',
+    citations: [{ url: 'https://namu.wiki/w/x', title: '나무위키' }, { url: 'https://blog.naver.com/a', title: '네이버 블로그' }] },
+  { id: 'a2', queryText: '운동화 브랜드', engineId: 'gemini', text: '무신사에서 파는 제품이 좋습니다.',
+    citations: [{ url: 'https://namu.wiki/w/y', title: '나무위키' }] },
+  { id: 'a3', queryText: '러닝화 추천', engineId: 'gemini', text: '아식스도 괜찮습니다.',
+    citations: [] },
 ]
 
 const detections = [
@@ -2940,6 +3189,7 @@ const base = {
   category: '패션',
   competitors: ['29CM', 'W컨셉'],
   engines: ['gemini'],
+  aliases: ['MUSINSA', '무탠다드'],
   measuredAt: '2026-07-30T02:00:00.000Z',
   metrics,
   answers,
@@ -3010,6 +3260,50 @@ describe('buildAuditResult', () => {
     expect(r.measuredAt).toBe('2026-07-30T02:00:00.000Z')
     expect(r.totalAnswers).toBe(3)
     expect(r.version).toBe(AUDIT_RESULT_VERSION)
+    // ★ 별칭도 측정 조건이다. 별칭이 언급률을 좌우하므로(없으면 ChatGPT 0%)
+    //   어떤 표기로 쟀는지 모르면 리포트를 재현할 수 없다.
+    expect(r.aliases).toEqual(['MUSINSA', '무탠다드'])
+  })
+
+  it('인용 출처를 답변 수 내림차순으로 담는다', () => {
+    const r = buildAuditResult(base)
+    // namu.wiki는 a1·a2 둘 다 → 최다
+    expect(r.sources[0]).toMatchObject({ domain: 'namu.wiki', answers: 2 })
+    expect(r.sources.map((s) => s.domain)).toContain('blog.naver.com')
+  })
+
+  it('인용 출처 점유율의 분모는 인용 0건인 답변까지 포함한다', () => {
+    // a3은 인용이 없다. 분모를 "인용이 있는 답변"으로 잡으면 비율이 뻥튀긴다.
+    const r = buildAuditResult(base)
+    expect(r.sources[0]?.share.n).toBe(3)
+    expect(r.sourceSummary.totalAnswers).toBe(3)
+    expect(r.sourceSummary.answersWithCitations).toBe(2)
+  })
+
+  it('selfDomains를 주면 우리 사이트 인용을 센다', () => {
+    const r = buildAuditResult({ ...base, selfDomains: ['namu.wiki'] })
+    expect(r.sourceSummary.selfAnswers).toBe(2)
+    expect(r.sources.find((s) => s.domain === 'namu.wiki')?.owner).toBe('self')
+  })
+
+  it('selfDomains가 없으면 소유 판정을 하지 않는다', () => {
+    // ★ 여기가 중요하다. 도메인을 모르는데 owner를 판정하면 "당신 사이트는
+    //   한 번도 인용되지 않았습니다"라는 가장 강한 문장을 근거 없이 만든다.
+    //   selfAnswers가 0이면 화면은 그 줄을 **숨겨야** 하고, 그러려면
+    //   hasSelfDomains로 "모른다"와 "0회"를 구분할 수 있어야 한다.
+    const r = buildAuditResult(base)
+    expect(r.sources.every((s) => s.owner === 'third-party')).toBe(true)
+    expect(r.hasSelfDomains).toBe(false)
+  })
+
+  it('인용이 하나도 없어도 던지지 않는다', () => {
+    const r = buildAuditResult({
+      ...base,
+      answers: answers.map((a) => ({ ...a, citations: [] })),
+    })
+    expect(r.sources).toEqual([])
+    expect(r.sourceSummary.answersWithCitations).toBe(0)
+    expect(r.sourceSummary.distinctDomains).toBe(0)
   })
 
   it('미판정 건수를 숨기지 않는다', () => {
@@ -3032,6 +3326,7 @@ describe('buildAuditResult', () => {
     })
     expect(r.evidence).toEqual([])
     expect(r.totalAnswers).toBe(0)
+    expect(r.sources).toEqual([])
   })
 })
 ```
@@ -3051,6 +3346,13 @@ Expected: FAIL — 모듈 없음
 ```ts
 import type { Sentiment } from '@/lib/detection/types'
 import type { BrandMetrics } from '@/lib/stats/metrics'
+import {
+  aggregateSources,
+  summarizeSources,
+  type Citation,
+  type SourceStat,
+  type SourceSummary,
+} from '@/lib/stats/sources'
 import type { Interval } from '@/lib/stats/wilson'
 
 /**
@@ -3087,6 +3389,14 @@ export interface AuditResult {
   competitors: string[]
   /** 이 측정에 쓴 엔진. 다른 엔진 구성끼리 비교하면 안 된다 */
   engines: string[]
+  /**
+   * 이 측정에 쓴 별칭 (Task 6-2가 생성). 측정 조건이다.
+   *
+   * ★ 별칭이 언급률을 좌우한다 — 영문 별칭이 없으면 ChatGPT 언급률이 구조적으로
+   *   0%가 된다(2026-07-30 실측). 어떤 표기로 쟀는지 남기지 않으면 리포트를
+   *   재현할 수도, 낮은 숫자가 실제인지 별칭 누락인지 가릴 수도 없다.
+   */
+  aliases: string[]
   /** ISO 8601 */
   measuredAt: string
   totalAnswers: number
@@ -3096,6 +3406,23 @@ export interface AuditResult {
   evidence: EvidenceItem[]
   byEngine: Record<string, Interval>
   byQuery: { queryText: string; interval: Interval }[]
+  /**
+   * AI가 읽는 출처. 답변 수 내림차순.
+   *
+   * ★ 0% 고객에게 **유일하게 집행 가능한 정보**다. 언급률 0%는 "당신은 없다"
+   *   외에 아무것도 알려주지 않지만, "AI가 당신 카테고리를 답할 때 이 5개
+   *   사이트를 읽는다"는 그 자리에서 할 일이 된다.
+   */
+  sources: SourceStat[]
+  sourceSummary: SourceSummary
+  /**
+   * 우리 사이트 도메인을 알고 있는가.
+   *
+   * ★ `sourceSummary.selfAnswers === 0`은 두 가지 뜻이다 — "인용되지 않았다"와
+   *   "도메인을 몰라서 못 셌다". 화면이 이 둘을 반드시 갈라야 한다. 후자를
+   *   "한 번도 인용되지 않았습니다"로 쓰면 근거 없는 단정이 된다.
+   */
+  hasSelfDomains: boolean
   /** 2차 판정이 실패해 미판정으로 남은 건수. 0이 아니면 화면에 표시한다 */
   unresolved: number
 }
@@ -3118,10 +3445,25 @@ export interface BuildAuditResultArgs {
   category: string
   competitors: string[]
   engines: string[]
+  /** Task 6-2가 생성한 자기 브랜드 별칭 */
+  aliases: string[]
   measuredAt: string
   metrics: BrandMetrics
-  answers: { id: string; queryText: string; engineId: string; text: string }[]
+  answers: {
+    id: string
+    queryText: string
+    engineId: string
+    text: string
+    citations: readonly Citation[]
+  }[]
   detections: DetectionRow[]
+  /**
+   * 우리 브랜드가 소유한 호스트명. **추측하지 않는다** — 비어 있으면 소유
+   * 판정을 하지 않는다. 브랜드명에서 도메인을 유추하면 틀리고, 틀린 추측이
+   * "당신 사이트는 한 번도 인용되지 않았습니다"라는 가장 강한 문장을 만든다.
+   */
+  selfDomains?: readonly string[]
+  competitorDomains?: readonly string[]
   unresolved: number
 }
 
@@ -3167,12 +3509,26 @@ export function buildAuditResult(args: BuildAuditResultArgs): AuditResult {
     ...args.competitors.map((name) => ({ name, mentions: mentionCount(name), isSelf: false })),
   ].sort((a, b) => b.mentions - a.mentions || a.name.localeCompare(b.name, 'ko'))
 
+  // 인용 출처 — API 호출이 늘지 않는다. 이미 수집한 citations를 집계할 뿐이다.
+  // ★ 분모는 인용 0건인 답변까지 포함한 **전체 답변 수**다. 2단계
+  //   aggregateSources가 그렇게 동작한다 — 인용이 있는 답변만 분모로 잡으면
+  //   비율이 뻥튀겨져서 "AI가 이 사이트를 늘 읽는다"처럼 보인다.
+  const citedAnswers = args.answers.map((a) => ({
+    answerId: a.id,
+    citations: a.citations,
+  }))
+  const sources = aggregateSources(citedAnswers, {
+    ...(args.selfDomains ? { selfDomains: args.selfDomains } : {}),
+    ...(args.competitorDomains ? { competitorDomains: args.competitorDomains } : {}),
+  })
+
   return {
     version: AUDIT_RESULT_VERSION,
     brandName: args.brandName,
     category: args.category,
     competitors: [...args.competitors],
     engines: [...args.engines],
+    aliases: [...args.aliases],
     measuredAt: args.measuredAt,
     totalAnswers: args.metrics.totalAnswers,
     citedRate: args.metrics.citedRate,
@@ -3182,6 +3538,9 @@ export function buildAuditResult(args: BuildAuditResultArgs): AuditResult {
     byEngine: args.metrics.byEngine,
     // 2단계 metrics가 이미 언급률 오름차순으로 준다. 여기서 다시 정렬하지 않는다.
     byQuery: args.metrics.byQuery.map((q) => ({ queryText: q.queryText, interval: q.interval })),
+    sources,
+    sourceSummary: summarizeSources(citedAnswers, sources),
+    hasSelfDomains: (args.selfDomains?.length ?? 0) > 0,
     unresolved: args.unresolved,
   }
 }
@@ -3198,9 +3557,9 @@ function truncate(text: string, limit: number): string {
 pnpm vitest run src/lib/audit/result.test.ts
 ```
 
-Expected: PASS (11 passed)
+Expected: PASS (17 passed)
 
-- [ ] **Step 5: 변이 테스트 3건**
+- [ ] **Step 5: 변이 테스트 5건**
 
 구현을 실제로 망가뜨려 테스트가 잡는지 확인한다. 표로 보고한다.
 
@@ -3209,8 +3568,10 @@ Expected: PASS (11 passed)
 | `sorted`에서 언급 우선 정렬 제거 (`return 0`) | 실패 |
 | `ranking`에서 경쟁사 제외 (`...[]`) | 실패 |
 | `truncate`의 상한을 무시하고 원문 반환 | 실패 |
+| `citedAnswers`를 인용 있는 답변만으로 필터 (`.filter(a => a.citations.length > 0)`) | 실패 — 출처 점유율 분모가 뻥튀긴다 |
+| `hasSelfDomains`를 항상 `true`로 고정 | 실패 — "모른다"가 "0회"로 배송된다 |
 
-셋 중 살아남는 변이가 있으면 **테스트를 추가하고 다시 돌린다.**
+다섯 중 살아남는 변이가 있으면 **테스트를 추가하고 다시 돌린다.**
 
 - [ ] **Step 6: 커밋**
 
@@ -3231,22 +3592,554 @@ git commit -m "feat(audit): 진단 리포트 구성 (증거 우선 · 경쟁사 
 
 ---
 
+### Task 6-2: 별칭 생성 (한·영 양방)
+
+> **★ 2026-07-30(2) 신규 태스크.** 이것 없이 3단계를 구현하면 모든 리포트가
+> "ChatGPT에서는 한 번도 나오지 않습니다"라고 말한다. 근거는
+> `docs/superpowers/notes/2026-07-30-pipeline-actuals.md`이고, 위 ★ 절 ①에
+> 실측표가 있다. **Task 7보다 먼저 만들어야 한다** — `executeAudit`이 이것을
+> 소비한다.
+
+**Files:**
+- Create: `src/lib/audit/aliases.ts`
+- Test: `src/lib/audit/aliases.test.ts`
+
+**Interfaces:**
+- Consumes: `@anthropic-ai/sdk` (2단계에 이미 있다), `zodOutputFormat`,
+  `BrandProfile` (2단계 `src/lib/detection/types.ts`)
+- Produces:
+  - `interface AliasSuggestion { canonical: string; aliases: string[]; ambiguous: boolean }`
+  - `type AliasFn = (brands, category) => Promise<AliasSuggestion[]>`
+  - `sanitizeAliases(canonical, raw, category): string[]` — 순수. 검증 전담
+  - `createAliasGenerator(opts?): AliasFn` · `generateAliases: AliasFn`
+  - `toBrandProfiles(suggestions): BrandProfile[]`
+  - Task 7의 `executeAudit`이 소비한다. **4단계 온보딩도 같은 함수를 쓴다** —
+    무료와 유료가 다른 별칭으로 측정되면 전환한 고객의 숫자가 달라진다
+
+**두 가지를 함께 해결한다.**
+
+1. **영문 표기.** ChatGPT는 `ASICS`, Gemini는 `아식스`로 쓴다. 양쪽을 다 넣어야
+   같은 브랜드로 집계된다.
+2. **`ambiguous` 판정.** 지금 계획은 `ambiguous: false`를 하드코딩한다.
+   `당근`·`토스`·`오늘의집`처럼 일반어와 겹치는 브랜드가 실제로 많고, 그때
+   1차 매칭이 채소 이야기를 잡는다. 2단계는 이미 **1차에 걸리면 예외 없이 2차를
+   거치도록** 바꿨으니 오탐 자체는 판정기가 막지만, `ambiguous`를 넘기면
+   판정 프롬프트가 그 사실을 알고 더 보수적으로 본다.
+
+**경쟁사도 반드시 함께 돌린다.** 경쟁사 별칭이 없으면 경쟁사 언급 수가 낮게
+나오고, Share of Voice가 **우리에게 유리한 쪽으로** 틀린다. 알아채기 가장
+어려운 방향의 오류다 — 숫자가 좋아 보여서 아무도 의심하지 않는다.
+
+**호출은 진단 1건당 1회다.** 브랜드 전부(자기 1 + 경쟁사 최대 3)를 한 번에
+넘긴다. 브랜드마다 호출하면 4배가 되는데 얻는 게 없다.
+
+- [ ] **Step 1: 실패하는 테스트 작성**
+
+`src/lib/audit/aliases.test.ts` — **API를 부르지 않는다.** 실제 호출은 Step 5의
+실측에서 확인한다. 여기서는 검증 로직(`sanitizeAliases`)과 조립을 본다.
+
+```ts
+import { describe, expect, it } from 'vitest'
+import {
+  createAliasGenerator,
+  sanitizeAliases,
+  toBrandProfiles,
+  MAX_ALIASES,
+} from '@/lib/audit/aliases'
+
+describe('sanitizeAliases', () => {
+  it('정상 별칭을 통과시킨다', () => {
+    expect(sanitizeAliases('무신사', ['MUSINSA', 'Musinsa', '무탠다드'], '패션')).toEqual([
+      'MUSINSA',
+      'Musinsa',
+      '무탠다드',
+    ])
+  })
+
+  it('표준명 자체를 별칭에서 뺀다', () => {
+    // 1차 매칭이 canonical을 이미 본다. 중복은 후보를 두 배로 만들고
+    // 2차 판정 원가만 늘린다.
+    expect(sanitizeAliases('무신사', ['무신사', 'MUSINSA'], '패션')).toEqual(['MUSINSA'])
+  })
+
+  it('대소문자만 다른 중복을 하나로 합친다', () => {
+    // 1차 매칭이 대소문자를 무시하므로 'ASICS'와 'asics'는 같은 별칭이다.
+    const out = sanitizeAliases('아식스', ['ASICS', 'asics', 'Asics'], '스포츠')
+    expect(out).toHaveLength(1)
+  })
+
+  it('한 글자 별칭을 버린다', () => {
+    // ★ 'A' 하나가 별칭이면 거의 모든 영문 답변에 걸린다. 1차 후보가 폭발하고
+    //   2차 판정 원가가 답변 수만큼 늘어난다.
+    expect(sanitizeAliases('아식스', ['A', 'ASICS'], '스포츠')).toEqual(['ASICS'])
+  })
+
+  it('카테고리 일반어를 별칭으로 받지 않는다', () => {
+    // ★ '패션'이 별칭이면 패션 질의의 모든 답변에 걸려 언급률이 100%가 된다.
+    //   0%를 100%로 바꾸는 오류이고, 고객은 그것을 기뻐하며 믿는다.
+    expect(sanitizeAliases('무신사', ['패션', '쇼핑몰', 'MUSINSA'], '패션')).toEqual(['MUSINSA'])
+  })
+
+  it('공백만 있는 값과 빈 문자열을 버린다', () => {
+    expect(sanitizeAliases('무신사', ['', '   ', 'MUSINSA'], '패션')).toEqual(['MUSINSA'])
+  })
+
+  it('앞뒤 공백을 다듬는다', () => {
+    expect(sanitizeAliases('무신사', ['  MUSINSA  '], '패션')).toEqual(['MUSINSA'])
+  })
+
+  it('개수를 상한에서 자른다', () => {
+    const many = Array.from({ length: 30 }, (_, i) => `별칭${i}`)
+    expect(sanitizeAliases('무신사', many, '패션')).toHaveLength(MAX_ALIASES)
+  })
+
+  it('너무 긴 값을 버린다 (문장을 별칭으로 준 경우)', () => {
+    const sentence = '무신사는 한국의 대표적인 온라인 패션 플랫폼입니다'
+    expect(sanitizeAliases('무신사', [sentence, 'MUSINSA'], '패션')).toEqual(['MUSINSA'])
+  })
+})
+
+describe('createAliasGenerator', () => {
+  it('모델 응답을 요청한 브랜드에만 매핑한다', async () => {
+    const generate = createAliasGenerator({
+      parse: async () => ({
+        brands: [
+          { canonical: '무신사', aliases: ['MUSINSA'], ambiguous: false },
+          { canonical: '29CM', aliases: ['29cm'], ambiguous: false },
+          // 요청하지 않은 브랜드를 끼워 넣었다 — 버려야 한다
+          { canonical: '쿠팡', aliases: ['Coupang'], ambiguous: false },
+        ],
+      }),
+    })
+    const out = await generate(['무신사', '29CM'], '패션')
+    expect(out.map((b) => b.canonical)).toEqual(['무신사', '29CM'])
+  })
+
+  it('응답에서 빠진 브랜드를 별칭 없이 채운다', async () => {
+    // ★ 조용히 빠뜨리면 그 브랜드가 측정에서 통째로 사라진다. 경쟁사가
+    //   사라지면 Share of Voice 분모가 줄어 우리 점유율이 올라간다.
+    const generate = createAliasGenerator({
+      parse: async () => ({ brands: [{ canonical: '무신사', aliases: ['MUSINSA'], ambiguous: false }] }),
+    })
+    const out = await generate(['무신사', '29CM'], '패션')
+    expect(out).toHaveLength(2)
+    expect(out[1]).toEqual({ canonical: '29CM', aliases: [], ambiguous: false })
+  })
+
+  it('입력 순서를 유지한다', async () => {
+    const generate = createAliasGenerator({
+      parse: async () => ({
+        brands: [
+          { canonical: '29CM', aliases: [], ambiguous: false },
+          { canonical: '무신사', aliases: [], ambiguous: false },
+        ],
+      }),
+    })
+    const out = await generate(['무신사', '29CM'], '패션')
+    expect(out.map((b) => b.canonical)).toEqual(['무신사', '29CM'])
+  })
+
+  it('브랜드가 없으면 호출하지 않는다', async () => {
+    let called = 0
+    const generate = createAliasGenerator({
+      parse: async () => {
+        called++
+        return { brands: [] }
+      },
+    })
+    expect(await generate([], '패션')).toEqual([])
+    expect(called).toBe(0)
+  })
+
+  it('호출이 실패하면 별칭 없이 진행한다 (측정을 중단하지 않는다)', async () => {
+    // ★ 별칭 생성 실패로 진단 전체를 죽이면 안 된다 — 이미 결제된 주문일 수도
+    //   있다. 다만 **조용히** 넘어가지 않는다. onError로 알리고, 리포트의
+    //   aliases가 비어 있으면 운영자가 그것을 보고 판단한다.
+    const errors: unknown[] = []
+    const generate = createAliasGenerator({
+      parse: async () => {
+        throw new Error('rate limited')
+      },
+      onError: (e) => errors.push(e),
+    })
+    const out = await generate(['무신사'], '패션')
+    expect(out).toEqual([{ canonical: '무신사', aliases: [], ambiguous: false }])
+    expect(errors).toHaveLength(1)
+  })
+
+  it('생성된 별칭도 검증을 거친다', async () => {
+    // 모델이 카테고리 일반어를 돌려주는 일이 실제로 있다.
+    const generate = createAliasGenerator({
+      parse: async () => ({
+        brands: [{ canonical: '무신사', aliases: ['패션', 'MUSINSA'], ambiguous: false }],
+      }),
+    })
+    const out = await generate(['무신사'], '패션')
+    expect(out[0]?.aliases).toEqual(['MUSINSA'])
+  })
+})
+
+describe('toBrandProfiles', () => {
+  it('BrandProfile로 그대로 변환한다', () => {
+    const profiles = toBrandProfiles([
+      { canonical: '당근', aliases: ['당근마켓', 'Karrot'], ambiguous: true },
+    ])
+    expect(profiles[0]).toEqual({
+      canonical: '당근',
+      aliases: ['당근마켓', 'Karrot'],
+      ambiguous: true,
+    })
+  })
+})
+```
+
+- [ ] **Step 2: 실패 확인**
+
+```bash
+pnpm vitest run src/lib/audit/aliases.test.ts
+```
+
+Expected: FAIL — 모듈 없음
+
+- [ ] **Step 3: 구현**
+
+`src/lib/audit/aliases.ts`:
+
+```ts
+import Anthropic from '@anthropic-ai/sdk'
+import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
+import { z } from 'zod'
+import type { BrandProfile } from '@/lib/detection/types'
+
+/**
+ * 별칭 생성 — 측정의 전제 조건이다.
+ *
+ * ★ 2026-07-30 실측: 같은 질의·같은 시스템 프롬프트인데 **ChatGPT는 영문 표기만,
+ *   Gemini는 한글 표기만** 쓴다. 예외가 한 건도 없었다.
+ *     ChatGPT: "ASICS GEL-CUMULUS 28"  (아식스 없음)
+ *     Gemini : "아식스 노바블라스트"      (ASICS 없음)
+ *   영문 별칭 없이 한글 브랜드명만 넘기면 ChatGPT 언급률이 **구조적으로 0%**로
+ *   측정되고, 엔진 비교가 통째로 거짓이 된다.
+ *
+ * ★ 경쟁사도 같은 함수를 거친다. 경쟁사 별칭이 없으면 경쟁사가 과소 계상되고
+ *   Share of Voice가 **우리에게 유리한 쪽으로** 틀린다.
+ */
+
+/** 브랜드당 별칭 상한. 넘으면 1차 후보가 늘어 2차 판정 원가만 커진다. */
+export const MAX_ALIASES = 12
+/** 별칭 최소 길이. 한 글자는 거의 모든 답변에 걸린다. */
+const MIN_ALIAS_LENGTH = 2
+/** 별칭 최대 길이. 이보다 길면 모델이 설명 문장을 돌려준 것이다. */
+const MAX_ALIAS_LENGTH = 40
+
+export const ALIAS_MODEL = 'claude-haiku-4-5'
+
+export interface AliasSuggestion {
+  canonical: string
+  aliases: string[]
+  ambiguous: boolean
+}
+
+export type AliasFn = (
+  brands: readonly string[],
+  category: string,
+) => Promise<AliasSuggestion[]>
+
+const responseSchema = z.object({
+  brands: z.array(
+    z.object({
+      canonical: z.string(),
+      aliases: z.array(z.string()),
+      ambiguous: z.boolean(),
+    }),
+  ),
+})
+
+type AliasResponse = z.infer<typeof responseSchema>
+
+/**
+ * 이 프롬프트는 **측정 도구의 일부**다. 문구를 바꾸면 언급률이 바뀐다.
+ * 바꿀 때는 Step 5의 실측을 다시 돌려라.
+ */
+const SYSTEM_PROMPT = `당신은 한국 브랜드의 표기 변형을 정리하는 도구입니다.
+
+각 브랜드에 대해, **AI 검색 답변에 실제로 등장할 수 있는 표기**를 나열하세요.
+
+반드시 포함할 것:
+- 영문 표기 (대문자·일반 표기 모두: "ASICS", "Asics")
+- 한글 표기 (브랜드명이 영문으로 주어진 경우)
+- 널리 쓰이는 줄임말 (예: "무신사스탠다드" → "무탠다드")
+- 공식 자사 브랜드·서브 브랜드 (예: "무신사" → "무신사스탠다드")
+
+넣지 말 것:
+- 카테고리 일반어 ("패션", "쇼핑몰", "화장품")
+- 제품 카테고리명 ("러닝화", "스킨케어")
+- 경쟁사 이름
+- 설명 문장
+- 확실하지 않은 추측 — **모르면 비워 두세요.** 틀린 별칭은 없는 별칭보다 나쁩니다.
+
+ambiguous는 브랜드명이 **일반 명사와 겹칠 때** true입니다.
+예: "당근"(채소), "토스"(동작), "오늘의집", "배달의민족" → true
+     "무신사", "ASICS", "29CM" → false
+
+주어진 브랜드만 다루고, 주어진 순서로 돌려주세요.`
+
+export interface AliasGeneratorOptions {
+  apiKey?: string
+  /** 테스트가 실제 호출을 대체한다 */
+  parse?: (brands: readonly string[], category: string) => Promise<AliasResponse>
+  /** 생성 실패를 알린다. 던지지 않는다 — 측정은 계속되어야 한다 */
+  onError?: (error: unknown) => void
+  onUsage?: (usage: { tokensIn: number; tokensOut: number }) => void
+}
+
+export function createAliasGenerator(opts: AliasGeneratorOptions = {}): AliasFn {
+  return async function aliasFn(brands, category) {
+    // 브랜드가 없으면 호출하지 않는다. 빈 호출도 돈이 나간다.
+    if (brands.length === 0) return []
+
+    let response: AliasResponse | null = null
+    try {
+      response = opts.parse
+        ? await opts.parse(brands, category)
+        : await callModel(brands, category, opts)
+    } catch (error) {
+      // ★ 던지지 않는다. 별칭 생성 실패로 진단 전체를 죽이면 안 된다 —
+      //   이미 결제된 주문일 수 있다. 다만 조용히 넘어가지도 않는다.
+      opts.onError?.(error)
+    }
+
+    const byName = new Map<string, AliasSuggestion>()
+    for (const b of response?.brands ?? []) {
+      // 요청하지 않은 브랜드는 버린다. 모델이 끼워 넣는 일이 있다.
+      if (!brands.includes(b.canonical)) continue
+      byName.set(b.canonical, {
+        canonical: b.canonical,
+        aliases: sanitizeAliases(b.canonical, b.aliases, category),
+        ambiguous: b.ambiguous,
+      })
+    }
+
+    // ★ 입력 순서를 유지하고, 빠진 브랜드를 반드시 채운다. 조용히 빠뜨리면
+    //   그 브랜드가 측정에서 통째로 사라진다 — 경쟁사가 사라지면 Share of
+    //   Voice 분모가 줄어 우리 점유율이 올라간다.
+    return brands.map(
+      (canonical) => byName.get(canonical) ?? { canonical, aliases: [], ambiguous: false },
+    )
+  }
+}
+
+async function callModel(
+  brands: readonly string[],
+  category: string,
+  opts: AliasGeneratorOptions,
+): Promise<AliasResponse> {
+  const client = new Anthropic({
+    ...(opts.apiKey ? { apiKey: opts.apiKey } : {}),
+  })
+  const message = await client.messages.parse({
+    model: ALIAS_MODEL,
+    max_tokens: 2048,
+    system: SYSTEM_PROMPT,
+    output_config: { format: zodOutputFormat(responseSchema) },
+    messages: [
+      {
+        role: 'user',
+        content: JSON.stringify({ category, brands: [...brands] }, null, 2),
+      },
+    ],
+  })
+  opts.onUsage?.({
+    tokensIn: message.usage.input_tokens,
+    tokensOut: message.usage.output_tokens,
+  })
+  if (message.stop_reason === 'refusal') throw new Error('별칭 생성이 거부되었습니다')
+  if (message.stop_reason === 'max_tokens') {
+    throw new Error(`별칭 응답이 max_tokens에서 잘렸습니다 (브랜드 ${brands.length}개)`)
+  }
+  return message.parsed_output
+}
+
+/**
+ * 생성된 별칭을 검증한다. 순수 함수.
+ *
+ * ★ 이 함수가 방어하는 것은 **오탐이 아니라 100%다.** 별칭에 카테고리 일반어가
+ *   하나 섞이면("패션") 그 카테고리 질의의 모든 답변에 걸려 언급률이 100%가
+ *   된다. 0%를 100%로 바꾸는 오류이고, 고객은 그것을 기뻐하며 믿는다.
+ *   1차에 걸리면 2차 판정을 거치므로 최종 판정은 걸러지지만, 후보가 답변 수만큼
+ *   늘어 판정 원가가 그만큼 커진다.
+ */
+export function sanitizeAliases(
+  canonical: string,
+  raw: readonly string[],
+  category: string,
+): string[] {
+  const banned = new Set(
+    [category, ...CATEGORY_STOPWORDS].map((w) => w.trim().toLowerCase()),
+  )
+  const seen = new Set<string>([canonical.trim().toLowerCase()])
+  const out: string[] = []
+
+  for (const value of raw) {
+    const alias = value.trim()
+    if (alias.length < MIN_ALIAS_LENGTH) continue
+    if (alias.length > MAX_ALIAS_LENGTH) continue
+
+    // 1차 매칭이 대소문자를 무시하므로 소문자 기준으로 중복을 없앤다.
+    const key = alias.toLowerCase()
+    if (banned.has(key)) continue
+    if (seen.has(key)) continue
+
+    seen.add(key)
+    out.push(alias)
+    if (out.length >= MAX_ALIASES) break
+  }
+
+  return out
+}
+
+/**
+ * 카테고리와 무관하게 별칭이 될 수 없는 말.
+ * `queries.ts`의 카테고리 별칭과 겹치는 것을 의도적으로 포함한다.
+ */
+const CATEGORY_STOPWORDS = [
+  '패션', '의류', '옷', '쇼핑몰', '브랜드', '플랫폼',
+  '화장품', '뷰티', '스킨케어', '코스메틱',
+  '식품', '음식', '먹거리', '간편식', '밀키트',
+  '가전', '전자제품', '전자기기', '디지털',
+  '교육', '학원', '강의', '인강',
+  '추천', '순위', '인기', '최고', '베스트',
+]
+
+export const generateAliases: AliasFn = createAliasGenerator()
+
+export function toBrandProfiles(suggestions: readonly AliasSuggestion[]): BrandProfile[] {
+  return suggestions.map((s) => ({
+    canonical: s.canonical,
+    aliases: [...s.aliases],
+    ambiguous: s.ambiguous,
+  }))
+}
+```
+
+- [ ] **Step 4: 통과 확인**
+
+```bash
+pnpm vitest run src/lib/audit/aliases.test.ts
+```
+
+Expected: PASS (16 passed)
+
+- [ ] **Step 5: 실제 모델로 10개 브랜드 실측**
+
+**이 Step을 건너뛰면 이 태스크는 아무것도 증명하지 못한다.** 검증한 것은
+`sanitizeAliases`뿐이고, 정작 중요한 것은 모델이 `ASICS`를 실제로 돌려주는지다.
+
+```bash
+cat > scripts/probe-aliases.mts <<'EOF'
+import { createAliasGenerator } from '@/lib/audit/aliases'
+import { estimateJudgeCostKrw } from '@/lib/engines/pricing'
+
+const CASES: [string, string[]][] = [
+  ['패션', ['무신사', '29CM', '지그재그', '에이블리']],
+  ['스포츠', ['아식스', '뉴발란스', '호카']],
+  ['중고거래', ['당근', '크림']],
+  ['화장품', ['라운드랩', '토리든', '아누아']],
+]
+
+let tokensIn = 0
+let tokensOut = 0
+const generate = createAliasGenerator({
+  onUsage: (u) => { tokensIn += u.tokensIn; tokensOut += u.tokensOut },
+  onError: (e) => console.error('생성 실패:', e),
+})
+
+for (const [category, brands] of CASES) {
+  const out = await generate(brands, category)
+  console.log(`\n[${category}]`)
+  for (const b of out) {
+    const flag = b.ambiguous ? ' (ambiguous)' : ''
+    console.log(`  ${b.canonical}${flag}: ${b.aliases.join(', ') || '(없음)'}`)
+  }
+}
+console.log(`\n원가 ${estimateJudgeCostKrw(tokensIn, tokensOut)}원 (in ${tokensIn} / out ${tokensOut})`)
+EOF
+
+pnpm tsx --conditions=react-server --env-file=.env.local scripts/probe-aliases.mts
+```
+
+**반드시 눈으로 확인할 것 — 통과 기준:**
+
+| 확인 | 통과 조건 |
+| --- | --- |
+| 영문 표기 | `아식스`→`ASICS`, `무신사`→`MUSINSA`가 **전부** 나온다 |
+| `ambiguous` | `당근`·`크림`이 `true`, `무신사`·`29CM`이 `false` |
+| 오염 | 카테고리 일반어·경쟁사 이름이 **한 건도 없다** |
+| 원가 | 4회 호출이 5원 미만 (진단 1건당 1회이므로 1원 남짓) |
+
+영문 표기가 하나라도 빠지면 **프롬프트를 고치고 다시 돌린다.** 그것을 못 잡으면
+이 태스크의 목적이 달성되지 않는다. 프롬프트를 세 번 고쳐도 안 되면
+`ALIAS_MODEL`을 `claude-sonnet-5`로 올린다 — 진단 1건당 1회이므로 원가 영향이
+거의 없고(수집 원가 250원 중 3원), 별칭 누락은 리포트를 통째로 거짓으로 만든다.
+
+결과를 `docs/superpowers/notes/2026-07-30-alias-actuals.md`에 남긴다.
+
+- [ ] **Step 6: 커밋**
+
+```bash
+git add src/lib/audit/aliases.ts src/lib/audit/aliases.test.ts scripts/probe-aliases.mts docs/superpowers/notes
+git commit -m "feat(audit): 한·영 양방 별칭 생성 · ambiguous 자동 판정
+
+별칭은 선택 사항이 아니라 ChatGPT 엔진의 전제 조건이다. 2026-07-30 실측에서
+같은 질의·같은 시스템 프롬프트인데 ChatGPT는 'ASICS GEL-CUMULUS 28', Gemini는
+'아식스 노바블라스트'로 썼고 예외가 한 건도 없었다. 영문 별칭 없이 한글
+브랜드명만 넘기면 ChatGPT 언급률이 구조적으로 0%가 되고, 고객에게 배송되는
+'ChatGPT에서 한 번도 안 나옵니다'는 측정 결과가 아니라 우리 버그다.
+
+경쟁사도 같은 함수를 거친다. 경쟁사 별칭이 없으면 경쟁사가 과소 계상되고
+Share of Voice가 우리에게 유리한 쪽으로 틀린다 — 숫자가 좋아 보여서 아무도
+의심하지 않는 방향의 오류다.
+
+sanitizeAliases가 방어하는 것은 오탐이 아니라 100%다. 별칭에 '패션'이 하나
+섞이면 그 카테고리 질의의 모든 답변에 걸려 언급률이 100%가 된다.
+
+생성 실패는 던지지 않는다. 이미 결제된 주문일 수 있다. onError로 알리고
+빈 별칭으로 진행하며, 리포트의 aliases가 비어 있으면 운영자가 판단한다."
+```
+
+---
+
 ### Task 7: 운영자 CLI와 리포트 메일
+
+> ### ★ 2026-07-30(2) 조정 — 세 곳이 바뀐다
+>
+> **① `executeAudit`이 별칭을 생성해서 넘긴다.** 원래 본문은 자기 브랜드와
+> 경쟁사에 `aliases: []`를 넘겼다 — 그대로 구현하면 모든 리포트가 "ChatGPT에서는
+> 한 번도 나오지 않습니다"가 된다. **아래 본문은 이미 Task 6-2의 `AliasFn`을
+> 쓰도록 고쳐 두었다.** 별칭 생성은 수집 **뒤에** 온다.
+>
+> **② `selfDomains`를 받아 넘긴다.** 인용 출처의 소유 판정에 쓴다.
+> 추측하지 않는다 — 없으면 소유 판정을 하지 않는다(Task 6의 ★ 참고).
+>
+> **③ `scripts/audit-new.mts`를 추가한다.** 크몽 주문은 웹 폼을 거치지 않는다.
+> Step 8에 CLI 세 개가 된다.
 
 **Files:**
 - Create: `src/lib/audit/execute.ts`, `scripts/audit-list.mts`,
-  `scripts/audit-run.mts`
+  `scripts/audit-new.mts`, `scripts/audit-run.mts`
 - Modify: `src/lib/email/templates.ts`, `package.json`
 - Test: `src/lib/audit/execute.test.ts`, `src/lib/email/audit-report.test.ts`
 
 **Interfaces:**
 - Consumes: `runCollection`·`buildFanout`·`buildPlanSnapshot` (Task 1·2),
   `runDetection` (Task 3), `generateAuditQueries`·리포지토리 (Task 4),
-  `buildAuditResult` (Task 6), `claudeJudge` (2단계 Task 8)
+  `generateAliases`·`toBrandProfiles` (Task 6-2), `buildAuditResult` (Task 6),
+  `claudeJudge` (2단계 Task 8)
 - Produces:
   - `executeAudit(audit, deps): Promise<AuditResult>` — 순수 오케스트레이션
   - `auditReportEmail({ result, url }): EmailContent`
-  - `pnpm audit:list` · `pnpm audit:run <id>` · `pnpm audit:reject <id>`
+  - `pnpm audit:list` · `pnpm audit:new` · `pnpm audit:run <id>` ·
+    `pnpm audit:reject <id>`
 
 **이 태스크가 무료 진단의 실행 경로 전부다.** 자동 트리거가 없으므로
 여기서 실패하면 아무 일도 일어나지 않는다 — 조용한 실패가 아니라 **명시적으로
@@ -3276,7 +4169,7 @@ function fakeAnswer(queryText: string, text: string): CollectedAnswer {
     engineId: 'gemini',
     sampleIndex: 0,
     text,
-    citations: [],
+    citations: [{ url: 'https://namu.wiki/w/x', title: '나무위키' }],
     raw: {},
     usage: { calls: 1, searches: 2, tokensIn: 10, tokensOut: 900 },
     costMilliKrw: 42_400,
@@ -3291,6 +4184,14 @@ const deps = {
     batch.map((r) => ({
       id: r.id,
       verdict: { isBrandReference: true, position: 1, sentiment: 'recommended' as const, context: '첫 번째로 언급' },
+    })),
+  ),
+  // 별칭 생성기도 주입한다. 실제 호출은 Task 6-2의 Step 5에서 확인했다.
+  aliasFn: vi.fn(async (brands: readonly string[]) =>
+    brands.map((canonical) => ({
+      canonical,
+      aliases: [`${canonical}-EN`],
+      ambiguous: false,
     })),
   ),
   now: () => new Date('2026-07-30T02:00:00.000Z'),
@@ -3348,6 +4249,66 @@ describe('executeAudit', () => {
     const result = await executeAudit(audit, noJudge)
     expect(result.unresolved).toBeGreaterThan(0)
   })
+
+  it('자기 브랜드와 경쟁사를 한 번에 넘겨 별칭을 만든다', async () => {
+    // ★ 경쟁사 별칭이 없으면 경쟁사가 과소 계상되고 Share of Voice가
+    //   우리에게 유리한 쪽으로 틀린다. 호출은 1회여야 한다 — 브랜드마다
+    //   부르면 원가가 4배가 되는데 얻는 게 없다.
+    deps.aliasFn.mockClear()
+    await executeAudit(audit, deps)
+    expect(deps.aliasFn).toHaveBeenCalledTimes(1)
+    expect(deps.aliasFn.mock.calls[0]?.[0]).toEqual(['무신사', '29CM'])
+  })
+
+  it('생성된 별칭을 리포트에 박제한다 (측정 조건)', async () => {
+    const result = await executeAudit(audit, deps)
+    expect(result.aliases).toEqual(['무신사-EN'])
+  })
+
+  it('별칭은 수집 뒤에 만든다', async () => {
+    // ★ 순서가 뒤집히면 수집이 전부 실패했을 때 별칭 비용을 이미 쓴 뒤에 던진다.
+    const order: string[] = []
+    const tracked = {
+      ...deps,
+      runOne: vi.fn(async (item: { queryText: string }) => {
+        order.push('collect')
+        return fakeAnswer(item.queryText, '무신사가 좋습니다.')
+      }),
+      aliasFn: vi.fn(async (brands: readonly string[]) => {
+        order.push('alias')
+        return brands.map((canonical) => ({ canonical, aliases: [], ambiguous: false }))
+      }),
+    }
+    await executeAudit(audit, tracked)
+    expect(order.indexOf('alias')).toBeGreaterThan(order.lastIndexOf('collect'))
+  })
+
+  it('수집이 전부 실패하면 별칭을 만들지 않는다', async () => {
+    const dead = {
+      ...deps,
+      runOne: vi.fn(async () => { throw new Error('전부 실패') }),
+      aliasFn: vi.fn(async () => []),
+    }
+    await expect(executeAudit(audit, dead)).rejects.toThrow(/수집/)
+    expect(dead.aliasFn).not.toHaveBeenCalled()
+  })
+
+  it('인용 출처를 리포트에 담는다', async () => {
+    const result = await executeAudit(audit, deps)
+    expect(result.sources[0]?.domain).toBe('namu.wiki')
+    expect(result.sourceSummary.answersWithCitations).toBe(3)
+  })
+
+  it('selfDomains를 주지 않으면 소유 판정을 하지 않는다', async () => {
+    const result = await executeAudit(audit, deps)
+    expect(result.hasSelfDomains).toBe(false)
+  })
+
+  it('selfDomains를 주면 우리 사이트 인용을 센다', async () => {
+    const result = await executeAudit({ ...audit, selfDomains: ['namu.wiki'] }, deps)
+    expect(result.hasSelfDomains).toBe(true)
+    expect(result.sourceSummary.selfAnswers).toBe(3)
+  })
 })
 ```
 
@@ -3373,18 +4334,27 @@ import type { JudgeFn } from '@/lib/judge/types'
 import { PLANS } from '@/lib/plans'
 import { buildAuditResult, type AuditResult } from '@/lib/audit/result'
 import { generateAuditQueries } from '@/lib/audit/queries'
+import { generateAliases, toBrandProfiles, type AliasFn } from '@/lib/audit/aliases'
 
 export interface AuditSubject {
   id: string
   brandName: string
   category: string
   competitors: string[]
+  /**
+   * 고객 사이트 호스트명. 없으면 인용 출처의 소유 판정을 하지 않는다.
+   * ★ 브랜드명에서 추측하지 않는다 — 틀린 추측이 "당신 사이트는 한 번도
+   *   인용되지 않았습니다"라는 가장 강한 문장을 근거 없이 만든다.
+   */
+  selfDomains?: string[]
 }
 
 export interface ExecuteAuditDeps {
   runOne?: RunCollectionDeps['runOne']
   onProgress?: RunCollectionDeps['onProgress']
   judge: JudgeFn
+  /** 기본값은 `generateAliases`. 테스트가 가짜를 주입한다 */
+  aliasFn?: AliasFn
   /** 테스트가 시각을 고정한다 */
   now?: () => Date
 }
@@ -3431,17 +4401,25 @@ export async function executeAudit(
     )
   }
 
-  // 4. 판정·집계. 2차가 실패해도 리포트는 만든다 — 이미 돈을 쓴 데이터다.
+  // 4. 별칭 생성 — 자기 브랜드와 경쟁사를 **한 번에** 넘긴다.
+  //
+  // ★ 이 단계를 빼면 ChatGPT 언급률이 구조적으로 0%가 된다(2026-07-30 실측).
+  //   경쟁사를 함께 넘기는 것도 필수다 — 경쟁사 별칭이 없으면 경쟁사가 과소
+  //   계상되고 Share of Voice가 우리에게 유리한 쪽으로 틀린다.
+  //
+  // ★ 수집 **뒤에** 생성한다. 순서를 바꾸면 수집이 전부 실패했을 때
+  //   별칭 생성 비용을 이미 쓴 뒤에 던지게 된다.
+  const aliasFn = deps.aliasFn ?? generateAliases
+  const suggestions = await aliasFn(
+    [subject.brandName, ...subject.competitors],
+    subject.category,
+  )
+  const [self, ...competitors] = toBrandProfiles(suggestions)
+  if (!self) throw new Error('별칭 생성이 자기 브랜드를 돌려주지 않았습니다')
+
+  // 5. 판정·집계. 2차가 실패해도 리포트는 만든다 — 이미 돈을 쓴 데이터다.
   const detection = await runDetection(
-    {
-      answers: collected.answers,
-      self: { canonical: subject.brandName, aliases: [], ambiguous: false },
-      competitors: subject.competitors.map((name) => ({
-        canonical: name,
-        aliases: [],
-        ambiguous: false,
-      })),
-    },
+    { answers: collected.answers, self, competitors },
     deps.judge,
   )
 
@@ -3450,6 +4428,8 @@ export async function executeAudit(
     category: subject.category,
     competitors: subject.competitors,
     engines: [...PLANS.free.engines],
+    aliases: self.aliases,
+    ...(subject.selfDomains ? { selfDomains: subject.selfDomains } : {}),
     measuredAt: now().toISOString(),
     metrics: detection.metrics,
     answers: collected.answers.map(toResultAnswer),
@@ -3472,7 +4452,14 @@ export function answerId(a: CollectedAnswer): string {
 }
 
 function toResultAnswer(a: CollectedAnswer) {
-  return { id: answerId(a), queryText: a.queryText, engineId: a.engineId, text: a.text }
+  return {
+    id: answerId(a),
+    queryText: a.queryText,
+    engineId: a.engineId,
+    text: a.text,
+    // 인용 출처 집계에 쓴다. 이미 수집한 값이므로 API 호출이 늘지 않는다.
+    citations: a.citations,
+  }
 }
 ```
 
@@ -3487,7 +4474,7 @@ function toResultAnswer(a: CollectedAnswer) {
 pnpm vitest run src/lib/audit/execute.test.ts
 ```
 
-Expected: PASS (7 passed)
+Expected: PASS (14 passed)
 
 - [ ] **Step 5: 리포트 메일 실패 테스트**
 
@@ -3517,6 +4504,18 @@ const result = {
   ],
   byEngine: { gemini: wilsonInterval(1, 3) },
   byQuery: [{ queryText: '러닝화 추천', interval: wilsonInterval(0, 1) }],
+  aliases: ['MUSINSA'],
+  sources: [
+    {
+      domain: 'namu.wiki',
+      answers: 2,
+      share: wilsonInterval(2, 3),
+      pages: [{ url: 'https://namu.wiki/w/x', title: '나무위키 - 무신사', answers: 2 }],
+      owner: 'third-party' as const,
+    },
+  ],
+  sourceSummary: { totalAnswers: 3, answersWithCitations: 2, distinctDomains: 1, selfAnswers: 0 },
+  hasSelfDomains: false,
   unresolved: 0,
 }
 
@@ -3548,6 +4547,21 @@ describe('auditReportEmail', () => {
 
   it('증거 원문을 담는다', () => {
     expect(auditReportEmail({ result, url }).html).toContain('무신사가 좋습니다.')
+  })
+
+  it('인용 출처를 담는다', () => {
+    // ★ 0% 고객이 메일에서 유일하게 얻어갈 수 있는 것이다. 링크를 눌러야
+    //   보인다면 대부분은 못 본다.
+    expect(auditReportEmail({ result, url }).html).toContain('namu.wiki')
+  })
+
+  it('도메인을 모르면 "우리 사이트 인용 없음"을 쓰지 않는다', () => {
+    expect(auditReportEmail({ result, url }).html).not.toMatch(/한 번도 인용되지 않/)
+  })
+
+  it('도메인을 알고 0회면 그 사실을 쓴다', () => {
+    const mail = auditReportEmail({ result: { ...result, hasSelfDomains: true }, url })
+    expect(mail.html).toMatch(/한 번도 인용되지 않/)
   })
 
   it('경쟁사가 없으면 Share of Voice를 아예 쓰지 않는다', () => {
@@ -3634,6 +4648,51 @@ export function auditReportEmail(params: { result: AuditResult; url: string }): 
       ? `<p style="margin:0 0 16px;color:#a60">${result.unresolved}건은 판정하지 못해 결과에서 제외했습니다.</p>`
       : ''
 
+  // ★ 인용 출처 — 0% 고객이 이 메일에서 유일하게 얻어갈 수 있는 것이다.
+  //   링크를 눌러야 보이게 하면 대부분은 못 본다. 메일 본문에 넣는다.
+  const sourceRows = result.sources
+    .slice(0, 8)
+    .map((s) => {
+      const badge =
+        s.owner === 'self'
+          ? ' <span style="color:#0a7">[우리]</span>'
+          : s.owner === 'competitor'
+            ? ' <span style="color:#a60">[경쟁사]</span>'
+            : ''
+      return `<tr>
+        <td style="padding:6px 12px 6px 0">${escapeHtml(s.domain)}${badge}</td>
+        <td style="padding:6px 0;color:#555">${s.answers}개 답변 (${formatPercent(s.share.point)})</td>
+      </tr>`
+    })
+    .join('')
+
+  // ★ hasSelfDomains가 false면 selfAnswers 0은 "모른다"는 뜻이다. 그것을
+  //   "한 번도 인용되지 않았습니다"로 쓰면 근거 없는 단정이 된다.
+  const selfLine = !result.hasSelfDomains
+    ? `<p style="margin:0 0 14px;color:#666;font-size:14px">
+         사이트 주소를 알려주시면 다음 측정에서 <strong>${brand} 사이트가 인용되는지</strong> 함께 확인해 드립니다.
+       </p>`
+    : result.sourceSummary.selfAnswers > 0
+      ? `<p style="margin:0 0 14px;color:#0a7;font-size:14px">
+           ${brand} 사이트는 ${result.sourceSummary.selfAnswers}개 답변에서 인용됐습니다.
+         </p>`
+      : `<p style="margin:0 0 14px;color:#a60;font-size:14px">
+           <strong>${brand} 사이트는 한 번도 인용되지 않았습니다.</strong>
+           AI는 아래 사이트들을 읽고 답을 만들고 있습니다.
+         </p>`
+
+  const sources =
+    result.sources.length > 0
+      ? `<h2 style="margin:0 0 12px;font-size:17px">AI가 읽는 출처</h2>
+         <p style="margin:0 0 12px;color:#666;font-size:14px">
+           답변 ${result.sourceSummary.totalAnswers}개 중
+           ${result.sourceSummary.answersWithCitations}개에 인용이 있었고, 도메인
+           ${result.sourceSummary.distinctDomains}개가 나왔습니다.
+         </p>
+         ${selfLine}
+         <table style="border-collapse:collapse;margin:0 0 28px">${sourceRows}</table>`
+      : ''
+
   return {
     subject: `[Cited] ${result.brandName} AI 언급률 ${rate} — 진단 리포트`,
     html: layout(`
@@ -3670,6 +4729,13 @@ export function auditReportEmail(params: { result: AuditResult; url: string }): 
       </p>
       ${evidence}
 
+      ${sources}
+
+      <p style="margin:0 0 24px;color:#888;font-size:12px">
+        측정 표기: ${escapeHtml([result.brandName, ...result.aliases].join(', '))} ·
+        빠진 표기가 있으면 알려주세요.
+      </p>
+
       <p style="margin:24px 0 0">
         <a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 20px;border-radius:8px;background:#111;color:#fff;text-decoration:none">전체 리포트 보기</a>
       </p>
@@ -3684,9 +4750,9 @@ export function auditReportEmail(params: { result: AuditResult; url: string }): 
 pnpm vitest run src/lib/email/audit-report.test.ts
 ```
 
-Expected: PASS (8 passed)
+Expected: PASS (11 passed)
 
-- [ ] **Step 8: CLI 두 개 작성**
+- [ ] **Step 8: CLI 세 개 작성**
 
 `scripts/audit-list.mts`:
 
@@ -3730,6 +4796,118 @@ if (overdue.length > 0) {
   console.warn(`\n⚠ 24시간을 넘긴 신청이 ${overdue.length}건 있습니다. '영업일 1일 이내'를 약속했습니다.`)
 }
 ```
+
+`scripts/audit-new.mts` — **크몽 주문의 입구다.**
+
+```ts
+/**
+ * 진단 신청을 운영자가 직접 등록한다. 이메일 인증을 건너뛴다.
+ *
+ *   pnpm audit:new "무신사" "패션" --email "고객@example.com" \
+ *     --competitors "29CM,지그재그" --domains "musinsa.com" --source kmong
+ *
+ * ★ 크몽 주문은 웹 폼을 거치지 않는다. 고객이 크몽 메시지로 브랜드명을 알려주고
+ *   운영자가 대신 입력한다. 이 CLI가 없으면 DB에 직접 INSERT하게 되는데, 그러면
+ *   상태값과 제약을 손으로 맞춰야 하고 언젠가 틀린다.
+ *
+ * ★ 이메일 인증을 건너뛰는 것은 크몽에서 결제가 이미 확인됐기 때문이다.
+ *   남용 위험이 없다. 다만 **`source`에 반드시 기록한다** — 그렇지 않으면
+ *   나중에 `email_verified = true`인 행 중 어느 것이 실제로 링크를 눌렀고
+ *   어느 것이 운영자가 통과시킨 것인지 구분할 수 없고, 인증 게이트가 실제로
+ *   작동하는지 감사할 수 없게 된다.
+ */
+import { createVerifiedAudit } from '@/lib/audit/repository'
+import { parseHostname } from '@/lib/audit/request-schema'
+import { hashIp } from '@/lib/audit/token'
+import { AUDIT_SOURCES, type AuditSource } from '@/lib/db/schema'
+
+const argv = process.argv.slice(2)
+
+function option(name: string): string | undefined {
+  const i = argv.indexOf(name)
+  if (i < 0) return undefined
+  const value = argv[i + 1]
+  argv.splice(i, value === undefined ? 1 : 2)
+  return value
+}
+
+const email = option('--email')
+const competitorsArg = option('--competitors')
+const domainsArg = option('--domains')
+const sourceArg = option('--source') ?? 'kmong'
+
+const [brandName, category] = argv
+
+if (!brandName || !category || !email) {
+  console.error(
+    '사용법: pnpm audit:new "<브랜드>" "<카테고리>" --email <이메일>' +
+      ' [--competitors a,b] [--domains a,b] [--source kmong|manual]',
+  )
+  process.exit(1)
+}
+if (!(AUDIT_SOURCES as readonly string[]).includes(sourceArg)) {
+  console.error(`알 수 없는 source: ${sourceArg} (${AUDIT_SOURCES.join(' | ')})`)
+  process.exit(1)
+}
+// ★ 'web'은 실제로 폼을 거친 신청에만 쓴다. CLI로 만든 행에 'web'을 붙이면
+//   인증 게이트 감사가 무의미해진다.
+if (sourceArg === 'web') {
+  console.error("source에 'web'을 쓸 수 없습니다. 폼을 거친 신청에만 쓰는 값입니다.")
+  process.exit(1)
+}
+
+const csv = (v: string | undefined): string[] =>
+  (v ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+
+const competitors = csv(competitorsArg).slice(0, 3)
+
+// ★ 폼과 같은 정규화를 거친다. `https://www.musinsa.com/kr`을 그대로 넣으면
+//   citationDomain이 뽑는 호스트명과 절대 일치하지 않아 소유 판정이 조용히
+//   전부 실패한다 — 리포트가 "인용 0회"라고 말하는데 원인은 입력 형식이다.
+const domainInputs = csv(domainsArg)
+const selfDomains: string[] = []
+for (const raw of domainInputs) {
+  const host = parseHostname(raw)
+  if (host === null) {
+    console.error(`사이트 주소를 알아볼 수 없습니다: ${raw}`)
+    process.exit(1)
+  }
+  selfDomains.push(host)
+}
+
+// 결제가 확인됐으므로 인증을 건너뛴다. 그 사실이 source에 남는다.
+const created = await createVerifiedAudit({
+  brandName,
+  category,
+  email,
+  competitors,
+  selfDomains,
+  source: sourceArg as Exclude<AuditSource, 'web'>,
+  // IP가 없다. 운영자 등록임을 나타내는 고정 값을 해시한다 — ipHash는 notNull이고
+  // 스팸 관측용이므로 빈 문자열을 넣으면 웹 신청과 섞인다.
+  ipHash: hashIp('cli'),
+})
+const id = created.id
+
+console.log(`등록 완료: ${id}`)
+console.log(`  ${brandName} · ${category} · source=${sourceArg}`)
+console.log(`  경쟁사 ${competitors.length}개${competitors.length ? `: ${competitors.join(', ')}` : ''}`)
+console.log(
+  selfDomains.length > 0
+    ? `  우리 도메인: ${selfDomains.join(', ')}`
+    : '  ⚠ --domains 없음 — 인용 출처의 소유 판정을 하지 않습니다',
+)
+console.log(`\n실행: pnpm audit:run ${id} --dry`)
+```
+
+> **`createVerifiedAudit`은 Task 4에서 이미 만들었다.** `markVerified`를
+> 재사용하지 않는 이유가 그 함수 주석에 있다 — 토큰의 이메일 검사가 그
+> 함수의 존재 이유이고, 우회 옵션을 뚫으면 웹 경로에서도 우회될 수 있다.
+>
+> **도메인 인자도 `parseHostname`을 거친다.** 운영자가 `https://www.musinsa.com/kr`
+> 처럼 붙여넣을 것이고, 그것을 그대로 저장하면 `citationDomain`이 뽑는 호스트명과
+> 절대 일치하지 않아 소유 판정이 **조용히 전부 실패한다.** 리포트는 "인용 0회"라고
+> 말하는데 원인은 입력 형식이다 — 알아챌 방법이 없는 종류의 버그다.
 
 `scripts/audit-run.mts`:
 
@@ -3788,6 +4966,7 @@ try {
       brandName: audit.brandName,
       category: audit.category,
       competitors: audit.competitors,
+      selfDomains: audit.selfDomains,
     },
     {
       judge: claudeJudge,
@@ -3805,6 +4984,16 @@ try {
 console.log(`\n소요 ${Math.round((Date.now() - started) / 1000)}초`)
 console.log(`언급률 ${formatPercent(result.citedRate.point)} (${formatInterval(result.citedRate)})`)
 console.log(`답변 ${result.totalAnswers}개 · 미판정 ${result.unresolved}건`)
+
+// ★ 별칭을 반드시 출력한다. 빈 별칭으로 돌면 ChatGPT가 0%로 나오는데, 그것을
+//   실제 결과로 착각해 발송하면 첫 리포트가 틀린 채로 나간다.
+if (result.aliases.length > 0) {
+  console.log(`별칭: ${result.aliases.join(', ')}`)
+} else {
+  console.warn('⚠ 별칭이 비어 있습니다. 별칭 생성이 실패했을 수 있습니다.')
+  console.warn('  ChatGPT 언급률이 0%로 나오면 측정 결과가 아니라 이 문제입니다. 재실행하세요.')
+}
+
 console.log('\n순위:')
 for (const r of result.ranking) {
   console.log(`  ${r.isSelf ? '▶' : ' '} ${r.name.padEnd(16)} ${r.mentions}회`)
@@ -3813,6 +5002,25 @@ console.log('\n증거:')
 for (const e of result.evidence) {
   console.log(`  [${e.mentioned ? '언급' : '미언급'}] ${e.query}`)
   console.log(`    ${e.text.slice(0, 120)}…`)
+}
+
+console.log(
+  `\nAI가 읽는 출처 — 답변 ${result.sourceSummary.totalAnswers}개 중` +
+    ` ${result.sourceSummary.answersWithCitations}개에 인용 · 도메인 ${result.sourceSummary.distinctDomains}개`,
+)
+for (const s of result.sources.slice(0, 8)) {
+  const tag = s.owner === 'self' ? ' [우리]' : s.owner === 'competitor' ? ' [경쟁사]' : ''
+  console.log(`  ${String(s.answers).padStart(2)}개 ${formatPercent(s.share.point).padStart(6)} ${s.domain}${tag}`)
+}
+// ★ 도메인을 모르는 것과 0회 인용은 다르다. 섞어서 말하지 않는다.
+if (result.hasSelfDomains) {
+  console.log(
+    result.sourceSummary.selfAnswers > 0
+      ? `  우리 사이트: ${result.sourceSummary.selfAnswers}개 답변에서 인용됨`
+      : '  우리 사이트: 한 번도 인용되지 않음 ← 리포트의 핵심 문장',
+  )
+} else {
+  console.log('  (우리 도메인 미지정 — 소유 판정 없음)')
 }
 
 if (dry) {
@@ -3837,28 +5045,43 @@ console.log(`\n발송 완료 → ${url}`)
 `package.json`의 `scripts`에 추가한다:
 
 ```json
-    "audit:list": "tsx --env-file=.env.local scripts/audit-list.mts",
-    "audit:run": "tsx --env-file=.env.local scripts/audit-run.mts"
+    "audit:list": "tsx --conditions=react-server --env-file=.env.local scripts/audit-list.mts",
+    "audit:new": "tsx --conditions=react-server --env-file=.env.local scripts/audit-new.mts",
+    "audit:run": "tsx --conditions=react-server --env-file=.env.local scripts/audit-run.mts"
 ```
+
+> **`--conditions=react-server`가 필요하다.** 2단계에서 확인했다 —
+> `server-only`는 이 export condition에서만 빈 모듈로 해석되고, 없으면
+> `@/lib/db`·`@/lib/env`를 import하는 순간 스크립트가 죽는다.
 
 - [ ] **Step 9: 실제 1건 실행 (dry)**
 
-DB에 인증된 신청이 있어야 한다. Task 5의 통합 테스트가 만든 건을 쓰거나,
-로컬 개발 서버에서 직접 신청하고 인증 링크를 눌러 만든다.
+`audit:new`로 직접 만든다 — 이것이 크몽 경로이므로 함께 검증된다.
 
 ```bash
+pnpm audit:new "무신사" "패션" --email "본인메일@example.com" \
+  --competitors "29CM,지그재그" --domains "musinsa.com" --source manual
 pnpm audit:list
 pnpm audit:run <id> --dry
 ```
 
-Expected: 3회 수집, 언급률과 증거가 출력되고 **저장·발송하지 않는다.**
+Expected: 3회 수집(무료 플랜 3질의 × 2엔진 × 1샘플 = 6회), 언급률·증거·인용
+출처가 출력되고 **저장·발송하지 않는다.** 원가는 약 250원.
 
 **이때 반드시 눈으로 확인할 것:**
 
 - 질의 3개에 브랜드명이 들어가지 않았는가
+- **별칭 줄에 `MUSINSA`가 있는가** — 없으면 ChatGPT가 0%로 나오고, 그건 측정
+  결과가 아니라 Task 6-2의 실패다. `⚠ 별칭이 비어 있습니다`가 뜨면 발송하지 말고
+  재실행한다
+- **엔진별 언급률이 ChatGPT 0% / Gemini 양수 꼴이 아닌가** — 이 패턴이 별칭
+  문제의 지문이다
 - 증거 원문이 실제 한국어 답변인가 (영어로 답했다면 systemInstruction 문제)
 - 언급 판정이 눈으로 봐도 맞는가 — **틀렸다면 2단계 판정 로직을 고쳐야 한다.
   이것이 수동 배송을 택한 이유다**
+- **인용 출처가 비어 있지 않은가.** 두 엔진 모두 인용 0건이면 어댑터가
+  citations를 흘리고 있다. Gemini 출처가 전부 `vertexaisearch.cloud.google.com`
+  하나로 뭉쳐 있으면 `Citation.domain`이 유실됐다는 뜻이다
 - 소요 시간을 기록한다. 자동화 시점을 결정할 숫자다
 
 - [ ] **Step 10: 커밋**
@@ -3868,7 +5091,14 @@ git add src/lib/audit/execute.ts src/lib/audit/execute.test.ts src/lib/email scr
 git commit -m "feat(audit): 운영자 CLI와 리포트 메일
 
 무료 진단은 자동 트리거가 없다. audit:list로 대기 목록을 보고 audit:run으로
-실행한다. --dry는 저장·발송 없이 결과만 보여준다 — 초기에는 반드시 이걸로
+실행한다. audit:new는 크몽 주문의 입구다 — 크몽 고객은 웹 폼을 거치지 않고
+운영자가 대신 등록한다. 결제가 확인됐으므로 이메일 인증을 통과시키되
+source='kmong'을 남긴다. 그것을 남기지 않으면 나중에 email_verified=true인 행
+중 어느 것이 실제로 링크를 눌렀는지 구분할 수 없어 인증 게이트를 감사할 수 없다.
+
+executeAudit이 별칭을 생성해 넘긴다. 자기 브랜드와 경쟁사를 한 번에 넘기고,
+수집 뒤에 생성한다 — 순서를 바꾸면 수집이 전부 실패했을 때 별칭 비용을 이미
+쓴 뒤에 던진다. audit:run은 별칭을 출력하고 비어 있으면 경고한다. --dry는 저장·발송 없이 결과만 보여준다 — 초기에는 반드시 이걸로
 눈으로 확인하고 보낸다. 자동 공개로 넘어가는 기준은 '손으로 고칠 게 없어진
 시점'이다.
 
@@ -3917,8 +5147,39 @@ unresolved로 세어 리포트에 표시한다 — 이미 돈을 쓴 수집 데�
 
 핵심 요구사항 (구현 시 반드시 지킬 것):
 
-1. 필드는 **브랜드명 · 카테고리 · 경쟁사(선택, 최대 3) · 이메일** 넷.
-   카테고리는 `KNOWN_CATEGORIES`를 datalist로 제안하되 자유 입력을 막지 않는다.
+1. 필드는 **브랜드명 · 카테고리 · 사이트 주소(선택) · 경쟁사(선택, 최대 3) ·
+   이메일** 다섯. 카테고리는 `KNOWN_CATEGORIES`를 datalist로 제안하되 자유 입력을
+   막지 않는다.
+
+   > **★ 2026-07-30(2) 추가 — 사이트 주소.** 인용 출처의 소유 판정에 쓴다
+   > (Task 6). 브랜드명에서 도메인을 **추측하지 않는다** — `무신사`가
+   > `musinsa.com`인지 `musinsa.co.kr`인지 알 수 없고, 틀린 추측이 "당신 사이트는
+   > 한 번도 인용되지 않았습니다"라는 리포트의 가장 강한 문장을 근거 없이
+   > 만들어낸다. 선택 항목이며, 비면 그 줄을 아예 표시하지 않는다.
+   >
+   > 입력값은 `https://` 유무·경로·`www.`가 섞여 들어온다. 서버(Task 5)에서
+   > 호스트명만 뽑아 저장한다:
+   >
+   > ```ts
+   > /** 사용자 입력에서 호스트명만 뽑는다. 실패하면 저장하지 않는다. */
+   > export function parseHostname(input: string): string | null {
+   >   const value = input.trim()
+   >   if (!value) return null
+   >   try {
+   >     // 스킴이 없으면 URL이 던진다. 붙여서 다시 시도한다.
+   >     const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`)
+   >     const host = url.hostname
+   >     if (!host.includes('.')) return null
+   >     return host.startsWith('www.') ? host.slice(4) : host
+   >   } catch {
+   >     return null
+   >   }
+   > }
+   > ```
+   >
+   > 파싱 실패를 **조용히 넘기지 않는다.** 폼에서 "사이트 주소를 알아볼 수
+   > 없습니다"로 되돌려준다 — 조용히 버리면 고객은 넣었다고 믿고, 리포트에는
+   > 그 줄이 없다.
 2. **경쟁사 입력란을 눈에 띄게 둔다.** 경쟁사를 넣으면 Share of Voice가 나오고
    그것이 가장 강한 후킹인데, 넣지 않으면 `n=0`이라 아예 표시되지 않는다.
    "경쟁사를 넣으면 점유율 비교를 함께 보내드립니다"라고 명시한다.
@@ -4001,6 +5262,23 @@ const base = {
   ],
   byEngine: { gemini: wilsonInterval(1, 3) },
   byQuery: [{ queryText: '러닝화 추천', interval: wilsonInterval(0, 1) }],
+  aliases: ['MUSINSA'],
+  sources: [
+    {
+      domain: 'namu.wiki',
+      answers: 2,
+      share: wilsonInterval(2, 3),
+      pages: [{ url: 'https://namu.wiki/w/x', title: '나무위키 - 무신사', answers: 2 }],
+      owner: 'third-party' as const,
+    },
+  ],
+  sourceSummary: {
+    totalAnswers: 3,
+    answersWithCitations: 2,
+    distinctDomains: 1,
+    selfAnswers: 0,
+  },
+  hasSelfDomains: false,
   unresolved: 0,
 }
 
@@ -4039,6 +5317,43 @@ describe('ResultView', () => {
     )
     expect(screen.getByText(/무신사가 좋습니다/)).toBeInTheDocument()
   })
+
+  it('인용 출처를 보여준다', () => {
+    render(<ResultView result={base} />)
+    expect(screen.getByText('namu.wiki')).toBeInTheDocument()
+  })
+
+  it('언급률 0%일 때도 인용 출처는 그린다', () => {
+    // ★ 0%가 가장 흔한 결과다. 여기서 출처까지 없으면 리포트에 남는 것이
+    //   "당신은 없습니다" 한 줄뿐이고, 고객이 할 수 있는 일이 없다.
+    render(<ResultView result={{ ...base, citedRate: wilsonInterval(0, 3) }} />)
+    expect(screen.getByText('namu.wiki')).toBeInTheDocument()
+  })
+
+  it('도메인을 모르면 "우리 사이트 인용 없음"을 쓰지 않는다', () => {
+    // ★ hasSelfDomains가 false면 selfAnswers 0은 "모른다"는 뜻이다.
+    //   그것을 "한 번도 인용되지 않았습니다"로 쓰면 근거 없는 단정이 된다.
+    render(<ResultView result={base} />)
+    expect(screen.queryByText(/한 번도 인용되지 않/)).not.toBeInTheDocument()
+  })
+
+  it('도메인을 알고 0회면 그 사실을 분명히 쓴다', () => {
+    render(<ResultView result={{ ...base, hasSelfDomains: true }} />)
+    expect(screen.getByText(/한 번도 인용되지 않/)).toBeInTheDocument()
+  })
+
+  it('인용이 하나도 없으면 출처 섹션을 그리지 않는다', () => {
+    render(
+      <ResultView
+        result={{
+          ...base,
+          sources: [],
+          sourceSummary: { totalAnswers: 3, answersWithCitations: 0, distinctDomains: 0, selfAnswers: 0 },
+        }}
+      />,
+    )
+    expect(screen.queryByText(/AI가 읽는 출처/)).not.toBeInTheDocument()
+  })
 })
 ```
 
@@ -4066,7 +5381,24 @@ pnpm add -D @testing-library/react @testing-library/jest-dom jsdom
    2단계 `metrics.ts` 주석 그대로 — 분모를 모르면 이 숫자는 오해를 만든다.
 4. `byQuery`는 **언급률이 낮은 순** 그대로 그린다. "이 질문에서 안 나온다"가
    위로 와야 행동으로 이어진다.
-5. 하단에 유료 전환 블록: **"이 리포트는 1회 측정입니다"** → 구간 넓이 →
+5. **★ 2026-07-30(2) — 「AI가 읽는 출처」 섹션을 반드시 넣는다.**
+   `sources`를 상위 8개까지, `answers`와 `share` 구간을 함께. `owner`가
+   `self`/`competitor`면 배지를 붙인다.
+
+   이 섹션이 **0% 고객에게 유일하게 집행 가능한 정보**다. 언급률 0%는 "당신은
+   없습니다" 외에 아무것도 알려주지 않지만, "AI가 이 질문에 답할 때 이 5개
+   사이트를 읽습니다"는 그 자리에서 할 일이 된다. `sources`가 비어 있으면
+   섹션을 그리지 않는다.
+
+   **`hasSelfDomains`가 false면 "우리 사이트" 줄을 아예 그리지 않는다.**
+   `selfAnswers === 0`은 "인용되지 않았다"와 "도메인을 몰라서 못 셌다" 두 가지
+   뜻이고, 후자를 "한 번도 인용되지 않았습니다"로 쓰면 리포트의 가장 강한
+   문장을 근거 없이 만드는 것이 된다. 대신 "사이트 주소를 알려주시면 인용
+   여부를 함께 확인해 드립니다"로 유도한다.
+6. **별칭을 측정 조건에 함께 표시한다.** "측정 표기: 무신사, MUSINSA, 무탠다드"
+   — 고객이 빠진 표기를 알려줄 수 있는 유일한 지점이고, 그 제보가 다음 측정의
+   정확도를 올린다.
+7. 하단에 유료 전환 블록: **"이 리포트는 1회 측정입니다"** → 구간 넓이 →
    "주 3회 측정하면 구간이 좁아지고 주간 변화를 판정할 수 있습니다" → 요금제 링크.
 
 `src/app/audit/[id]/page.tsx`:
@@ -4204,6 +5536,21 @@ test('잘못된 이메일은 제출되지 않는다', async ({ page }) => {
   await expect(page).not.toHaveURL(/\/audit\/requested/)
 })
 
+// ★ 2026-07-30(2) — 사이트 주소는 선택 항목이다. 위 첫 테스트가 그것을
+//   비운 채로 통과하므로 선택임이 이미 증명된다. 여기서는 **알아볼 수 없는
+//   값을 조용히 삼키지 않는지**만 본다 — 조용히 버리면 고객은 넣었다고 믿고
+//   리포트에는 그 줄이 없다.
+test('알아볼 수 없는 사이트 주소는 오류를 보여준다', async ({ page }) => {
+  await page.goto('/')
+  await page.getByLabel('브랜드명').fill('E2E테스트브랜드')
+  await page.getByLabel('카테고리').fill('패션')
+  await page.getByLabel(/사이트/).fill('무신사')
+  await page.getByLabel('이메일').fill(`e2e-${Date.now()}@cited-smoke.invalid`)
+  await page.getByRole('button', { name: /신청/ }).click()
+  await expect(page).not.toHaveURL(/\/audit\/requested/)
+  await expect(page.getByText(/사이트 주소를 알아볼 수 없/)).toBeVisible()
+})
+
 test('만료·위조 인증 링크는 안내 화면으로 보낸다', async ({ page }) => {
   await page.goto('/api/audit/verify?token=forged.signature')
   await expect(page).toHaveURL(/state=invalid/)
@@ -4288,9 +5635,19 @@ git commit -m "test(e2e): 진단 신청 플로우 · 방침 갱신 · 1차 배�
 ## 3단계 완료 조건 (= 1차 배포 게이트)
 
 - [ ] `pnpm test` · `pnpm typecheck` · `pnpm lint` · `pnpm build` 전부 통과
-- [ ] `pnpm test:e2e` 5건 통과
+- [ ] `pnpm test:e2e` 6건 통과
 - [ ] **수집·판정 코어가 `@trigger.dev/*`를 import하지 않는다** (4단계가 감쌀 수 있어야 한다)
 - [ ] `pnpm audit:run <id> --dry`로 **실제 API에 1건 이상 돌려 결과를 눈으로 확인**했다
+- [ ] **별칭이 실제로 생성됐다** — `probe-aliases`에서 `아식스`→`ASICS`,
+      `무신사`→`MUSINSA`가 나왔고, `audit:run` 출력의 별칭 줄이 비어 있지 않다
+- [ ] **엔진별 언급률이 `ChatGPT 0% / Gemini 양수` 꼴이 아니다** — 이 패턴이
+      별칭 누락의 지문이다. 나타나면 배포하지 않는다
+- [ ] **리포트에 인용 출처 섹션이 있고 비어 있지 않다.** Gemini 출처가
+      `vertexaisearch.cloud.google.com` 하나로 뭉쳐 있지 않다
+- [ ] **도메인 미지정 진단에서 "한 번도 인용되지 않았습니다"가 나오지 않는다**
+      (모르는 것을 0회라고 말하지 않는다)
+- [ ] `pnpm audit:new`로 등록한 건이 `source='kmong'`(또는 `manual`)으로 남고,
+      **`web`으로는 만들 수 없다**
 - [ ] 프로덕션에서 신청→인증→발송→열람을 **본인 계정으로 끝까지** 돌렸다
 - [ ] 확인 메일과 리포트 메일이 스팸함으로 가지 않는다
 - [ ] 개인정보처리방침 §7·§8에 Google LLC·Anthropic PBC가 반영됐다
@@ -4307,6 +5664,13 @@ git commit -m "test(e2e): 진단 신청 플로우 · 방침 갱신 · 1차 배�
   `runDetection`을 **감싸기만** 한다. 로직을 잡 안으로 되돌리지 마라
 - **`selectBrandsForToday`(요일 분산 선별)와 일일 스케줄러** — 3단계에서 뺐다
 - 토스 빌링키·구독 생애주기·온보딩 마법사
+- **온보딩의 별칭 생성은 Task 6-2의 `generateAliases`를 그대로 쓴다.**
+  따로 만들지 마라 — 무료와 유료가 다른 별칭으로 측정되면 전환한 고객의
+  언급률이 달라지고, "무료에선 33%였는데 유료는 18%네요"에 답할 수가 없다.
+  온보딩에서는 생성된 별칭을 **고객이 보고 고칠 수 있게** 한다(고객이 자기
+  브랜드 표기를 가장 잘 안다). 경쟁사 별칭도 같이 생성한다
+- **`brands.selfDomains`**를 온보딩에서 받는다. 3단계는 진단 폼에서 받았고
+  (`free_audits.self_domains`), 유료는 브랜드 등록에 속한다
 
 **무료 진단 자동화는 4단계에도 넣지 않는다.** 판단 기준은 시간이 아니라
 **"리포트를 N건 보내는 동안 손으로 고친 것이 없어진 시점"**이다. 그때
