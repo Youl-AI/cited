@@ -28,6 +28,7 @@
     "audit:new": "tsx --conditions=react-server --env-file=.env.local scripts/audit-new.mts",
     "audit:run": "tsx --conditions=react-server --env-file=.env.local scripts/audit-run.mts",
     "audit:reject": "tsx --conditions=react-server --env-file=.env.local scripts/audit-reject.mts",
+    "audit:resend": "tsx --conditions=react-server --env-file=.env.local scripts/audit-resend.mts",
     "measure": "tsx --conditions=react-server --env-file=.env.local scripts/measure.mts",
     "label:collect": "tsx --conditions=react-server --env-file=.env.local scripts/label-collect.mts",
     "label": "tsx --conditions=react-server scripts/label.mts",

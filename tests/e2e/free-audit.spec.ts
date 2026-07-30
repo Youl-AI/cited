@@ -167,6 +167,13 @@ test('위조된 인증 링크는 안내 화면으로 보낸다', async ({ page }
   await page.goto('/api/audit/verify?token=forged.signature')
   await expect(page).toHaveURL(/state=invalid/)
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/만료|올바르지/)
+
+  // ★ 리다이렉트가 **같은 오리진**에 머물러야 한다. 이 라우트는
+  //   `env.NEXT_PUBLIC_APP_URL`로 Location을 만드는데, `.env.local`에 프로덕션
+  //   주소가 들어가면 로컬에서 띄운 서버가 사용자를 프로덕션으로 보낸다.
+  //   `state=invalid`만 보면 그래도 통과하므로 조용히 지나간다 — 실제로
+  //   2026-07-30에 그 상태였다.
+  expect(new URL(page.url()).origin).toBe('http://localhost:3000')
 })
 
 test('발송되지 않은 리포트 링크는 404다', async ({ page }) => {

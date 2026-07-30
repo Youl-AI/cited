@@ -1,17 +1,24 @@
 /**
  * 진단 1건을 실행하고 리포트를 메일로 보낸다.
  *
- *   pnpm audit:run aud_xxx          실행 후 발송
- *   pnpm audit:run aud_xxx --dry    실행만 하고 발송하지 않는다 (결과 확인용)
+ *   pnpm audit:run aud_xxx --base-url https://cited.co.kr   실행 후 발송
+ *   pnpm audit:run aud_xxx --dry                            실행만 (결과 확인용)
  *
  * ★ --dry를 먼저 써라. 초기에는 리포트를 눈으로 보고 나서 보내야 한다.
  *   자동 공개로 넘어가는 기준이 "손으로 고칠 게 없어진 시점"이다.
  *
  * ★ --dry도 **돈이 든다.** 수집과 판정을 실제로 부른다. 저장과 발송만 건너뛴다.
+ *
+ * ★ **발송에는 `--base-url`이 필요하다.** 이 스크립트는 `.env.local`을 읽으므로
+ *   `NEXT_PUBLIC_APP_URL`이 개발용 `http://localhost:3000`이다. 2026-07-30 첫
+ *   실사용에서 리포트 메일이 실제로 그 링크를 달고 나갔다 — 고객은 못 연다.
+ *   같은 변수가 웹 라우트(Vercel 환경변수)에서는 옳고 여기서는 틀리다는 것이
+ *   함정이었다. 이제 로컬 주소로 발송하려 하면 **돈을 쓰기 전에** 멈춘다.
  */
 import { createAliasGenerator } from '@/lib/audit/aliases'
 import { createCostMeter } from '@/lib/audit/cost'
 import { executeAudit } from '@/lib/audit/execute'
+import { parseBaseUrlFlag, reportUrl, resolveReportBaseUrl } from '@/lib/audit/report-url'
 import { getAudit, markFailed, markRunning, markSent } from '@/lib/audit/repository'
 import { sendEmail } from '@/lib/email/send'
 import { auditReportEmail } from '@/lib/email/templates'
@@ -23,7 +30,18 @@ const [auditId, ...flags] = process.argv.slice(2)
 const dry = flags.includes('--dry')
 
 if (!auditId) {
-  console.error('사용법: pnpm audit:run <auditId> [--dry]')
+  console.error('사용법: pnpm audit:run <auditId> [--dry] [--base-url https://cited.co.kr]')
+  process.exit(1)
+}
+
+// ★ **수집을 시작하기 전에** 링크를 검증한다. 뒤에서 하면 235원을 다 쓴 뒤에
+//   거부하게 되고, 그러면 운영자는 링크 때문에 돈을 두 번 쓴다.
+const resolved = resolveReportBaseUrl(
+  parseBaseUrlFlag(flags) ?? env.NEXT_PUBLIC_APP_URL,
+  dry ? 'dry' : 'send',
+)
+if (!resolved.ok) {
+  console.error(`실행하지 않았습니다 — ${resolved.reason}`)
   process.exit(1)
 }
 
@@ -166,7 +184,7 @@ if (dry) {
   process.exit(0)
 }
 
-const url = `${env.NEXT_PUBLIC_APP_URL}/audit/${audit.id}`
+const url = reportUrl(resolved.baseUrl, audit.id)
 // ★ 측정에 쓴 별칭을 함께 저장한다. 별칭이 언급률을 좌우하므로, 남기지 않으면
 //   나중에 "이 숫자가 왜 이렇게 낮았나"에 답할 수 없다.
 await markSent(audit.id, result, result.aliases)
