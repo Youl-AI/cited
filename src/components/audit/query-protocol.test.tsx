@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { DISPLAYED_JUDGE_MODEL, QueryProtocol } from '@/components/audit/query-protocol'
-import { KNOWN_CATEGORIES, generateAuditQueries } from '@/lib/audit/queries'
+import { KNOWN_CATEGORIES, generateAuditQueries, isRegionalCategory } from '@/lib/audit/queries'
 import { JUDGE_MODEL } from '@/lib/judge/claude'
 
 afterEach(cleanup)
@@ -57,7 +57,9 @@ describe('QueryProtocol', () => {
   it('브랜드명 없이 질의를 만든다 — 질의에 브랜드가 들어가면 측정이 무효다', () => {
     // 컴포넌트는 generateAuditQueries(category, '')를 부른다. 이 성질이
     // 바뀌어 브랜드명이 필요해지면 이 렌더 자체가 흔들리므로 여기서 못박는다.
+    // 지역형 업종은 지역 없이 던지므로(의도) 탭에 없다 — 전국형만 보증한다.
     for (const category of KNOWN_CATEGORIES) {
+      if (isRegionalCategory(category)) continue
       expect(() => generateAuditQueries(category, '')).not.toThrow()
     }
   })
