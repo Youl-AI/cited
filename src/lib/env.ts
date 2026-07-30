@@ -46,6 +46,19 @@ const baseSchema = z.object({
   // 그 상태로 로컬을 막으면 안 된다. 빈 값의 거부는 배포 검사에서만 한다.
   CRON_SECRET: z.string().optional(),
 
+  /**
+   * 무료 진단 신청 알림을 받을 운영자 주소.
+   *
+   * 무료 진단은 운영자가 CLI로 직접 실행한다. 이 알림이 **유일한 실행
+   * 트리거**이므로, 주소가 비어 있으면 신청이 인증까지 끝난 채로 방치되고
+   * 고객에게 약속한 "영업일 1일 이내 발송"이 조용히 깨진다.
+   *
+   * CRON_SECRET과 같은 이유로 스키마상 optional이고(로컬 개발이 이 값 없이도
+   * 돌아야 한다) 배포에서는 아래 superRefine이 필수로 승격한다. 같은 이유로
+   * `.min(1)`도 붙이지 않는다 — `.env.example`을 복사하면 빈 문자열이 된다.
+   */
+  OPERATOR_EMAIL: z.string().optional(),
+
   // 선택 — 관측
   SENTRY_DSN: z.string().optional(),
   // Sentry 서버 설정(sentry.server.config)도 관례상 동일한 DSN을 읽는다.
@@ -152,6 +165,27 @@ const schema = baseSchema.superRefine((value, ctx) => {
       path: ['CRON_SECRET'],
       message:
         '배포 환경에서는 필수입니다 (없으면 /api/cron/* 이 401만 돌려주고 만료 세션 정리가 멈춥니다). Vercel 환경변수에 임의의 긴 무작위 문자열을 넣으면 Vercel Cron이 Authorization 헤더로 함께 보냅니다',
+    })
+  }
+  // OPERATOR_EMAIL — CRON_SECRET과 같은 범위로 승격한다. 무료 진단은 운영자가
+  // 손으로 실행하고, 이 알림이 유일한 실행 트리거다. 없으면 인증까지 끝난 신청이
+  // 방치되고 "영업일 1일 이내"라는 약속이 조용히 깨진다.
+  if (behavesLikeDeployment && !value.OPERATOR_EMAIL) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['OPERATOR_EMAIL'],
+      message:
+        '배포 환경에서는 필수입니다 (무료 진단 신청 알림이 가지 않으면 신청이 방치됩니다). 운영자 본인이 실제로 확인하는 주소를 넣으세요',
+    })
+  }
+  // 값이 있는데 주소 형식이 아니면 발송이 매번 실패한다 — 그 실패는 로그에만
+  // 남고 사용자에게는 보이지 않으므로 부팅 시점에 잡는다. 빈 문자열은 위에서
+  // 이미 "없음"으로 처리했으므로 여기서 두 번 보고하지 않는다.
+  if (value.OPERATOR_EMAIL && !z.email().safeParse(value.OPERATOR_EMAIL).success) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['OPERATOR_EMAIL'],
+      message: '이메일 주소 형식이어야 합니다',
     })
   }
   if (

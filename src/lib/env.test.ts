@@ -12,10 +12,11 @@ const valid = {
   EMAIL_FROM: 'Cited <noreply@example.com>',
 }
 
-// 배포로 판정되는 조합을 만들 때 얹는다. 배포에서는 CRON_SECRET이 필수라
-// (아래 'CRON_SECRET' describe 참고), 이걸 빼면 BETTER_AUTH_URL을 검증하려던
-// 테스트가 엉뚱하게 CRON_SECRET 때문에 실패한다.
-const deployable = { CRON_SECRET: 'c'.repeat(32) }
+// 배포로 판정되는 조합을 만들 때 얹는다. 배포에서 필수로 승격되는 값들이라
+// (아래 'CRON_SECRET'·'OPERATOR_EMAIL' describe 참고), 이걸 빼면
+// BETTER_AUTH_URL을 검증하려던 테스트가 엉뚱하게 다른 키 때문에 실패한다.
+// 배포 필수 항목을 새로 추가하면 여기에도 넣어야 한다.
+const deployable = { CRON_SECRET: 'c'.repeat(32), OPERATOR_EMAIL: 'ops@example.com' }
 
 describe('parseEnv', () => {
   it('필수 키가 모두 있으면 파싱된다', () => {
@@ -347,8 +348,8 @@ describe('CRON_SECRET', () => {
   it('배포에 값이 있으면 통과한다', () => {
     const env = parseEnv({
       ...valid,
+      ...deployable,
       VERCEL: '1',
-      CRON_SECRET: 'c'.repeat(32),
       BETTER_AUTH_URL: 'https://cited.co.kr',
       NEXT_PUBLIC_APP_URL: 'https://cited.co.kr',
     })
@@ -371,6 +372,63 @@ describe('CRON_SECRET', () => {
     }
     expect((thrown as Error).message).toContain('CRON_SECRET')
     expect((thrown as Error).message).not.toContain(plausible)
+  })
+})
+
+// 무료 진단은 운영자가 CLI로 직접 실행한다. 이 주소로 가는 알림이 **유일한
+// 실행 트리거**라, 비어 있으면 인증까지 끝난 신청이 방치되고 고객에게 약속한
+// "영업일 1일 이내 발송"이 조용히 깨진다. CRON_SECRET과 같은 성질의 조용한
+// 실패이므로 같은 범위로 승격한다.
+describe('OPERATOR_EMAIL', () => {
+  const deployed = {
+    VERCEL: '1',
+    CRON_SECRET: 'c'.repeat(32),
+    BETTER_AUTH_URL: 'https://cited.co.kr',
+    NEXT_PUBLIC_APP_URL: 'https://cited.co.kr',
+  }
+
+  it('로컬 개발에서는 없어도 된다', () => {
+    expect(parseEnv(valid).OPERATOR_EMAIL).toBeUndefined()
+  })
+
+  it('로컬 프로덕션 빌드는 막지 않는다', () => {
+    // `next build`·`next start`는 로컬에서도 NODE_ENV=production이다.
+    // CRON_SECRET과 같은 카브아웃을 쓰는지 확인한다.
+    expect(() =>
+      parseEnv({ ...valid, NODE_ENV: 'production', CRON_SECRET: 'c'.repeat(32) }),
+    ).not.toThrow()
+  })
+
+  it('배포에 없으면 부팅을 막는다', () => {
+    expect(() => parseEnv({ ...valid, ...deployed })).toThrowError(/OPERATOR_EMAIL/)
+  })
+
+  it('배포에서 빈 문자열은 설정된 것으로 보지 않는다', () => {
+    // `.env.example`을 그대로 복사하면 `OPERATOR_EMAIL=`(빈 문자열)이 된다.
+    expect(() => parseEnv({ ...valid, ...deployed, OPERATOR_EMAIL: '' })).toThrowError(
+      /OPERATOR_EMAIL/,
+    )
+  })
+
+  it('주소 형식이 아니면 거부한다', () => {
+    // 오타 난 주소는 발송이 매번 실패하고 그 실패는 로그에만 남는다.
+    // 사용자에게는 보이지 않으므로 부팅 시점에 잡아야 한다.
+    for (const bad of ['ops', 'ops@', '@example.com', 'ops example@x.com']) {
+      expect(() => parseEnv({ ...valid, ...deployed, OPERATOR_EMAIL: bad }), bad).toThrowError(
+        /OPERATOR_EMAIL/,
+      )
+    }
+  })
+
+  it('형식이 틀리면 로컬에서도 거부한다', () => {
+    // 배포 승격과 별개다. 로컬에서 오타를 넣어 두면 운영자 알림 경로를
+    // 한 번도 실제로 확인하지 못한 채 배포하게 된다.
+    expect(() => parseEnv({ ...valid, OPERATOR_EMAIL: 'ops' })).toThrowError(/OPERATOR_EMAIL/)
+  })
+
+  it('배포에 올바른 주소가 있으면 통과한다', () => {
+    const env = parseEnv({ ...valid, ...deployed, OPERATOR_EMAIL: 'ops@example.com' })
+    expect(env.OPERATOR_EMAIL).toBe('ops@example.com')
   })
 })
 

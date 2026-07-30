@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
+import { maskEmail } from './mask'
 import type { EmailContent } from './templates'
 
 // ★ 모듈 최상위에서 `new Resend(...)`를 하지 않는다.
@@ -34,16 +35,10 @@ function getResend(): Resend {
  */
 export type SendEmailResult = { ok: true; id: string | null } | { ok: false; reason: string }
 
-/** 로그·에러 문자열에서 이메일 주소를 마스킹한다. `reader@example.com` → `r***@e***.com` */
-export function maskEmail(email: string): string {
-  const at = email.lastIndexOf('@')
-  if (at <= 0) return '***'
-  const local = email.slice(0, at)
-  const domain = email.slice(at + 1)
-  const dot = domain.lastIndexOf('.')
-  const tld = dot >= 0 ? domain.slice(dot) : ''
-  return `${local[0] ?? ''}***@${domain[0] ?? ''}***${tld}`
-}
+// 구현은 './mask'에 있다 — `./templates`도 이 함수를 쓰는데, 순수 모듈인
+// templates가 이 파일을 import하면 Resend SDK와 server-only env를 함께 끌고 온다.
+// 기존 호출자를 위해 여기서 그대로 re-export한다.
+export { maskEmail } from './mask'
 
 // 외부(Resend) 에러 메시지에는 검증 실패한 수신자 주소가 그대로 실려 올 수 있다.
 // 로그로 흘려보내기 전에 이메일처럼 생긴 문자열을 전부 마스킹한다.

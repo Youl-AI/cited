@@ -2495,6 +2495,50 @@ nullable이었고, 그 순서 때문에 이메일 인증이 비용을 전혀 방
 않는다.** 신청 접수는 DB 쓰기 1회 + 메일 1통이 전부다. 그래서 Turnstile도,
 예산 킬스위치도 필요 없다 — 태울 돈이 없다.
 
+> ### ★ 2026-07-30(3) — 구현하면서 계획서와 달라진 것 (실행 완료)
+>
+> **① 로직이 라우트 파일에 없다.** 아래 Step 10·11은 `route.ts`에 본문을 다
+> 넣는데, 그러면 Step 12의 통합 테스트가 **실제 DB를 요구한다.** `pnpm test`는
+> `vitest.config.ts`의 더미 `DATABASE_URL`로 돌기 때문에 CI에서 그 파일이 통째로
+> 깨진다(계획서는 "DB가 없으면 건너뛴다"고 적었지만 건너뛰는 코드가 없다).
+>
+> `src/lib/cron/cleanup-sessions.ts`가 이미 쓰는 패턴으로 바꿨다 —
+> **`src/lib/audit/handlers.ts`**에 `handleAuditRequest(request, deps)`·
+> `handleAuditVerify(request, deps)`를 두고 리포지토리·발송기·`appUrl`·
+> `operatorEmail`을 주입한다. 라우트는 실제 의존성만 꽂는 4줄이다. 그래서
+> 통합 테스트 24건이 **DB도 메일 서버도 없이** `pnpm test`에서 돈다.
+> 실제 DB 왕복은 `pnpm probe:audit`이 이미 덮는다 — 역할이 다르다.
+>
+> **② `maskEmail`을 `src/lib/email/mask.ts`로 옮겼다.** 계획서는 템플릿에서
+> `@/lib/email/send`의 `maskEmail`을 import하라고 하는데, 그러면 순수 모듈인
+> `templates.ts`가 Resend SDK와 server-only인 `@/lib/env`를 끌고 온다.
+> `send.ts`는 하위 호환을 위해 그대로 re-export한다.
+>
+> **③ 메일 제목은 이스케이프하지 않는다.** 계획서 Step 6의
+> `expect(mail.subject).not.toContain('<script>')`를 뺐다. 제목은 MIME 헤더로
+> 나가 메일 클라이언트가 **평문으로** 렌더하므로 HTML 파서를 타지 않는다.
+> 반대로 이스케이프하면 `H&M` 같은 실제 브랜드명이 제목에 `H&amp;M`으로 보인다.
+> 본문(html)은 이스케이프한다 — 그쪽은 실제로 파싱된다.
+>
+> **④ env의 `OPERATOR_EMAIL` 승격 조건.** Step 1의 `superRefine` 코드는
+> 조건 없이 `if (!value.OPERATOR_EMAIL)`인데, 그러면 **로컬 개발이 부팅하지
+> 못한다.** `CRON_SECRET`과 같은 `behavesLikeDeployment` 게이트를 쓴다.
+> 값이 있는데 주소 형식이 아닌 경우는 환경과 무관하게 거부한다 — 그 오타는
+> 발송 실패로만 나타나고 사용자에게는 보이지 않는다.
+> `z.string().email()` 대신 zod 4의 `z.email()`을 쓴다.
+>
+> **⑤ Step 2의 첫 테스트가 틀렸다.** `expect(parseAuditRequest(valid)).toEqual(valid)`는
+> 통과할 수 없다 — 출력에는 기본값 `siteUrl: ''`과 `selfDomains: []`가 항상 있다.
+>
+> **⑥ `parseHostname`에 스킴 검사를 넣지 않는다.** 넣어 봤지만 변이 테스트에서
+> 살아남았다. `https://` 접두사를 붙이는 로직 때문에 결과 protocol이 **항상**
+> http/https라 절대 발동하지 않는 죽은 분기였다. 대신 그 이유와 "접두사 로직을
+> 바꾸면 다시 넣어야 한다"를 주석으로 남겼다.
+>
+> **⑦ `/audit/requested` 페이지는 아직 없다.** 인증 라우트가 거기로
+> 리다이렉트하지만 그 화면은 **Task 8**에서 만든다. Task 8 전에는 이 링크가
+> 404다 — 배포는 Task 9이므로 순서상 문제없다.
+
 - [ ] **Step 1: env에 운영자 주소 추가**
 
 `src/lib/env.ts`의 스키마에 추가한다:
