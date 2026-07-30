@@ -195,7 +195,10 @@ const url = reportUrl(resolved.baseUrl, audit.id)
 //   나중에 "이 숫자가 왜 이렇게 낮았나"에 답할 수 없다.
 await markSent(audit.id, result, result.aliases)
 
-const sent = await sendEmail({ to: audit.email, content: auditReportEmail({ result, url }) })
+const sent = await sendEmail({
+  to: audit.email,
+  content: auditReportEmail({ result, url, tier: audit.tier }),
+})
 if (!sent.ok) {
   // 결과는 이미 저장됐다. 메일만 실패했으므로 링크를 직접 전달할 수 있다.
   console.error(`\n리포트는 저장했지만 메일 발송에 실패했습니다: ${sent.reason}`)

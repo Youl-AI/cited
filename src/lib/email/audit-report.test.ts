@@ -78,6 +78,20 @@ describe('auditReportEmail', () => {
     expect(mail.html).toMatch(/1회|3회 측정|주 3회/)
   })
 
+  it('무료는 1회 측정의 한계를, 유료는 반복 측정을 말한다', () => {
+    const free = auditReportEmail({ result, url })
+    expect(free.html).toContain('질의 3개를 1회')
+
+    const paid = auditReportEmail({ result, url, tier: 'deluxe' })
+    expect(paid.html).not.toContain('질의 3개를 1회')
+    expect(paid.html).toContain('3회 반복')
+  })
+
+  it('유료 메일은 유료 플랜 판매 문구를 넣지 않는다 — 이미 산 사람에게 팔지 않는다', () => {
+    const paid = auditReportEmail({ result, url, tier: 'deluxe' })
+    expect(paid.html).not.toContain('유료 플랜')
+  })
+
   it('전체 리포트 링크를 담는다', () => {
     expect(auditReportEmail({ result, url }).html).toContain(url)
   })
