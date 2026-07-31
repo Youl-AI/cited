@@ -352,7 +352,9 @@ describe('유료 확장', () => {
     const { container } = render(
       <ResultView result={after} tier="premium" compare={{ before, beforeDate: '2026-07-01' }} />,
     )
-    expect(screen.getByText(/전후 비교/)).toBeInTheDocument()
+    // ★ 텍스트 매칭이 아니라 제목 role이다 — PDF 표지의 티어 라벨
+    //   "정밀 진단 + 전후 비교"도 /전후 비교/에 걸리기 때문.
+    expect(screen.getByRole('heading', { name: '전후 비교' })).toBeInTheDocument()
     expect(screen.getByText('2026-07-01')).toBeInTheDocument()
     // 두 측정값이 함께 보인다 — 이전과 이번.
     const text = visibleText(container)
@@ -387,6 +389,37 @@ describe('유료 확장', () => {
     )
     expect(screen.getByText(/비교할 수 없/)).toBeInTheDocument()
     expect(screen.queryByText(/유의미한 (상승|하락)/)).not.toBeInTheDocument()
+  })
+
+  it('유료 리포트는 PDF 표지를 넣는다 — 화면에는 숨기고 인쇄에서만 편다', () => {
+    // 표지는 납품 문서의 첫 장이다. 화면(`hidden`)에는 없고 인쇄(`print:flex`)에만
+    // 있어야 하며, 표지에는 브랜드명·티어 라벨·측정 조건이 실린다.
+    const { container } = render(<ResultView result={base} tier="deluxe" />)
+    const cover = screen.getByText('AI 언급 진단 리포트').closest('section')
+    expect(cover).not.toBeNull()
+    expect(cover?.className).toContain('hidden')
+    expect(cover?.className).toContain('print:flex')
+    expect(cover?.className).toContain('break-after-page')
+    const coverText = (cover?.textContent ?? '').replace(/\s+/g, ' ')
+    expect(coverText).toContain('무신사')
+    expect(coverText).toContain('정밀 진단 + 개선 가이드')
+    expect(coverText).toContain('2026-07-30')
+    expect(coverText).toContain('MUSINSA')
+    expect(visibleText(container)).toContain('cited.co.kr')
+  })
+
+  it('표지의 엔진 이름도 내부 식별자가 아니라 표시 이름이다', () => {
+    render(<ResultView result={{ ...base, engines: ['google_aio'] }} tier="standard" />)
+    const cover = screen.getByText('AI 언급 진단 리포트').closest('section')
+    const coverText = (cover?.textContent ?? '').replace(/\s+/g, ' ')
+    expect(coverText).toContain('Google AI 개요')
+    expect(coverText).not.toContain('google_aio')
+  })
+
+  it('무료 리포트에는 PDF 표지가 없다 — 공짜 PDF에 납품 문서의 옷을 입히지 않는다', () => {
+    const { container } = render(<ResultView result={base} />)
+    expect(screen.queryByText('AI 언급 진단 리포트')).not.toBeInTheDocument()
+    expect(visibleText(container)).not.toContain('cited.co.kr')
   })
 
   it('유료 리포트는 "무료 진단"이라고 말하지 않는다', () => {

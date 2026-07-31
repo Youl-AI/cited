@@ -30,6 +30,7 @@
     "audit:remeasure": "tsx --conditions=react-server --env-file=.env.local scripts/audit-remeasure.mts",
     "audit:run": "tsx --conditions=react-server --env-file=.env.local scripts/audit-run.mts",
     "audit:guide": "tsx --conditions=react-server --env-file=.env.local scripts/audit-guide.mts",
+    "audit:pdf": "tsx --conditions=react-server --env-file=.env.local scripts/audit-pdf.mts",
     "audit:reject": "tsx --conditions=react-server --env-file=.env.local scripts/audit-reject.mts",
     "audit:resend": "tsx --conditions=react-server --env-file=.env.local scripts/audit-resend.mts",
     "measure": "tsx --conditions=react-server --env-file=.env.local scripts/measure.mts",

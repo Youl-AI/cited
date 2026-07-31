@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Markdown from 'react-markdown'
 import { AnswerSpecimen } from '@/components/audit/answer-specimen'
 import type { SpecimenMark } from '@/components/audit/answer-specimen'
+import { ReportCover } from '@/components/audit/report-cover'
 import { Button } from '@/components/ui/button'
 import type { AuditResult } from '@/lib/audit/result'
 import { isPaidTier } from '@/lib/audit/tiers'
@@ -33,8 +34,12 @@ function Metric({ children }: { children: React.ReactNode }) {
 }
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
+  // ★ `print:break-after-avoid` — 한 장에 다 안 들어가 섹션이 쪼개질 때도
+  //   제목만 앞 장 끝에 홀로 남지 않게 한다(제목·본문 고아 방지).
   return (
-    <h2 className="mb-1 text-lg font-semibold tracking-tight sm:text-xl">{children}</h2>
+    <h2 className="mb-1 text-lg font-semibold tracking-tight sm:text-xl print:break-after-avoid">
+      {children}
+    </h2>
   )
 }
 
@@ -82,7 +87,12 @@ export function ResultView({
   const measuredOn = result.measuredAt.slice(0, 10)
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-14 sm:py-20">
+    <div className="mx-auto w-full max-w-3xl px-6 py-14 sm:py-20 print:py-0">
+      {/* ── PDF 표지 (유료 전용) ─────────────────────────────── */}
+      {/* 화면에는 없다(`hidden print:flex`). 무료는 표지 없이 바로 본문 —
+          공짜 PDF에 납품 문서의 옷을 입히지 않는다. */}
+      {isPaidTier(tier) && <ReportCover result={result} tier={tier} />}
+
       {/* ── 표제 ─────────────────────────────────────────────── */}
       <header className="mb-10">
         <p className="font-mono text-xs tracking-[0.14em] text-muted-foreground uppercase">
@@ -100,7 +110,7 @@ export function ResultView({
       {/* ── 대표 지표 ────────────────────────────────────────── */}
       <section
         data-testid="headline"
-        className="mb-10 rounded-lg border border-border bg-card p-6 sm:p-7"
+        className="mb-10 rounded-lg border border-border bg-card p-6 sm:p-7 print:break-inside-avoid"
       >
         <p className="text-sm text-muted-foreground">AI 답변에 인용된 비율</p>
         <div className="mt-1 flex flex-wrap items-baseline gap-x-3">
@@ -129,7 +139,7 @@ export function ResultView({
       )}
 
       {/* ── 이 숫자를 어떻게 읽어야 하는가 ───────────────────── */}
-      <section className="mb-10 border-l-2 border-border pl-5">
+      <section className="mb-10 border-l-2 border-border pl-5 print:break-inside-avoid">
         {tier === 'free' ? (
           <p className="text-sm leading-relaxed text-muted-foreground">
             무료 진단은 질의 <Metric>3</Metric>개를 <Metric>1</Metric>회 측정합니다. 그래서
@@ -151,7 +161,7 @@ export function ResultView({
            "우리만 등록했으니 점유율 100%"는 거짓말이고, 없는 것을 설명하려 들면
            혼란만 준다. 경쟁사 목록을 항상 옆에 붙이는 것도 같은 이유다:
            경쟁사를 적게 등록하면 이 값이 높아지므로 분모를 감추면 오해가 된다. */
-        <section className="mb-10">
+        <section className="mb-10 print:break-inside-avoid">
           <SectionHeading>언급 점유율</SectionHeading>
           <SectionNote>
             등록한 경쟁사({result.competitors.join(', ')}) 대비 언급 비중입니다. 경쟁사를 더
@@ -175,7 +185,7 @@ export function ResultView({
       )}
 
       {/* ── 브랜드별 언급 ────────────────────────────────────── */}
-      <section className="mb-10">
+      <section className="mb-10 print:break-inside-avoid">
         <SectionHeading>브랜드별 언급 횟수</SectionHeading>
         <SectionNote>같은 답변 안에서 어떤 브랜드가 몇 번 등장했는지입니다.</SectionNote>
         <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
@@ -183,7 +193,7 @@ export function ResultView({
             <li
               key={item.name}
               data-testid="ranking-row"
-              className="flex items-baseline justify-between gap-4 px-5 py-3"
+              className="flex items-baseline justify-between gap-4 px-5 py-3 print:break-inside-avoid"
             >
               <span
                 className={
@@ -206,14 +216,18 @@ export function ResultView({
       </section>
 
       {/* ── 질의별 ───────────────────────────────────────────── */}
-      <section className="mb-10">
+      <section className="mb-10 print:break-inside-avoid">
         <SectionHeading>질문별 결과</SectionHeading>
         {/* metrics가 이미 언급률 낮은 순으로 준다. 여기서 다시 정렬하지 않는다 —
             "이 질문에서 안 나온다"가 위로 와야 행동으로 이어진다. */}
         <SectionNote>못 나오는 질문이 위에 옵니다. 손볼 곳이 거기입니다.</SectionNote>
         <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
           {result.byQuery.map((q) => (
-            <li key={q.queryText} data-testid="query-row" className="px-5 py-3.5">
+            <li
+              key={q.queryText}
+              data-testid="query-row"
+              className="px-5 py-3.5 print:break-inside-avoid"
+            >
               <div className="flex items-baseline justify-between gap-4">
                 <span className="text-sm">{q.queryText}</span>
                 <span className="shrink-0 font-mono text-sm tabular-nums">
@@ -229,34 +243,40 @@ export function ResultView({
       </section>
 
       {/* ── 증거 ─────────────────────────────────────────────── */}
-      <section className="mb-10">
+      <section className="mb-10 print:break-inside-avoid">
         <SectionHeading>실제 AI 답변</SectionHeading>
         <SectionNote>
           같은 질문을 직접 물어보시면 비슷한 답을 확인하실 수 있습니다. 밑줄은 우리가 센
           브랜드이고, 표시가 없는 브랜드는 등록되지 않아 세지 않은 것입니다.
         </SectionNote>
         <div className="space-y-4">
+          {/* ★ 표본 하나가 장 사이에서 쪼개지면 질문과 답이 다른 장에 놓인다.
+              한 장을 넘는 표본은 브라우저가 avoid를 무시하고 자연스럽게 자른다. */}
           {result.evidence.map((item, index) => (
-            <AnswerSpecimen
+            <div
               key={`${item.query}-${item.engineId}-${index}`}
-              engineId={engineLabel(item.engineId)}
-              query={item.query}
-              text={item.text}
-              marks={evidenceMarks(result, item.mentioned, item.position)}
-              footer={
-                item.mentioned ? (
-                  <span className="text-metric-up-fg">언급됨{item.context ? ` · ${item.context}` : ''}</span>
-                ) : (
-                  '언급 없음'
-                )
-              }
-            />
+              className="print:break-inside-avoid"
+            >
+              <AnswerSpecimen
+                engineId={engineLabel(item.engineId)}
+                query={item.query}
+                text={item.text}
+                marks={evidenceMarks(result, item.mentioned, item.position)}
+                footer={
+                  item.mentioned ? (
+                    <span className="text-metric-up-fg">언급됨{item.context ? ` · ${item.context}` : ''}</span>
+                  ) : (
+                    '언급 없음'
+                  )
+                }
+              />
+            </div>
           ))}
         </div>
       </section>
 
       {result.sources.length > 0 && (
-        <section className="mb-10">
+        <section className="mb-10 print:break-inside-avoid">
           <SectionHeading>AI가 읽는 출처</SectionHeading>
           <SectionNote>
             답변 <Metric>{result.sourceSummary.totalAnswers}</Metric>개 중{' '}
@@ -270,7 +290,7 @@ export function ResultView({
             {result.sources.slice(0, 8).map((source) => (
               <li
                 key={source.domain}
-                className="flex items-baseline justify-between gap-4 px-5 py-3"
+                className="flex items-baseline justify-between gap-4 px-5 py-3 print:break-inside-avoid"
               >
                 <span className="flex items-baseline gap-2 font-mono text-sm">
                   {source.domain}
@@ -297,7 +317,7 @@ export function ResultView({
       {/* ── 개선 가이드 (DELUXE·PREMIUM) ─────────────────────── */}
       {/* 출처 다음이다 — 위 데이터(출처·순위)가 가이드의 근거라 순서가 논증이다. */}
       {guide && (
-        <section className="mb-10">
+        <section className="mb-10 print:break-inside-avoid">
           <SectionHeading>개선 가이드</SectionHeading>
           <SectionNote>
             여기부터는 계측이 아니라 해설입니다 — 위 측정 결과를 근거로 운영자가 직접
@@ -313,7 +333,7 @@ export function ResultView({
       )}
 
       {/* ── 측정 조건 ────────────────────────────────────────── */}
-      <section className="mb-10 rounded-lg bg-muted/40 px-5 py-4">
+      <section className="mb-10 rounded-lg bg-muted/40 px-5 py-4 print:break-inside-avoid">
         <p className="text-xs text-muted-foreground">
           측정 표기{' '}
           <span className="font-mono text-foreground">
@@ -326,7 +346,7 @@ export function ResultView({
       </section>
 
       {/* ── 유료 전환 ────────────────────────────────────────── */}
-      <section className="rounded-lg border border-border bg-card p-6 sm:p-7">
+      <section className="rounded-lg border border-border bg-card p-6 sm:p-7 print:break-inside-avoid">
         <h2 className="text-lg font-semibold tracking-tight">
           이 리포트는 <Metric>1</Metric>회 측정입니다
         </h2>
@@ -376,7 +396,7 @@ function CompareSection({
     currEngines: result.engines,
   })
   return (
-    <section className="mb-10 rounded-lg border border-border bg-card p-6 sm:p-7">
+    <section className="mb-10 rounded-lg border border-border bg-card p-6 sm:p-7 print:break-inside-avoid">
       <SectionHeading>전후 비교</SectionHeading>
       <SectionNote>
         <Metric>{beforeDate}</Metric> 측정과 같은 질의 <Metric>{result.byQuery.length}</Metric>
