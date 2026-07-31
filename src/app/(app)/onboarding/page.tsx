@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { queriesStepPath } from '@/lib/onboarding/editor'
 import { loadOnboardingGate } from '@/lib/onboarding/gate'
 import { loadPrefill } from '@/lib/onboarding/prefill'
 import { BrandStepForm } from './brand-step-form'
@@ -10,6 +11,13 @@ export const metadata = { title: '온보딩 — 브랜드' }
 export default async function OnboardingPage() {
   const gate = await loadOnboardingGate()
   if (gate.state === 'no-plan') redirect('/dashboard')
+  // ★ 브랜드 한도 검사보다 **먼저** 온다. 순서가 뒤집히면 브랜드를 만들고
+  //   질의를 확정하지 않은 Starter 고객(한도 1개)이 여기서 `/dashboard`로
+  //   튕기고, 대시보드는 다시 여기로 보내지 않으므로 온보딩을 끝낼 방법이
+  //   사라진다 — 요금은 나가고 측정은 안 되는 상태다 (state.ts 주석).
+  if (gate.state === 'needs-queries' && gate.pendingBrandId) {
+    redirect(queriesStepPath(gate.pendingBrandId))
+  }
   if (!gate.limits || gate.brandCount >= gate.limits.maxBrands) redirect('/dashboard')
 
   const prefill = await loadPrefill(gate.user.email, gate.subscription?.fromAuditId ?? null)

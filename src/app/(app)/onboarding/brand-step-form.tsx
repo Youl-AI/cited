@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { KNOWN_CATEGORIES, isRegionalCategory } from '@/lib/audit/queries'
+import { queriesStepPath } from '@/lib/onboarding/editor'
 import { createBrandAction } from './actions'
 
 /**
@@ -66,7 +67,7 @@ export function BrandStepForm({
     setError(null)
     startTransition(async () => {
       const result = await createBrandAction({ name, category, region, competitors, siteUrl })
-      if (result.ok) router.push(`/onboarding/queries?brand=${result.value.brandId}`)
+      if (result.ok) router.push(queriesStepPath(result.value.brandId))
       else setError(result.reason)
     })
   }

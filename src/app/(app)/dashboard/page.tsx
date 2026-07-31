@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { queriesStepPath } from '@/lib/onboarding/editor'
 import { loadOnboardingGate } from '@/lib/onboarding/gate'
 
 export const metadata = { title: '대시보드' }
@@ -22,6 +23,12 @@ export const metadata = { title: '대시보드' }
 export default async function DashboardPage() {
   const gate = await loadOnboardingGate()
   if (gate.state === 'needs-onboarding') redirect('/onboarding')
+  // ★ 브랜드는 만들었는데 질의를 확정하지 않은 계정도 여기 머물면 안 된다.
+  //   수집 cron은 `queriesFrozenAt IS NOT NULL`만 고르므로, 이어서 갈 링크가
+  //   없으면 **돈은 내고 측정은 영원히 안 되는** 계정이 된다 (state.ts 주석).
+  if (gate.state === 'needs-queries' && gate.pendingBrandId) {
+    redirect(queriesStepPath(gate.pendingBrandId))
+  }
   const user = gate.user
   // 아래 JSX는 기존 스텁 그대로다 — 이 태스크는 게이트만 단다. Task 9가 교체한다.
   return (
