@@ -47,3 +47,6 @@ next-env.d.ts
 # Playwright — 실행 산출물(트레이스·스크린샷)이다. 실패 때만 쌓이고 재실행마다 커진다.
 /test-results/
 /playwright-report/
+
+# git worktree (서브에이전트 구현용 격리 체크아웃)
+/.worktrees/
