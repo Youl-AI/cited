@@ -212,7 +212,14 @@ if (dry) {
 const url = reportUrl(resolved.baseUrl, audit.id)
 // ★ 측정에 쓴 별칭을 함께 저장한다. 별칭이 언급률을 좌우하므로, 남기지 않으면
 //   나중에 "이 숫자가 왜 이렇게 낮았나"에 답할 수 없다.
-await markSent(audit.id, result, result.aliases)
+try {
+  await markSent(audit.id, result, result.aliases)
+} catch (error) {
+  // 위 status 사전 검사로 정상 흐름에서는 오지 않는다 — 이 스크립트와
+  // audit:publish가 경합한 경우다. 스택 대신 재발송 안내가 담긴 메시지만 남긴다.
+  console.error(`\n${error instanceof Error ? error.message : String(error)}`)
+  process.exit(1)
+}
 
 const sent = await sendEmail({
   to: audit.email,

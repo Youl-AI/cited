@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
+import { generateAuditQueries } from '@/lib/audit/queries'
 import { REGION_SLOT } from '@/lib/audit/query-templates'
 import { env } from '@/lib/env'
 
@@ -19,7 +20,12 @@ import { env } from '@/lib/env'
 export interface CustomQueryContext {
   brandName: string
   competitors: readonly string[]
-  regional: boolean
+  /**
+   * 신청의 업종. 템플릿 3개(`generateAuditQueries`)를 여기서 다시 만들어
+   * 동결 대상에 들어 있는지 검사한다 — 아래 ★ 템플릿 주석 참고.
+   */
+  category: string
+  /** 지역형 업종의 지역. 템플릿 재생성에 그대로 넘어간다 */
   region?: string
   /** AUDIT_TIERS[tier].queryCount */
   requiredCount: number
@@ -51,6 +57,20 @@ export function validateCustomQueries(
     const key = norm(q)
     if (seen.has(key)) throw new Error(`중복 질의: "${q}"`)
     seen.add(key)
+  }
+
+  // ★ 템플릿 3개가 전부 들어 있어야 통과다. 상품 약속이 "템플릿 3 + 맞춤 7"이고
+  //   (무료 샘플과의 연속성), 지역형 업종의 지역 강제도 템플릿 3이 맡는다 —
+  //   아래 지역 관련 테스트가 맞춤 질의에 지역을 강제하지 않는 근거가 그것이다.
+  //   운영자가 검수 파일에서 템플릿 줄을 지우면 그 두 약속이 조용히 사라지므로,
+  //   동결 전에 여기서 멈춘다. 비교는 중복 검사와 같은 norm 기준이다.
+  const templates = generateAuditQueries(ctx.category, ctx.brandName, ctx.region)
+  for (const t of templates) {
+    if (!seen.has(norm(t))) {
+      throw new Error(
+        `템플릿 질의가 빠져 있습니다: "${t}" — 템플릿 ${templates.length}개는 무료 샘플과 같은 질문이라 반드시 포함해야 합니다`,
+      )
+    }
   }
 
   // ★ 공백·대소문자를 뭉개고 비교한다. "바디텍 필라테스"와 "바디텍필라테스"는

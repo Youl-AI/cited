@@ -12,14 +12,24 @@
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { createCustomQueryGenerator, validateCustomQueries } from '@/lib/audit/custom-queries'
-import { generateAuditQueries, isRegionalCategory } from '@/lib/audit/queries'
+import { generateAuditQueries } from '@/lib/audit/queries'
 import { freezeQueries, getAudit } from '@/lib/audit/repository'
 import { AUDIT_TIERS, isPaidTier } from '@/lib/audit/tiers'
 
 const argv = process.argv.slice(2)
 const freeze = argv.includes('--freeze')
 const briefIdx = argv.indexOf('--brief')
-const brief = briefIdx >= 0 ? argv[briefIdx + 1] : undefined
+// ★ --brief 값이 없으면 크게 멈춘다. argv[briefIdx + 1]을 그대로 쓰면 뒤에 오는
+//   플래그(--freeze)를 값으로 삼켜 brief가 "--freeze"가 된 채 조용히 생성이 돈다.
+let brief: string | undefined
+if (briefIdx >= 0) {
+  const value = argv[briefIdx + 1]
+  if (value === undefined || value.startsWith('--')) {
+    console.error('--brief 뒤에 값이 없습니다. 예: --brief "기구 필라테스 전문, 그룹·개인 레슨"')
+    process.exit(1)
+  }
+  brief = value
+}
 const auditId = argv.find((a) => !a.startsWith('--') && a !== brief)
 
 if (!auditId) {
@@ -49,7 +59,8 @@ const file = `audit-queries.${audit.id}.json`
 const ctx = {
   brandName: audit.brandName,
   competitors: audit.competitors,
-  regional: isRegionalCategory(audit.category),
+  // 템플릿 3개 포함 검증(validateCustomQueries)이 여기서 템플릿을 다시 만든다.
+  category: audit.category,
   ...(audit.region ? { region: audit.region } : {}),
   requiredCount: tierCfg.queryCount,
 }
@@ -59,8 +70,21 @@ if (freeze) {
     console.error(`${file}이 없습니다. 먼저 --freeze 없이 실행해 후보를 만드세요.`)
     process.exit(1)
   }
-  const queries = JSON.parse(readFileSync(file, 'utf8')) as string[]
-  const validated = validateCustomQueries(queries, ctx)
+  // ★ 운영자가 손으로 고친 파일이다 — JSON이 깨졌거나 배열이 아닐 수 있고,
+  //   그대로 넘기면 validateCustomQueries가 TypeError 스택으로 죽는다.
+  //   무엇이 잘못됐는지 파일 이름과 함께 말해 준다.
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(readFileSync(file, 'utf8'))
+  } catch {
+    console.error(`${file}을 JSON으로 읽지 못했습니다. 검수 중 문법이 깨졌는지 확인하세요.`)
+    process.exit(1)
+  }
+  if (!Array.isArray(parsed) || !parsed.every((q): q is string => typeof q === 'string')) {
+    console.error(`${file}이 질의 문자열 배열이 아닙니다. ["질의 1", "질의 2", …] 형태여야 합니다.`)
+    process.exit(1)
+  }
+  const validated = validateCustomQueries(parsed, ctx)
   await freezeQueries(audit.id, validated)
   console.log(`동결 완료 — ${validated.length}개`)
   for (const [i, q] of validated.entries()) console.log(`  q${i + 1}  ${q}`)

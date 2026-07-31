@@ -102,7 +102,14 @@ if (age) {
 //   다시 보낼 수 있다.
 // ★ 별칭은 dry가 저장한 측정 결과 안에 있다 — 그 측정에 실제로 쓴 별칭을
 //   그대로 남긴다 (별칭이 언급률을 좌우하므로 측정 조건이다).
-await markSent(audit.id, result, result.aliases)
+try {
+  await markSent(audit.id, result, result.aliases)
+} catch (error) {
+  // 위 status 사전 검사로 정상 흐름에서는 오지 않는다 — publish 중복 실행이나
+  // audit:run 발송과의 경합이다. 스택 대신 재발송 안내가 담긴 메시지만 남긴다.
+  console.error(error instanceof Error ? error.message : String(error))
+  process.exit(1)
+}
 
 // ★ tier를 반드시 넘긴다 — 생략하면 무료 본문이 된다(`auditReportEmail`의
 //   기본값). publish 대상은 dry로 검수한 유료 건이다 — 유료 고객에게 무료

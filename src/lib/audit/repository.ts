@@ -162,16 +162,31 @@ export async function markRunning(auditId: string): Promise<void> {
     .where(eq(schema.freeAudits.id, auditId))
 }
 
-/** 발송 완료. 결과와 측정에 쓴 별칭을 함께 남긴다. */
+/**
+ * 발송 완료. 결과와 측정에 쓴 별칭을 함께 남긴다.
+ *
+ * ★ 최초 발송 전용 — `freezeQueries`와 같은 구조적 가드다. `sentAt`은 "영업일
+ *   1일 이내" 납기 지표의 원본이라 두 번째 발송(중복 publish, publish와
+ *   `audit:run --base-url`의 경합)이 덮어쓰면 지표가 거짓이 된다. 호출부의
+ *   사전 검사(status === 'sent' 거부)가 정상 흐름을 막지만, 검사와 UPDATE
+ *   사이의 경합은 WHERE만이 막는다.
+ */
 export async function markSent(
   auditId: string,
   result: unknown,
   aliases: readonly string[],
 ): Promise<void> {
-  await db
+  const rows = await db
     .update(schema.freeAudits)
     .set({ status: 'sent', result, aliases: [...aliases], sentAt: new Date() })
-    .where(eq(schema.freeAudits.id, auditId))
+    .where(and(eq(schema.freeAudits.id, auditId), ne(schema.freeAudits.status, 'sent')))
+    .returning({ id: schema.freeAudits.id })
+  if (rows.length === 0) {
+    throw new Error(
+      `발송 완료 처리 실패: ${auditId} — 없는 건이거나 이미 발송된 진단입니다. ` +
+        `sentAt(납기 지표)을 덮어쓰지 않습니다 — 재발송은 pnpm audit:resend ${auditId}`,
+    )
+  }
 }
 
 export async function markFailed(auditId: string, reason: string): Promise<void> {

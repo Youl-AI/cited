@@ -4,7 +4,7 @@ import { createCustomQueryGenerator, validateCustomQueries } from '@/lib/audit/c
 const ctx = {
   brandName: '바디텍필라테스',
   competitors: ['코어무브'],
-  regional: true,
+  category: '필라테스',
   region: '수원',
   requiredCount: 10,
 }
@@ -58,6 +58,22 @@ describe('validateCustomQueries', () => {
   it('빈 줄·공백만인 질의를 거부한다', () => {
     const bad = [...template3, ...custom7.slice(0, 6), '   ']
     expect(() => validateCustomQueries(bad, ctx)).toThrowError(/비어/)
+  })
+
+  it('템플릿 질의가 하나라도 빠지면 어느 질의인지 말하며 거부한다', () => {
+    // ★ 상품 약속이 "템플릿 3 + 맞춤 7"이다 — 운영자가 검수 파일에서 템플릿
+    //   줄을 지우면 무료 샘플과의 연속성과 지역 강제가 조용히 사라진다.
+    const missingTemplate = template3[2] as string // '수원 요가원 괜찮은 데 알려줘'
+    const bad = [...template3.slice(0, 2), ...custom7, '수원 필라테스 주차 되는 곳 있어?']
+    expect(() => validateCustomQueries(bad, ctx)).toThrowError(missingTemplate)
+    expect(() => validateCustomQueries(bad, ctx)).toThrowError(/템플릿/)
+  })
+
+  it('템플릿 3개가 온전하면 통과한다 — 공백·대소문자 차이는 같은 질의로 본다', () => {
+    // 검수 중 공백이 어긋난 정도로 템플릿이 "빠졌다"고 하면 운영자만 괴롭다 —
+    // 중복 검사와 같은 norm 기준으로 비교한다.
+    const padded = [`  ${template3[0] as string}`, ...template3.slice(1), ...custom7]
+    expect(() => validateCustomQueries(padded, ctx)).not.toThrow()
   })
 
   it('지역형인데 지역이 하나도 없는 맞춤 질의가 과반이면 경고가 아니라 통과다', () => {

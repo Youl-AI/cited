@@ -3,7 +3,7 @@ import type { AliasFn } from '@/lib/audit/aliases'
 import { generateAuditQueries } from '@/lib/audit/queries'
 import { buildAuditResult } from '@/lib/audit/result'
 import type { AuditResult } from '@/lib/audit/result'
-import { AUDIT_TIERS, isPaidTier } from '@/lib/audit/tiers'
+import { AUDIT_ENGINES, AUDIT_TIERS, isPaidTier } from '@/lib/audit/tiers'
 import type { AuditTier } from '@/lib/audit/tiers'
 import { buildFanout } from '@/lib/collection/fanout'
 import type { FanoutItem } from '@/lib/collection/fanout'
@@ -13,7 +13,6 @@ import type { CollectedAnswer, RunCollectionDeps } from '@/lib/collection/run'
 import { DETECTOR_VERSION } from '@/lib/detection'
 import { runDetection } from '@/lib/detection/pipeline'
 import type { JudgeFn } from '@/lib/judge/types'
-import { PLANS } from '@/lib/plans'
 
 export interface AuditSubject {
   id: string
@@ -129,6 +128,10 @@ export async function executeAudit(
       competitors: subject.competitors,
       detectorVersion: DETECTOR_VERSION,
     }),
+    // ★ 엔진은 구독 플랜에서 상속하지 않고 진단 상수로 고정한다 — 크몽 상품
+    //   설명이 "ChatGPT · Gemini"를 이름으로 약속하므로, PLANS가 바뀌어도
+    //   팔린 상품의 엔진 집합과 원가는 여기서 안 바뀐다 (AUDIT_ENGINES 주석 참고).
+    engines: [...AUDIT_ENGINES],
     samples: { llm: tierCfg.samplesPerEngine, serp: 0 },
   }
   const items = buildFanout(snapshot, queries)
@@ -191,7 +194,8 @@ export async function executeAudit(
     brandName: subject.brandName,
     category: subject.category,
     competitors: subject.competitors,
-    engines: [...PLANS.free.engines],
+    // 리포트에 박제하는 엔진 구성도 같은 상수다 — 팬아웃과 표기가 갈리면 안 된다.
+    engines: [...AUDIT_ENGINES],
     aliases: self.aliases,
     // 조건부 전달과 `selfDomains: subject.selfDomains ?? []`는 **동등하다** —
     // `buildAuditResult`가 빈 배열도 "모른다"로 취급한다(그쪽 테스트가 그것을

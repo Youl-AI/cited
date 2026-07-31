@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { isRegionalCategory } from '@/lib/audit/queries'
+import { BUSINESS_INFO } from '@/lib/business-info'
 import { PLANS } from '@/lib/plans'
 
 /**
@@ -102,6 +104,17 @@ export const auditRequestSchema = z
   .refine((v) => v.competitors.length <= MAX_COMPETITORS, {
     message: `경쟁사는 최대 ${MAX_COMPETITORS}개까지 등록할 수 있습니다`,
     path: ['competitors'],
+  })
+  // ★ 지역형 업종(치과 등)은 접수 시점에 거부한다. 폼에는 지역 입력이 없어서
+  //   (region은 CLI 전용 — A안 결정) 받아도 `audit:run`에서야 막히고, 그러면
+  //   "영업일 1일" 약속이 깨진 채 죽은 신청이 대기 목록에 쌓인다. 자동완성에서
+  //   지역형을 뺀 것(`request-form.tsx`)과 같은 결정이고, 직접 타이핑한 입력은
+  //   여기가 마지막 관문이다. 메시지는 라우트가 그대로 응답에 담아 폼에 뜬다.
+  .refine((v) => !isRegionalCategory(v.category), {
+    message:
+      `지역이 필요한 업종이라 웹 신청으로는 진단하기 어렵습니다. ` +
+      `${BUSINESS_INFO.email}로 지역과 함께 문의해 주시면 진단을 도와드리겠습니다.`,
+    path: ['category'],
   })
   .refine((v) => !v.siteUrl || v.selfDomains.length > 0, {
     message: '사이트 주소를 알아볼 수 없습니다. 예: musinsa.com',

@@ -74,6 +74,21 @@ describe('parseAuditRequest', () => {
     expect(r.competitors).toEqual(['a', 'b', 'c'])
   })
 
+  it('지역형 업종을 문의 안내와 함께 거부한다', () => {
+    // ★ 폼에는 지역 입력이 없다(region은 CLI 전용). 접수해 봤자 audit:run에서
+    //   막혀 죽은 신청이 되므로, 접수 시점에 문의 채널을 안내하며 거절한다.
+    for (const category of ['치과', '필라테스', '수학 학원']) {
+      expect(() => parseAuditRequest({ ...valid, category }), category).toThrow(/문의/)
+    }
+  })
+
+  it('전국형·모르는 업종은 그대로 받는다', () => {
+    // 지역형 거부가 자유 입력 업종까지 막으면 목록 밖 고객이 신청을 못 한다.
+    for (const category of ['패션', '금융', '수제 캔들']) {
+      expect(() => parseAuditRequest({ ...valid, category }), category).not.toThrow()
+    }
+  })
+
   it('잘못된 이메일을 거부한다', () => {
     for (const email of ['', 'a', 'a@', '@b.com', 'a b@c.com']) {
       expect(() => parseAuditRequest({ ...valid, email }), email).toThrow()
@@ -215,6 +230,7 @@ describe('오류 메시지', () => {
       { ...valid, brandName: 'ㄱ'.repeat(101) },
       { ...valid, competitors: ['a', 'b', 'c', 'd'] },
       { ...valid, siteUrl: '무신사' },
+      { ...valid, category: '치과' },
     ]
     for (const input of cases) {
       const message = firstMessage(input)

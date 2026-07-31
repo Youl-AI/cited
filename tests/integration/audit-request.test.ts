@@ -243,6 +243,18 @@ describe('입력 검증', () => {
     expect(sent).toHaveLength(0)
   })
 
+  it('지역형 업종은 400에 문의 안내를 담아 거절한다', async () => {
+    // ★ 자동완성에서 지역형을 뺐어도 직접 타이핑('치과')은 들어온다. 받아 주면
+    //   audit:run에서야 막혀 "영업일 1일" 약속이 깨진다 — 접수 시점에 거절하고,
+    //   폼이 이 메시지를 그대로 띄우므로 문의 채널이 사용자에게 보여야 한다.
+    const res = await post({ ...valid, category: '치과' })
+    expect(res.status).toBe(400)
+    const body = (await res.json()) as { error: string }
+    expect(body.error).toContain('문의')
+    expect(rows).toHaveLength(0)
+    expect(sent).toHaveLength(0)
+  })
+
   it('사이트 주소를 넣으면 호스트명만 저장된다', async () => {
     await post({ ...valid, siteUrl: 'https://www.Musinsa.com/kr/main' })
     expect(rows[0]?.selfDomains).toEqual(['musinsa.com'])

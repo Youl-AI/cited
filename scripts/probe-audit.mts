@@ -62,6 +62,14 @@ check('발송 기록', sent?.status === 'sent' && sent.sentAt !== null)
 check('result jsonb 왕복', (sent?.result as { brandName?: string })?.brandName === '프로브브랜드')
 check('aliases 저장', sent?.aliases[0] === 'PROBE')
 check('발송된 건은 대기 목록에서 빠진다', !(await listPendingAudits()).some((x) => x.id === a.id))
+check(
+  // ★ sentAt은 납기 지표다 — 두 번째 markSent(중복 publish·run 경합)가 던져야 한다.
+  '이미 발송된 건의 markSent는 거부된다 (sentAt 덮어쓰기 방지)',
+  await markSent(a.id, { version: 1 }, []).then(
+    () => false,
+    () => true,
+  ),
+)
 
 // 6. 운영자 경로
 const k = await createVerifiedAudit({

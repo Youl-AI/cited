@@ -20,8 +20,18 @@ if (!parent) {
   console.error(`원본을 찾을 수 없습니다: ${parentId}`)
   process.exit(1)
 }
-if (parent.status !== 'sent' || !parent.result) {
-  console.error(`원본이 발송 완료 상태가 아닙니다 (status=${parent.status}). 비교할 결과가 없습니다.`)
+// ★ 원인별로 따로 말한다 — 한 문장에 뭉치면 운영자는 무엇부터 고칠지 모른다.
+if (parent.status !== 'sent') {
+  console.error(
+    `원본이 발송 완료 상태가 아닙니다 (status=${parent.status}) — 전후 비교의 "전"은 ` +
+      `고객이 받은 리포트여야 합니다. 먼저 발송하세요: pnpm audit:run ${parent.id} --dry`,
+  )
+  process.exit(1)
+}
+if (!parent.result) {
+  console.error(
+    '원본에 저장된 측정 결과가 없습니다 — 발송 상태인데 결과가 비어 있으면 데이터가 손상된 것입니다. 재측정 등록 전에 원본부터 확인하세요.',
+  )
   process.exit(1)
 }
 if (!parent.queries || parent.queries.length === 0) {

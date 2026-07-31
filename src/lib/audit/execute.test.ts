@@ -346,6 +346,17 @@ describe('executeAudit — 티어', () => {
     })
   }
 
+  it('유료 수집도 엔진이 정확히 chatgpt·gemini다 — 크몽 상품 설명의 약속', async () => {
+    // ★ PLANS가 바뀌어도 팔린 상품의 엔진 집합이 따라가면 안 된다 — 팬아웃
+    //   실측으로 고정한다 (tiers.ts의 AUDIT_ENGINES 주석 참고).
+    const engines = new Set<string>()
+    await executeAudit(
+      { ...audit, tier: 'deluxe', frozenQueries: frozen10 },
+      { ...makeDeps(), runOne: observingRunOne((item) => engines.add(item.engineId)) },
+    )
+    expect([...engines].sort()).toEqual(['chatgpt', 'gemini'])
+  })
+
   it('deluxe는 10질의 × 2엔진 × 3회 = 60회 수집한다', async () => {
     const calls: string[] = []
     const result = await executeAudit(

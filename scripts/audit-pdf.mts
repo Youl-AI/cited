@@ -46,7 +46,19 @@ if (audit.status !== 'sent') {
 
 const base = (parseBaseUrlFlag(argv) ?? 'http://localhost:3000').replace(/\/+$/, '')
 const url = reportUrl(base, audit.id)
-const out = `cited-${audit.brandName}-${new Date().toISOString().slice(0, 10)}.pdf`
+
+/**
+ * 브랜드명은 사용자 입력이다 — 파일시스템 금지 문자(`/`·`:` 등)가 섞이면
+ * `page.pdf`가 경로 오류로 죽는다. 지우지 않고 `-`로 바꾼다(이름 흔적 유지).
+ */
+function sanitizeForFilename(s: string): string {
+  return s.replace(/[\\/:*?"<>|]/g, '-')
+}
+
+// ★ auditId 뒤 6자를 붙인다. 브랜드+날짜만으로는 같은 브랜드를 같은 날 두 번
+//   뽑을 때(deluxe·premium 동시 납품 — 리허설에서 실제로 겪음) 앞 파일을
+//   덮어쓴다. id 접미사가 건마다 다르므로 충돌이 구조적으로 없다.
+const out = `cited-${sanitizeForFilename(audit.brandName)}-${new Date().toISOString().slice(0, 10)}-${audit.id.slice(-6)}.pdf`
 
 /** 브랜드명은 사용자 입력이다 — 템플릿 HTML에 넣기 전에 이스케이프한다. */
 function escapeHtml(s: string): string {
