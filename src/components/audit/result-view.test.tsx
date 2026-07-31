@@ -405,6 +405,10 @@ describe('유료 확장', () => {
     expect(coverText).toContain('정밀 진단 + 개선 가이드')
     expect(coverText).toContain('2026-07-30')
     expect(coverText).toContain('MUSINSA')
+    // 표지의 대표 계측값 — 큰 숫자 옆에 구간이 반드시 함께 있어야 한다.
+    // 본문 요약 카드와 같은 규칙: 점추정 단독 노출은 거짓말이다.
+    expect(coverText).toContain('33%')
+    expect(coverText).toContain(formatInterval(base.citedRate))
     expect(visibleText(container)).toContain('cited.co.kr')
   })
 

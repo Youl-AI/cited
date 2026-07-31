@@ -40,7 +40,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           나왔나" 설명이 앱 전역에서 쓰이므로 루트에서 한 번만 감싼다.
           Provider는 클라이언트 컴포넌트지만 children은 props로 들어오므로
           서버 렌더링 경계는 유지된다. */}
-      <body className="min-h-dvh bg-background text-foreground antialiased">
+      {/* `print:bg-white` — 인쇄(PDF 납품)에서는 종이를 종이색으로 둔다.
+          --background(oklch 0.994)는 화면용 "계측 장비의 흰색"인데, PDF의
+          여백은 칠해지지 않은 순백이라 본문 영역 가장자리에 옅은 이음선이
+          생긴다(실측 — 리포트 PDF 전 장의 여백 경계에 회색 띠가 보였다).
+          문서가 아니라 웹페이지 캡처처럼 보이는 주범. 화면에는 영향이 없다.
+          ★ globals.css의 base 규칙로는 안 된다 — 여기 utilities 레이어의
+            bg-background가 base를 이기므로, 같은 레이어의 print 변형이어야 한다. */}
+      <body className="min-h-dvh bg-background text-foreground antialiased print:bg-white">
         {/* 본문 건너뛰기. 앱 영역은 sticky 머리글에 내비 링크가 셋이고 마케팅
             영역도 워드마크·로그인·시작하기를 지나야 본문에 닿는다. 키보드·
             스크린리더 사용자가 페이지마다 그걸 반복해서 통과할 이유는 없다.
