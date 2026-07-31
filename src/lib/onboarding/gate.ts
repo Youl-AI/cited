@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull } from 'drizzle-orm'
+import { and, asc, count, eq, isNotNull, isNull } from 'drizzle-orm'
 import { db, schema } from '@/lib/db'
 import type { Subscription } from '@/lib/db/schema'
 import { resolveLimits, type PlanLimits } from '@/lib/plans'
@@ -18,6 +18,13 @@ export interface OnboardingGate {
    * (state.ts `unfrozenBrandId` 주석 — 온보딩 중단 계정이 갇히는 것을 막는다).
    */
   pendingBrandId: string | null
+  /**
+   * 질의를 **확정한** 활성 브랜드 수. 0이면 이 계정에는 측정 가능한 것이 없다
+   * (수집 cron은 `queriesFrozenAt IS NOT NULL`만 고른다).
+   * `/dashboard`가 강제 리다이렉트 여부를 이 값으로 가른다
+   * (state.ts `resolveDashboardEntry` 주석).
+   */
+  frozenBrandCount: number
   state: OnboardingState
 }
 
@@ -59,6 +66,22 @@ export async function loadOnboardingGate(): Promise<OnboardingGate> {
     .orderBy(asc(schema.brands.createdAt))
     .limit(1)
   const pendingBrandId = pendingBrand?.id ?? null
+  // ★ 동결된 브랜드 수도 같이 센다. 대시보드는 "미동결이 있는가"가 아니라
+  //   **"측정 중인 것이 하나도 없는가"**로 튕겨야 한다 — 브랜드 1을 동결한 뒤
+  //   브랜드 2를 만든 Business 고객이 브랜드 1의 대시보드까지 잃으면 안 된다
+  //   (state.ts `resolveDashboardEntry` 주석). 조건이 정반대라 `brandCount`에서
+  //   빼는 식으로 유도하지 않고 따로 센다.
+  const [frozenCountRow] = await db
+    .select({ value: count() })
+    .from(schema.brands)
+    .where(
+      and(
+        eq(schema.brands.userId, user.id),
+        eq(schema.brands.isActive, true),
+        isNotNull(schema.brands.queriesFrozenAt),
+      ),
+    )
+  const frozenBrandCount = frozenCountRow?.value ?? 0
   const state = resolveOnboardingState({ subscription, brandCount, unfrozenBrandId: pendingBrandId })
   return {
     user: { id: user.id, email: user.email, name: user.name },
@@ -69,6 +92,7 @@ export async function loadOnboardingGate(): Promise<OnboardingGate> {
         : null,
     brandCount,
     pendingBrandId,
+    frozenBrandCount,
     state,
   }
 }

@@ -1,4 +1,5 @@
 import type { Subscription } from '@/lib/db/schema'
+import { queriesStepPath } from './editor'
 
 /**
  * 온보딩 게이트 판정 — 순수 모듈.
@@ -38,4 +39,42 @@ export function resolveOnboardingState(args: {
   if (!isActiveSubscription(args.subscription)) return 'no-plan'
   if (args.brandCount === 0) return 'needs-onboarding'
   return args.unfrozenBrandId ? 'needs-queries' : 'complete'
+}
+
+/** 대시보드 진입 판정. `redirect`면 그 주소로 튕기고, `render`면 화면을 그린다. */
+export type DashboardEntry =
+  | { kind: 'redirect'; to: string }
+  | { kind: 'render'; pendingBrandId: string | null }
+
+/**
+ * `/dashboard`가 온보딩 때문에 튕겨야 하는지 판정한다 — 순수 함수.
+ *
+ * ★ **강제 리다이렉트는 "측정 중인 것이 하나도 없을 때"뿐이다.**
+ *   원래는 미동결 브랜드가 하나라도 있으면 무조건 질의 단계로 보냈는데,
+ *   그러면 Business 고객이 브랜드 1을 동결한 뒤 브랜드 2를 만드는 정상 동작만으로
+ *   **이미 측정 중인 브랜드 1의 대시보드까지 잃는다.** 월 29만 원짜리 플랜에서
+ *   "본 적 있는 화면이 사라졌다"는 해지 사유다.
+ *
+ *   막으려던 것은 그게 아니라 **"돈은 내는데 측정은 한 번도 안 되는"** 계정이었다
+ *   (수집 cron은 `queriesFrozenAt IS NOT NULL`만 고른다). 그 상태는 동결된 브랜드가
+ *   0개일 때만 성립하므로, 조건도 거기까지만 좁힌다. 나머지는 배너로 안내한다 —
+ *   `pendingBrandId`를 같이 돌려주는 이유다.
+ *
+ * ★ `/onboarding`의 리다이렉트는 그대로 둔다. 거기서는 목적지가 대시보드라
+ *   갇히는 문제가 생기지 않고, 오히려 "미동결 브랜드가 있으면 그것부터"가 맞다.
+ */
+export function resolveDashboardEntry(args: {
+  state: OnboardingState
+  pendingBrandId: string | null
+  /** 질의를 확정한 활성 브랜드 수. 0이면 이 계정은 측정 가능한 것이 하나도 없다. */
+  frozenBrandCount: number
+}): DashboardEntry {
+  if (args.state === 'needs-onboarding') return { kind: 'redirect', to: '/onboarding' }
+  if (args.state === 'needs-queries' && args.pendingBrandId) {
+    if (args.frozenBrandCount === 0) {
+      return { kind: 'redirect', to: queriesStepPath(args.pendingBrandId) }
+    }
+    return { kind: 'render', pendingBrandId: args.pendingBrandId }
+  }
+  return { kind: 'render', pendingBrandId: null }
 }

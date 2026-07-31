@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { queriesStepPath } from '@/lib/onboarding/editor'
 import { loadOnboardingGate } from '@/lib/onboarding/gate'
+import { resolveDashboardEntry } from '@/lib/onboarding/state'
 
 export const metadata = { title: '대시보드' }
 
@@ -22,18 +23,32 @@ export const metadata = { title: '대시보드' }
 //   requireUser는 loadOnboardingGate 안에서 호출된다 ((app) 그룹 규칙 충족).
 export default async function DashboardPage() {
   const gate = await loadOnboardingGate()
-  if (gate.state === 'needs-onboarding') redirect('/onboarding')
-  // ★ 브랜드는 만들었는데 질의를 확정하지 않은 계정도 여기 머물면 안 된다.
-  //   수집 cron은 `queriesFrozenAt IS NOT NULL`만 고르므로, 이어서 갈 링크가
-  //   없으면 **돈은 내고 측정은 영원히 안 되는** 계정이 된다 (state.ts 주석).
-  if (gate.state === 'needs-queries' && gate.pendingBrandId) {
-    redirect(queriesStepPath(gate.pendingBrandId))
-  }
+  // ★ 강제 리다이렉트 판정은 순수 함수가 한다 — 조건이 두 갈래(측정 중인 것이
+  //   하나도 없으면 튕기고, 있으면 배너)라 여기 인라인으로 두면 테스트가 안 된다.
+  //   근거는 state.ts `resolveDashboardEntry` 주석에 있다.
+  const entry = resolveDashboardEntry({
+    state: gate.state,
+    pendingBrandId: gate.pendingBrandId,
+    frozenBrandCount: gate.frozenBrandCount,
+  })
+  if (entry.kind === 'redirect') redirect(entry.to)
   const user = gate.user
   // 아래 JSX는 기존 스텁 그대로다 — 이 태스크는 게이트만 단다. Task 9가 교체한다.
   return (
     <div className="max-w-2xl space-y-4">
       <h1 className="text-2xl font-semibold tracking-tight">대시보드</h1>
+      {entry.pendingBrandId && (
+        // 튕기지 않고 알린다. 이미 측정 중인 브랜드가 있으므로 대시보드를 막을
+        // 이유가 없고, 그렇다고 미동결 브랜드를 잊게 두면 그 브랜드는 영영
+        // 측정되지 않는다 — 이어서 갈 링크를 항상 눈에 보이는 자리에 둔다.
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed">
+          아직 질의를 확정하지 않은 브랜드가 있습니다. 확정 전까지 그 브랜드는 측정되지
+          않습니다.{' '}
+          <Link href={queriesStepPath(entry.pendingBrandId)} className="font-medium underline">
+            이어서 확정하기
+          </Link>
+        </p>
+      )}
       <p className="text-muted-foreground">
         {user.name}님, 정기 측정은 아직 준비 중입니다. 결제가 열리면 브랜드를 등록하고 주{' '}
         <span className="font-mono tabular-nums">3</span>회 측정한 추이를 여기서 보게 됩니다.
