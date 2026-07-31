@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { eq } from 'drizzle-orm'
+import { and, eq, ne } from 'drizzle-orm'
 import { db, schema } from '@/lib/db'
 import type { Subscription } from '@/lib/db/schema'
 import type { GrantablePlan } from './grant-args'
@@ -73,6 +73,11 @@ export async function grantPlan(args: {
         queryPacks: args.queryPacks,
         fromAuditId: args.fromAuditId,
         canceledAt: null,
+        // ★ graceUntil도 함께 비운다. schema.ts가 "status=past_due일 때만 채워진다"를
+        //   불변식으로 적어 놨는데, status만 active로 바꾸고 graceUntil을 남기면
+        //   active인데 유예 만료 시각이 있는 행이 된다 — 나중에 그 열을 읽는
+        //   판정이 생기면 조용히 틀린다.
+        graceUntil: null,
         updatedAt: new Date(),
       },
     })
@@ -82,11 +87,35 @@ export async function grantPlan(args: {
   return created
 }
 
-export async function revokePlan(userId: string): Promise<Subscription | null> {
+export type RevokeResult =
+  | { ok: true; subscription: Subscription }
+  | { ok: false; reason: 'not-found' | 'already-canceled' }
+
+/**
+ * 회수 = status를 'canceled'로. 행은 지우지 않는다.
+ *
+ * ★ 이미 canceled인 행은 **건드리지 않는다**(`ne(status,'canceled')`). 다시
+ *   덮어쓰면 최초 회수 시각이 사라지는데, 결제가 없어 `currentPeriodEnd`를
+ *   채우지 않으므로 `canceledAt`이 "언제부터 청구를 멈췄는가"의 유일한 증거다.
+ *   증거를 잃는 것은 조용하다 — 나중에 정산을 되짚을 때야 없어진 걸 안다.
+ */
+export async function revokePlan(userId: string): Promise<RevokeResult> {
   const rows = await db
     .update(schema.subscriptions)
     .set({ status: 'canceled', canceledAt: new Date(), updatedAt: new Date() })
-    .where(eq(schema.subscriptions.userId, userId))
+    .where(
+      and(
+        eq(schema.subscriptions.userId, userId),
+        ne(schema.subscriptions.status, 'canceled'),
+      ),
+    )
     .returning()
-  return rows[0] ?? null
+
+  const revoked = rows[0]
+  if (revoked) return { ok: true, subscription: revoked }
+
+  // 0행에는 두 가지 원인이 있고, 운영자에게는 전혀 다른 상황이다 —
+  // "구독이 없다"(이메일을 잘못 쳤나?)와 "이미 회수했다"(할 일이 없다).
+  const existing = await findSubscriptionByUserId(userId)
+  return { ok: false, reason: existing ? 'already-canceled' : 'not-found' }
 }

@@ -58,7 +58,21 @@ if (fromAuditId) {
     process.exit(1)
   }
 
-  console.log(`진단 연결: ${audit.brandName} · ${audit.category} · tier=${audit.tier}`)
+  // ★ 연결 "교체"도 해제만큼 조용하다. aud_OLD → aud_NEW는 upsert가 한 줄로
+  //   덮어쓰고 끝나서, 잘못된 id를 붙였을 때 원래 무엇이 걸려 있었는지 되짚을
+  //   길이 사라진다. 해제(else 가지)와 같은 원칙으로 두 id를 모두 이름 대서 말한다.
+  const existing = await findSubscriptionByUserId(user.id)
+  if (existing?.fromAuditId && existing.fromAuditId !== fromAuditId) {
+    console.warn(`[주의] 기존 진단 연결이 교체됩니다: ${existing.fromAuditId} → ${fromAuditId}`)
+    console.warn(`  되돌리려면: pnpm plan:grant ${email} ${plan} --from-audit ${existing.fromAuditId}`)
+  }
+
+  // ★ status를 같이 찍는다. rejected·requested 진단도 id만 맞으면 연결되는데,
+  //   그런 진단은 동결 질의·리포트가 없거나 못 쓰는 것이다 — 확인 줄에 안 보이면
+  //   운영자는 잘못 붙인 걸 알 방법이 없다.
+  console.log(
+    `진단 연결: ${audit.brandName} · ${audit.category} · tier=${audit.tier} · status=${audit.status}`,
+  )
   if (!audit.queries || audit.queries.length === 0) {
     // 동결 질의가 없으면 프리필은 브랜드 정보뿐이다. 막지는 않는다 — 무료
     // 진단 전환도 이 경로를 쓸 수 있다.
