@@ -91,8 +91,10 @@ async function anthropicCosts(key: string): Promise<DailyCost[]> {
     }
     if (!Array.isArray(b.data)) unexpected('Anthropic', body)
     for (const bucket of b.data) {
-      const usd = (bucket.results ?? []).reduce((s, r) => s + Number(r.amount ?? 0), 0)
-      days.push({ date: (bucket.starting_at ?? '').slice(0, 10), usd })
+      // ★ amount는 달러가 아니라 **센트**다(최저 화폐 단위). 나누지 않으면
+      //   $3.44가 $344로 보인다 — 2026-07-31 실제로 그렇게 보였다.
+      const cents = (bucket.results ?? []).reduce((s, r) => s + Number(r.amount ?? 0), 0)
+      days.push({ date: (bucket.starting_at ?? '').slice(0, 10), usd: cents / 100 })
     }
     page = b.has_more ? (b.next_page ?? null) : null
   } while (page)
@@ -126,7 +128,9 @@ async function openaiCosts(key: string): Promise<DailyCost[]> {
     }
     if (!Array.isArray(b.data)) unexpected('OpenAI', body)
     for (const bucket of b.data) {
-      const usd = (bucket.results ?? []).reduce((s, r) => s + (r.amount?.value ?? 0), 0)
+      // ★ value가 문자열로 올 수 있다. Number 없이 더하면 문자열 이어붙기가
+      //   되어 toFixed에서 죽는다 — 2026-07-31 실제로 그랬다. (여긴 달러 단위.)
+      const usd = (bucket.results ?? []).reduce((s, r) => s + Number(r.amount?.value ?? 0), 0)
       const date = bucket.start_time
         ? new Date(bucket.start_time * 1000).toISOString().slice(0, 10)
         : ''
