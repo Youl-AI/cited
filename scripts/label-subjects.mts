@@ -1,4 +1,5 @@
 import type { BrandProfile } from '@/lib/detection/types'
+import { generateAuditQueries } from '@/lib/audit/queries'
 
 /**
  * 골드 라벨 수집 대상.
@@ -26,6 +27,54 @@ export interface SubjectSet {
 }
 
 export const SUBJECT_SETS: SubjectSet[] = [
+  // ── 새 업종 템플릿 검증 세트 (2026-07-31 골드 확장) ──────────────────
+  //
+  // ★ 질의를 손으로 쓰지 않고 `generateAuditQueries`에서 뽑는다 — 제품이
+  //   실제로 던지는 질의 그대로여야 "새 템플릿에서 판정기가 맞는가"를 잰다.
+  //   템플릿 질의는 배포 후 불변이므로(query-templates.ts 규칙) 후보 id도
+  //   안정적이다.
+  //
+  // ★ 새 세트를 배열 **맨 앞**에 둔다. label-collect의 수집 순서가 배열
+  //   순서라서, 기존 40건이 없는 엔진(chatgpt)에 `--limit 6`을 걸면
+  //   정확히 이 6개 질의만 수집된다.
+  {
+    id: 'pilates-suwon',
+    label: '필라테스·요가 (수원, 지역형 템플릿)',
+    // 지역형 검증의 핵심: 동네 상호는 전국 브랜드보다 언급이 희귀하고
+    // 표기가 흔들린다. 브랜드는 **수집된 실제 답변이 언급한 실존 업체**에서
+    // 골랐다 — 우리가 지어낸 상호를 물으면 부정 라벨만 쌓인다.
+    // 셋 다 웹에서 실존을 확인했다(2026-07-31): 리본요가 rebornyoga.co.kr,
+    // 클로바필라테스 수원권선점, 더센터오브필라테스 수원인계점(헬스장 정보
+    // 사이트 등재). 답변에 등장하지만 실존을 못 굳힌 상호(예: '필라테스
+    // 루틴')는 뺐다.
+    brands: [
+      // gemini 답변이 '리본요가 수원점'으로 언급. 각 브랜드가 6개 답변 중
+      // 1개에만 나온다 — 지역형 특성상 부정 라벨 공급원을 겸한다.
+      { canonical: '리본요가', aliases: ['리본요가 수원점', 'Reborn Yoga'], ambiguous: false },
+      { canonical: '클로바필라테스', aliases: ['클로바 필라테스'], ambiguous: false },
+      {
+        canonical: '더센터오브필라테스',
+        aliases: ['더센터오브 필라테스'],
+        ambiguous: false,
+      },
+    ],
+    queries: generateAuditQueries('필라테스·요가', '(브랜드 없음)', '수원'),
+  },
+  {
+    id: 'finance',
+    label: '금융 (전국형 템플릿)',
+    brands: [
+      // 기존 fintech 세트와 겹치는 토스·카카오뱅크는 그대로 둔다 —
+      // 같은 브랜드라도 **질의가 새 템플릿**이라 답변 분포가 다르다.
+      { canonical: '토스', aliases: ['toss', '토스뱅크', '토스증권'], ambiguous: true },
+      { canonical: '카카오뱅크', aliases: ['카뱅', 'kakaobank'], ambiguous: false },
+      // 카카오뱅크/카카오페이 — 접두어가 같아 판정기가 헷갈릴 만한 쌍.
+      { canonical: '카카오페이', aliases: ['kakaopay', '카카오페이증권'], ambiguous: false },
+      { canonical: '뱅크샐러드', aliases: ['banksalad'], ambiguous: false },
+      { canonical: '케이뱅크', aliases: ['K뱅크', 'kbank'], ambiguous: false },
+    ],
+    queries: generateAuditQueries('금융', '(브랜드 없음)'),
+  },
   {
     id: 'fashion',
     label: '온라인 패션 플랫폼',

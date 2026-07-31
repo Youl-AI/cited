@@ -324,6 +324,87 @@ describe('executeAudit', () => {
   })
 })
 
+describe('executeAudit — 티어', () => {
+  const frozen10 = [
+    '수원 필라테스 어디가 좋아?',
+    '수원에서 기구 필라테스 배울 만한 곳 추천해줘',
+    '수원 요가원 괜찮은 데 알려줘',
+    '수원 필라테스 그룹레슨 가격 어느 정도야?',
+    '수원 필라테스 1:1 레슨 어디가 괜찮아?',
+    '기구 필라테스랑 매트 필라테스 차이가 뭐야?',
+    '수원 산후조리 필라테스 추천해줘',
+    '수원역 근처 필라테스 알려줘',
+    '필라테스 처음 시작할 때 뭘 봐야 해?',
+    '수원 필라테스 체험 수업 있는 곳 어디야?',
+  ]
+
+  /** 팬아웃 항목을 관찰하면서 기존 `fakeAnswer` 계약을 그대로 지키는 runOne */
+  function observingRunOne(onItem: (item: FanoutItem) => void) {
+    return vi.fn(async (item: FanoutItem) => {
+      onItem(item)
+      return fakeAnswer(item, `${item.queryText}에는 무신사가 좋습니다. 29CM도 있습니다.`)
+    })
+  }
+
+  it('deluxe는 10질의 × 2엔진 × 3회 = 60회 수집한다', async () => {
+    const calls: string[] = []
+    const result = await executeAudit(
+      { ...audit, tier: 'deluxe', frozenQueries: frozen10 },
+      { ...makeDeps(), runOne: observingRunOne((item) => calls.push(item.queryText)) },
+    )
+    expect(calls).toHaveLength(60)
+    expect(result.totalAnswers).toBe(60)
+  })
+
+  it('동결 질의가 그대로, 그 순서대로 던져진다', async () => {
+    const texts = new Set<string>()
+    await executeAudit(
+      { ...audit, tier: 'deluxe', frozenQueries: frozen10 },
+      { ...makeDeps(), runOne: observingRunOne((item) => texts.add(item.queryText)) },
+    )
+    expect([...texts]).toEqual(frozen10)
+  })
+
+  it('유료 티어인데 동결 질의가 없으면 수집 전에 던진다 — 돈을 쓰기 전에', async () => {
+    let collected = 0
+    await expect(
+      executeAudit(
+        { ...audit, tier: 'deluxe' },
+        { ...makeDeps(), runOne: observingRunOne(() => (collected += 1)) },
+      ),
+    ).rejects.toThrowError(/동결/)
+    expect(collected).toBe(0)
+  })
+
+  it('유료 티어의 동결 질의 수가 어긋나면 거부한다', async () => {
+    await expect(
+      executeAudit(
+        { ...audit, tier: 'standard', frozenQueries: frozen10.slice(0, 7) },
+        makeDeps(),
+      ),
+    ).rejects.toThrowError(/10개/)
+  })
+
+  it('free는 기존과 완전히 같다 — 템플릿 3질의 × 1회', async () => {
+    const calls: string[] = []
+    await executeAudit(audit, {
+      ...makeDeps(),
+      runOne: observingRunOne((item) => calls.push(item.queryText)),
+    })
+    expect(calls).toHaveLength(6) // 3질의 × 2엔진 × 1회
+  })
+
+  it('지역형 업종의 free 진단은 region을 템플릿에 넣는다', async () => {
+    const texts = new Set<string>()
+    await executeAudit(
+      { ...audit, category: '치과', region: '수원' },
+      { ...makeDeps(), runOne: observingRunOne((item) => texts.add(item.queryText)) },
+    )
+    expect(texts.size).toBeGreaterThan(0)
+    for (const t of texts) expect(t).toContain('수원')
+  })
+})
+
 describe('answerId', () => {
   it('질의·엔진·샘플의 조합이다', () => {
     expect(answerId({ queryId: 'q1', engineId: 'chatgpt', sampleIndex: 0 })).toBe('q1:chatgpt:0')

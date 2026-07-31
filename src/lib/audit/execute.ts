@@ -3,6 +3,8 @@ import type { AliasFn } from '@/lib/audit/aliases'
 import { generateAuditQueries } from '@/lib/audit/queries'
 import { buildAuditResult } from '@/lib/audit/result'
 import type { AuditResult } from '@/lib/audit/result'
+import { AUDIT_TIERS, isPaidTier } from '@/lib/audit/tiers'
+import type { AuditTier } from '@/lib/audit/tiers'
 import { buildFanout } from '@/lib/collection/fanout'
 import type { FanoutItem } from '@/lib/collection/fanout'
 import { buildPlanSnapshot } from '@/lib/collection/plan-snapshot'
@@ -24,6 +26,15 @@ export interface AuditSubject {
    *   인용되지 않았습니다"라는 가장 강한 문장을 근거 없이 만든다.
    */
   selfDomains?: string[]
+  /** 진단 티어. 생략하면 'free' — 기존 호출부는 그대로 동작한다 */
+  tier?: AuditTier
+  /** 지역형 업종의 지역. 템플릿 질의 생성에 쓴다 */
+  region?: string
+  /**
+   * 동결된 질의(`freezeQueries`가 저장한 것). 유료 티어는 필수다.
+   * ★ 순서까지 상품의 일부다 — byQuery·재측정 비교가 순서에 기댄다.
+   */
+  frozenQueries?: string[]
 }
 
 /** 실행 통계. 운영자가 원가와 완전성을 봐야 한다. */
@@ -74,25 +85,52 @@ export async function executeAudit(
 ): Promise<AuditResult> {
   const now = deps.now ?? (() => new Date())
 
-  // 1. 질의 생성 — 브랜드명은 넣지 않는다 (queries.ts 주석 참고)
-  const texts = generateAuditQueries(subject.category, subject.brandName)
+  const tier = subject.tier ?? 'free'
+  const tierCfg = AUDIT_TIERS[tier]
+
+  // 1. 질의 확정 — 유료는 동결본 필수, 무료는 템플릿 생성.
+  //    브랜드명은 넣지 않는다 (queries.ts 주석 참고).
+  //    ★ 검증을 수집 **전에** 한다. 뒤에서 하면 돈을 쓴 뒤에 거부하게 된다
+  //    (report-url의 --base-url 검증과 같은 원칙).
+  let texts: string[]
+  if (isPaidTier(tier)) {
+    if (!subject.frozenQueries || subject.frozenQueries.length === 0) {
+      throw new Error(
+        `${tierCfg.label}은 동결된 질의가 필요합니다. 먼저 실행하세요: pnpm audit:queries ${subject.id}`,
+      )
+    }
+    if (subject.frozenQueries.length !== tierCfg.queryCount) {
+      throw new Error(
+        `동결 질의가 ${subject.frozenQueries.length}개입니다 — ${tierCfg.label}은 정확히 ${tierCfg.queryCount}개여야 합니다`,
+      )
+    }
+    texts = subject.frozenQueries
+  } else {
+    texts = subject.frozenQueries ?? generateAuditQueries(subject.category, subject.brandName, subject.region)
+  }
   const queries = texts.map((text, i) => ({ id: `q${i + 1}`, text }))
 
-  // 2. 무료 플랜 설정 그대로 팬아웃. 수동이라고 늘리지 않는다.
-  //    질의 3개 × 엔진 2개 × 샘플 1개 = 6회. 이 수가 곧 원가다.
+  // 2. 팬아웃. 무료 플랜 스냅샷을 기본으로, 티어의 반복 수만 덮어쓴다.
+  //    무료는 질의 3개 × 엔진 2개 × 샘플 1개 = 6회. 이 수가 곧 원가다.
+  //
+  //    ★ snapshot.plan은 'free'로 남는다 — 진단은 구독이 아니고, 이 스냅샷은
+  //    저장되지 않고 팬아웃 계산에만 쓴다(무료 진단은 collection_runs를 안 쓴다).
   //
   // ★ `competitors`는 여기서 **관측되지 않는다.** `buildFanout`이 쓰지 않고,
   //   무료 진단은 스냅샷을 저장하지 않기 때문이다(`historyMonths: 0`).
   //   그래도 올바른 값을 넣는다 — 4단계가 이 스냅샷을 저장하기 시작하면
   //   그때부터 SoV 비교 가능성이 이 필드에 달린다. 변이 테스트로 확인했고,
   //   이 값을 `[]`로 바꿔도 지금은 아무 테스트가 실패하지 않는다.
-  const snapshot = buildPlanSnapshot({
-    plan: 'free',
-    queryPacks: 0,
-    queryIds: queries.map((q) => q.id),
-    competitors: subject.competitors,
-    detectorVersion: DETECTOR_VERSION,
-  })
+  const snapshot = {
+    ...buildPlanSnapshot({
+      plan: 'free',
+      queryPacks: 0,
+      queryIds: queries.map((q) => q.id),
+      competitors: subject.competitors,
+      detectorVersion: DETECTOR_VERSION,
+    }),
+    samples: { llm: tierCfg.samplesPerEngine, serp: 0 },
+  }
   const items = buildFanout(snapshot, queries)
 
   // 3. 수집
@@ -160,6 +198,9 @@ export async function executeAudit(
     // 못박는다). 조건부로 두는 것은 `exactOptionalPropertyTypes` 관례를 따르는
     // 것이고 동작 차이는 없다.
     ...(subject.selfDomains ? { selfDomains: subject.selfDomains } : {}),
+    // 유료 리포트는 증거를 6건까지 담는다 — 답변이 60건인데 3건만 보여주면
+    // 고객이 산 것(10질의 × 3회)이 리포트에 보이지 않는다.
+    ...(isPaidTier(tier) ? { evidenceMax: 6 } : {}),
     measuredAt: now().toISOString(),
     metrics: detection.metrics,
     answers,

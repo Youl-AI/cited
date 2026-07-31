@@ -13,6 +13,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 import type { AnyPgColumn } from 'drizzle-orm/pg-core'
+import { AUDIT_TIER_IDS, type AuditTier } from '@/lib/audit/tiers'
 import { ENGINE_TIER, PLANS } from '@/lib/plans'
 import type { EngineId, PlanId } from '@/lib/plans'
 
@@ -475,6 +476,27 @@ export const freeAudits = pgTable(
      *   리포트를 재현할 수 없다.
      */
     aliases: jsonb('aliases').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    /**
+     * 진단 티어. 크몽 유료 상품은 'standard'|'deluxe'|'premium'.
+     * ★ 구독 플랜이 아니다 — `AUDIT_TIERS` 참고.
+     */
+    tier: text('tier').$type<AuditTier>().notNull().default('free'),
+    /** 지역형 업종의 지역 (예: '강남'). 전국형은 null. CLI로만 들어온다 */
+    region: text('region'),
+    /**
+     * 동결된 질의 목록. **null이면 템플릿에서 생성**(기존 무료 동작).
+     * 유료 티어는 실행 전에 반드시 채워져야 한다 — 순서까지 상품의 일부다.
+     * 재측정(전후 비교)이 이 배열을 그대로 다시 던지므로, 동결 후에는
+     * 절대 수정하지 않는다.
+     */
+    queries: jsonb('queries').$type<string[]>(),
+    /** 운영자가 쓰는 개선 가이드(마크다운). DELUXE부터. 리포트 화면이 렌더한다 */
+    guideMd: text('guide_md'),
+    /**
+     * PREMIUM 재측정이 가리키는 원본 진단. 전후 비교 화면이 이 연결로
+     * 원본 결과를 불러온다.
+     */
+    parentId: text('parent_id'),
     status: text('status').$type<AuditStatus>().notNull().default('requested'),
     /** 유입 경로. 'web'이 아니면 이메일 인증을 운영자가 통과시킨 것이다 */
     source: text('source').$type<AuditSource>().notNull().default('web'),
@@ -499,6 +521,7 @@ export const freeAudits = pgTable(
     index('audits_status_created_idx').on(t.status, t.createdAt),
     enumCheck('free_audits_status_check', t.status, AUDIT_STATUSES),
     enumCheck('free_audits_source_check', t.source, AUDIT_SOURCES),
+    enumCheck('free_audits_tier_check', t.tier, AUDIT_TIER_IDS),
   ],
 )
 

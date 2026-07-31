@@ -1,0 +1,215 @@
+{
+  "engineId": "chatgpt",
+  "query": "가계부 앱 추천해줘",
+  "capturedAt": "2026-07-31T05:30:43.778Z",
+  "elapsedMs": 39914,
+  "usage": {
+    "calls": 1,
+    "searches": 2,
+    "tokensIn": 13674,
+    "tokensOut": 641,
+    "tokensThinking": 1792
+  },
+  "raw": {
+    "id": "resp_0ea2974403b45104006a6c32ddd140819ab6a8e4bfb4562686",
+    "object": "response",
+    "created_at": 1785475805,
+    "status": "completed",
+    "background": false,
+    "billing": {
+      "payer": "developer"
+    },
+    "completed_at": 1785475842,
+    "error": null,
+    "frequency_penalty": 0,
+    "incomplete_details": null,
+    "instructions": "너는 일반 소비자의 질문에 답하는 어시스턴트다. 한국어로, 구체적인 브랜드나 제품명을 들어 간결하게 답하라.",
+    "max_output_tokens": null,
+    "max_tool_calls": null,
+    "model": "gpt-5-mini-2025-08-07",
+    "moderation": null,
+    "output": [
+      {
+        "id": "rs_0ea2974403b45104006a6c32de973c819aa12e9b423b3b24f6",
+        "type": "reasoning",
+        "content": [],
+        "encrypted_content": "gAAAAABqbDMCU6ljH7RlaTTAWnNuZq9mDfkBRws4kHuqSM0lluAM3tQFuwz56gNCzNI9r9skkYeMKDDVN7syTm-xTfZPVpIrFuW1VxInftWGecOmfQR9qVcSlHk_R1HmMiMEORmpqWpw4AIK-Nx4N8B6ganxZYNNXM7QLBakRvyHwdZ9G4iSTk6ZeiCIwaoTIelqQpjE1Bng274aSbI0QtfY7rp3ZHU7rCsjmguW6iXpMsq2JjsmYIOtjQQ2ThvqRR0v092gEglYsonrwvvFY9wXyN_9TzJSaGG_4baqiCMjhg82biLpGkTq1ZSLx-Bqt2RKIj6E-1hR02jCclkxB3kVNNp03GQx_3XgusBmldp2bLtFp3NxdLrqhtZa4tiB96UEDA2jI8tfnxqha-LN9nA7KroqJqSWviXpQoHKyh12MRVtWxeDLPiHzyxK1rLgE3N6mAaAyhvCNHcT5lNfQ7XXjS9Tuu0olkefnLjoeg-8PZt2f8J6if3A99nKVuGvnAfbRvKo1Cx3F-RrSvI68pPVOpKXe2Bg7D5h47KFUOhr9qcFWtTbkoE62C9vR3Q3r3KnC9fdevyM6pu4pn5VGfW7UG4zFmolq6P_v9VquyAUM5jz_5FH_-tEMDYelVYRLaReOtQx-Aybx85uPu34NzTEttGDljnT0yilrevggbMnGBTP3KyHBGGdfEDkcpnvfUqmrGOVzrnIYZVzkyN5TaPX1-_ybz6b_27eLTzhqjdOcUaiEMyvdp3Ddr6yCjrnu7fbeJocWDt-7g2nSP_0iQfhTsXK82S9RWV_wAiVofTuiZYNdH_ADZ3U7cQonDZfmBRpIRqMHsEoq6WJol9W-aVFuJMGLLhizIMoNyankAUEeKQsAVxHeVPUbR0KdqXvjzgMW2_xOPmue6WrDOs5oaSLuL16IFFF8enycIktmrbrSgVXVOQ-5cfrVxc6ysArQ885FJtIa2Xn_W2e9u4iz_aYpeysjf2iVJTVKi0vEauCHESkXWV6gGG3ldxglo0oRKVbqJ4o3LdAmkyNjZIBQGpYPJsVjm2fK6U3D-3a-6m_xJMl3_DbUCmPvS4ZmsCFErD089ox-NAdCyz6e1XkNqnGwIrWd_4HUVXnkN-v6ehGgORcxtJ1eJLZe_lXtGig_c3UV3AyYZXqLD-8x3ewQphogQ8QFAKduXNYAQ9ERAc6RpfrGvX4A6kml3Lh-K-lDHrXIIf2Tc4kIVTv0reqCNFEk_LsLbahYRfzmtNK7op0rJXT9CwnMdl8pjNCnpSCTkEbznX4omjFL5rmQKR_iWVZ7qywMzmArJtU0q4EWdPsSeEYe7hVeyjZk2U5Z49mv0jG_bLnwaOQsuHRV_rRlUa8CXXTKo6oCEla2NNDe1uA6Nl8G1v9pXBLdakrjqUs9OeeLvxPJ-NsNFwok67uSw8LUgXrNuPMaP_raNrMDpqSKFYB4jCURsu43UA04LFUtQtVlwQY3GP82b3nvQUDsXorv2Xu5809ia5WHOQ004Xe8v9yYEd7L8hawZxA5wCkPW1HoPpSdJHie161yE61iF1TCffZoYB2UqjyeFXtFaksJSHVB5poW6yzqwbwHNm8Tp89FqK7bCYF6b4Vp-iU6ZgsugbAxBaaeDCj2R9aLFE3CSm3v4tjZtpWkc8ytF2JNOZ3SIkTToY4zljjHvrAcIMZ6dZZB9O8MswZ8z1mA9j7aw1Y-3j800bamNfwOt12_tYcny2-Bv3g1aOHofvfBuGKe4rm89DLU5YuxawNS_HPvoxv3wpwrBvRl2H7ezPfC9FcNx-tWT4ufTPKAzqkwheT_OFMEb9L110-vlZiCGRw9GX78Q83U-iLDz4oiREsopyagXFwGXpiZ-jgLA0AeeFwdwxtyoNsF6tuqYYOh_mxCovOCowPBGIRMawrJjL-mlDeFdvszv90tPh5QtK2HlLB8p3s6qtL26WEcAnDwztADbrpaGne7MCQJRoYrpiuSxFZijy0tOzR0U90ykj1nPpSVckQ1FQuXm3LlaJxvW6sjXCsUBFORdWbw_8CPH0rtxVZTl4OkvM-eSYB3oYI9YWvm3Rp8RmpBCqmosCwCo45aKSGm0WOsLjGmJpaahYRlkpvy9NtIx7e0jpLEKgfj-zDXTCzC2Z6q6IMfE9nW_fG_zMvS_uwyajlnyG6Z0lUB6U5MbP5hI94qCbGJlJIib7wUQ-_8t3P-kge5vZ9CeM5pg7UrWvXRfW1sWWMfp2q1CNTuQQ34u4w3bvyX4RVO-BBRBpJpE_U0m99a68DhMgMH9H6HZSOWlTh44VSSRSm0aoTQ8a9WgBDmLinQjMPKFxxrPCRNVJIV3L6tDQGWuLVu33_pifsaivIbTr4owkrfRspqt0d8BLCiAgr0TYd9wZDFZ5S__aJo8xr-BAihxSQhP9QdfVyZO9bqfmF_lgHQF_fzmwv_Mc_MwJXcAMBFEzDxzGnZA_oiOCOm3xJBoZe9Wf0Ra5FNU8NK-7OZzfB5nNiW694G73aE2Y228u3AZGIiX8AzEakqXijfHVGeWLGAEPhxRgjMZCl-PyEV4oUI9qlpAeQqkyx6SsvW5VYcwzAKSWD2sUTUDUO9nlcfvTITtnIsC6p7G5htzMR-0QUsHdMUyy7xlOYLcIN1Cekra02rX9usFjn5SGAAbcIUzAk9XF_I-utzXoaJPZR_8BGKoex5rUbLaluBqu9oKHw2TrI23qbInAqiMB8FJjTKhYuBNee8My2y-fQl51VdItMfyaGHCMWhxyEh0HAZyXk7aKvdo_2huVg56jYG4HHGzzB5vCv06tqI8LjErRmG-_XiC315oc9ILJew6qwhVqu3dknu0kqYs3lmHU7-HrI6fSjGGFl8rv0OhvrLdOYq6JBwv9iAwxzHv2vZrcn4oKu3rfnrgKDMu8Gqj60aiz7NQDEHFIFRhTEe0oXjuR80uN3ORr-9rJPO8D--VwOKO3YqBjlms-y4eTUc35NbYwsk2K9vkt1b9R0379tZyX-cCJqEco8PswZxIFffbIz1oDqj9kFpveI8fiR0IRvSaCty26-MQ43pW8XMHeaSqD2YFRJD_QmSb1tn9eGOTbF26BpxrUcBN4rnIwoPYe2sycourKS2dck0YzqVZHReJarwRlVrBdYI1k0GTwGYvSNXS4ciHZX8S10Z6TmUvVzDO_cV9OQlsT8njjE0DHn8XHdnw6sdqSq4uA3VvTDzeLezmpUKErlXLcYmJVcViXXlmipaSLiE0F8o4x6TqWP42d3MNY3UNrb2-lzL41fqL2BnfEXiiI0tUzTDs6JqElEqLH9zuESMqR4GBwg2qd4Zr_bD9bfUpgrDiDKvHvZ9fxuhuJ1bdHXJkzAuVygjsP0M4DdyfI85lDM1cmOr8f2aOI4c7p-90nFZQ6Bgcbiu5F6MzVu6VH0H8tFDBJ6REbEaNgwscnuOgRsbvc3VaoxU29Z1YADGGrLcxtgVKnzZsZkhAFY2_O8jCXWsOhofCSfQUtNTZV80oq0KGd4S_3czHN1uEdmfOo31ZK2QYem0U2bdvAF8ITZidMJl-PqaBNk7jKMf1Mai2q7ZiMHG__hl_pXtF4OB1qEBEOqolPm-qb0J401iqZgeK8hkBmSSvaiEdL8ejbXNgXNpgdZRwO3dK6Bxa5q9TEOngZ48bBz0defLNAXi0DD04wnV83Rn3SM7vH66iDTlNaULkbYPOBstAdyyvxAw_s2QAdb-kBs1uX30Hdi-MgtfZYTVZLMv9wnCzX9mPBQ-sGZPtJq3v2vmJZbP0hDJ2H5gNZ3CW-07zcnipDwSGRIJ_EP8sgt51YuuYMZ0B2bOgU86e7LI3puJaUx6QDN3Xsn_L7qRhpib82dtRekSaiX6ImxhKBo6yfHgbMG4GFcXvLwkcwExrs2DxzErH8sCjW9TRUYGxf2FQr11YYkqVtrZd_3Mp9aUP0iQsKeOBCKHYxuBFAIkbffHXY8loSkBsZlRkIpc_-FdlrOhBK9y4vDeCZQgOQv2Dv7RhNLZxcrHG6eAAKj4aKkys8m-4CUsB3ZM6kc3G-apcgkC0JZIStDmNXhzUNoL4wceRoB_yTm7t0kDOsilVK7Kxy3whc3RahIiPSvLE6MHEkCDjXwRaiMALgLPkY8nA==",
+        "summary": []
+      },
+      {
+        "id": "ws_0ea2974403b45104006a6c32e6ae24819ab34d5059a322955f",
+        "type": "web_search_call",
+        "status": "completed",
+        "action": {
+          "type": "search",
+          "queries": [
+            "뱅크샐러드 가계부 기능",
+            "토스 가계부 기능",
+            "머니트리 가계부 앱",
+            "카카오페이 가계부 기능"
+          ],
+          "query": "뱅크샐러드 가계부 기능"
+        }
+      },
+      {
+        "id": "rs_0ea2974403b45104006a6c32e92d58819a9cce817f8e31b058",
+        "type": "reasoning",
+        "content": [],
+        "encrypted_content": "gAAAAABqbDMCJlyifG7V9xO0gBfTRZqtrztuDlNAPisBQVwa888gSSliTDgbY9M8qflSQ0QxGpASaOxE6NMQcOdTwnc0-cnMS37hd3_LkbA06ec9giEMQReCJaT2IkFtHfKO0dBMm2uapRPs7pTeiT4lXTWYpKGPGHRIGRVB6klu8fAnTLT1P1H2muziMztFaicAhWZow2Dn2AwG8DWnEx0rWil8Un7h__SyZzT5h00dCq2hRKtWn09cSLB3nCF6Bqtd_mYF23NPRgjHVPNlgOK1_UmMvGXe5JamP6PtH-NhczW7m9w4Y8l1sJAuIml9ei2r5JGiZ-9W3ln7HVN4o2TZEekXTSjc_6j7LRnlRlgZj4aB1Ithm2Ot9s3oam0JIjl4pnRwaRNakQNvNrJvM4chLdUjrbpWF_fvXT64VYEmGS_5VlgfkvZ_8IUjdIRr1p1PQMM6ifPV1wd0AHujVt52dSYyd9ZD9pykYgwQ41zSlS2BjdocQ1UXUxB5xOG2CfnF7ikohrk2OBpA47hQuuddEnMMw92TrkA71PSOYZL80_cqIGqZg8SBkmAJo4flhMCTSk-Ohlkx2-FVwucf7y_-VvJ8f2UlXzaUhuWWnzuHETLtLtmXElmGUnUml-8E7OVbP9YBM50ATvKGbzzuEBVasijBOWb0pXqth-1aGwSBlHziPthshjYQL5FJiTDoBRypVoMStKg5r9C7ayar6gSHkMdK_bSSfCiL5Pc7waLxwsbNIufB93tAe4VTdrSQqJZj2_U9Q1XpqOh_G1AJ5_WZU6FAMrkMTp9AkPf2brE4_ZgSG1rTo0kobBTr2V88O7ny-QDbNFOkdH5WSV7lCGpdmi78HZGU9qV-yNV6sr7Ez3natfrh4zq4M8YcqdsQmbaSRVFQMacrH0oDPhjaXsOLCGtMSxP9h_f__bNzafjZMkMJGcG4MAw_TZSuveJc2iqHspb-Nwa1QVOBbZX-1XBznnS8j-kuqjLl5NpsfkTvy8khfHk5AWc3fYJ5eomoIFbN-NcOS8I9B3VRERccdE7be9oAAC1t6uZH7VQbS1bmHge28SP0qVKf3pBGmTE80lORrxO1SWDnqmg6AAA0GEmcu4ZlmlXCEYmiNnQwJYxjkr_uxTUXsYRKd_TO9wvfiHe1f32AScsjXlZRzjNE_Lzypn9qqdolIfjGt0BWcxeU7nMpx_5ZXV_ne9Cv8gL5AX6v_jxLLVOIw3sE5ib0Q2u5P0JfpC9l8a-7-4xg6F7eaa3iYaBNTXy-Bx5CeMjtTEKVUtPsfR8sCBknMYcEMXKOwVA-7gdxURPm2DASYmESECx6dtaQAtvaxMpBRP5xJUjO_9nnx_twA_r7rWNuB4MDJJvHHVo_cGMlZsWg0D6Dz-I459rZsnD0ZP4cqWLnIaVXcJu1KvaC6ORieEFo9zOEM_ag3ofBCJD0hbLhWO8Xr_g0euktyw6MmEtx-82a10xrdONImJhhl_4FYZOrLFnts_6NaAj8jg8Sd5tH8QyI2eJWaUL-Bh3KDd1cJ4ZthVf2tE9M6ualc7dSK2_TYQg3VmDOjWZi3R_FcgbHjT_DFWbEZr3TTZX6vwaARKrNLucHzpWhFCJJFpot7P5XL2jV4Z3LdaMCgrS82mbo5fjx3akV6lZbztGCQ0v57lKICOtG5wopUB-k5ofl5bVHTWhwoENAyr_xTTcuISxAhnBXOwPlAbFctlGw4Ali1B9lIU4H7z7BDjV6qKY74Jw0s1eNzs2x9kL8csiKahoTvmVKgRNiWHk0IBn_lT1CSd45cnBsC43wxTlOgtQ9Xdig2M6sJo9ibGbJJP6qHI-y3TOaIGApi4DIKmGBPN-fOMyl7Rk6j8lPRqvjYnao4bjPp06G3WDuwRXZJwbg25pYkaCeSYBwJiiizXec_tajIyS4PhBf4lFKZf1Kx_e4NnF-EprIJ7_BCzJa8fLIYXw3H-Ufn89K48Tnmbx6lA6CWjb-3rM_P0gTp5U4CZ0HKeawi0EPj_TJTcy1Mw1u3klpmzGI-ArSP_7u23A9CPS5beAx2y8zVB_G74IPhs7OL4fvdL520wMhS_iY4n0au2WT66OyFvissiJKe9hxklb0yMB0fGZpYG9Il1bbA4bWGt11LXo_qdGZpzaUF2czlHp9h6TT4UXnCy2gbZgAbuoLqVQ3pa-R3KGPFcfVwO54rJ5hjUlIhC9aso-brHbgrCUY8tD2zGQw_DivFlLqWBujXr1UeuvzzEX_duIimnplhIkUfaF6SsQ_cqajigEIf4y1FtsCT1C6MDehBu6tI_xAQsxCjnRlC-AxRzQ9n2hWAkLIT0k18bxyk_xPFcuMAbChOUb4A0CGWkTkcfLvL4emHeG9S11-d6_4SzZUkGQrTq4OQRhy310aR2YVqdG_hoJs7AnPhFJEwQXY-tfMbiurkDCKhz1O6IpURit8zkzjHMYSufR1BC3ZHtNxGHrPaoVcEgy4uDF5wyJNo2yDH5hAmdJcsgKvq9zkYp8GoamENoCkHSI79bZ7_9qenr1ZXwx9-t98NiO_r7smMfA=",
+        "summary": []
+      },
+      {
+        "id": "ws_0ea2974403b45104006a6c32ecb0e8819a8d1fed19a9aee78e",
+        "type": "web_search_call",
+        "status": "completed",
+        "action": {
+          "type": "search",
+          "queries": [
+            "네이버페이 가계부 기능",
+            "똑똑 가계부 앱"
+          ],
+          "query": "네이버페이 가계부 기능"
+        }
+      },
+      {
+        "id": "rs_0ea2974403b45104006a6c32f0d444819aab4c48fe79cd1b8c",
+        "type": "reasoning",
+        "content": [],
+        "encrypted_content": "gAAAAABqbDMCBQX5idHvcsyzXQvQeCiCh4icdaB8gq5u90rVff8j7XZqfkTEZ1dp0uxLxQZwAtD1YwxnulExTqHMlDlvoCbvexhAmRmxSgh-jr9swIMH6GLyhQVd4x63TnO8UNvgcb2HVkGjcVpHllzd7A2U5tOZCn1EIozOVRy5avVGKpmQrYqVmAX-MU3b2giQEMAbDXc_2hj8AVkKT4jqt6S2L5-MrfaLtPPaNjP1s137B--n5MJJy2nXVT1X9e9rVNCmJ3IlzUJxfnG2kA4C37f_xQLu0whnhxbV9xIULi8RafaFsnavFYBk8LpuOmYh_1bzrUXAeDuf-ipjsP39Ay2yIhUJijfSZJWJmo0zNoZj7ZXEm7g6bELyh6Wbiy3nsH35y8UmEcoLqjWdoHrecXXq8MQJGFPRyzSo0Y3eewKC1Bvz5qRDM8yhWJKytlrrAPtEsejVh4Q6CvlbeVFla7xaKSOhiNCsjdQ69rHZGL7WulQTsINbGEVaX7_GBDn4HM6PwCJQ-UTxL4fjYo-mot3Y8U_8V5FKagi7lt_ivxHM4Yxd4AS7KjzOxGh-XF8zZzLSSjr0sux4qRZe-xl-rPfosS3-0PQKOZfDEhuxJURm4uDljQ5xSlo9ukNLT1zq3lFRhjUgpA0d8m8s7cfhZaQEIsezOGsED0VFLIUZlwWtXBaT6bYqo4KN7KQ2eUCuIFxHRrtVP3IvyS3b6pOseQnEQobfVxlyt90PQUalKHhbEiVjZbES8KtopcLZpXmPKXXLEDQwHtyK2lOjKHbPsSjU5f1xEDnaFEdmcItaSA9annT2y1ANl-jHoygVLLlH6iVDtaBbKXymbIvDCUxF0rUBFwWhW-gC7sggzTa6fx_a8DGSf4OSuC7R7gzJE2EnJV-lxF8t21sULeCdbUho5IUTNbSCWCXdxkSJPuQdEiwHlLwLlSa6GKEcthFFHd7KOw9DnActSDFawHmEmyyhhSIevP2qyOyxzmrgGWeBpO-7Hr2VzAGUIiILqUL4Fg9ShVbKUPdkTqoKBNT1iM1HgMDTvFLnoBwLZW8sCm1xh_umHRvYDkzJ-PSxO40uBnGM-JG2XJKj_dGuNunzPExU09ECFmgvzn3ykgNfbSge9wyO-67a5FytNBEooYWDTfDuLx3jf7X-eS1T6Nr3NhtYv16t4bcCvpoYNMYNZJG0w9YFNI5CvQkpok8XtQe-wGRXI-Q8uyh6mce3azmF1eYtGm1X8S_mZD2AiXQ1kocCmgC71w9K9_WxT9ylR2cLkYJBa7loTZTqZNHAKu2V-etQ-9WPIhgg3M4hoCw2_EvxDxuCkPrZzhrtQ9vtPt52lBki5P3f172MrHLLim9bSkBTgqUPWvaapGInDV-mRXL0ODvhRRLmXZdzm6z6S4z2t6aVPVD_mDN_arffhnswuOtvAWN9TlYaelIuJcUGZv-mpmg57yBuyNyHWJFydyrFCScZlmQKbQ30REn_kKeeCSKPoef_iGjRZ09MBNTO7ccBKMVBzAD9Me9hBCD5XChKMFDR0Cw886XTfMeQkZnTriK95l8IZbNvYGOygnMUsx0UkjjCDergVUjxBaA9xJTbiQwp-UINzo6zdq2-pC47fRll02mkHozEwHYaNAgToIQgYZy-p9hc9WjOHFPT7SN00DEvu3kPxtYjN_kl5hZgXhLlIIKS19gw5rYV1cAuAlem52h5mUuf8rbY8iKkjHU_bEOZ1i7bZFKi76dK_hgb09k2VjBQeUF_5y1E7UBmV_4DE04lClpLq4h6GlshS-50QeeoqpSYyaj_souy4AFGGYx2wrDmK4vrztNbDhP4wVTVk-Qtk4yf5ox_Twgo476AU7lzzbWKCEOwtDUmZmawkWCu0waEXGTK88lGGK1w-Lmfsary-iPuwQYFw6PUYDoAVJh_SSJk45xKnA8uTyR257YJitnK0ugTWBHv24od9bsHSYHcCE1hubv8u04FEtM6Q6B_IuVnl60s2xTCAndmJSz3uWAqTceihPpHtmvj3q8OP1BeAQPHxk-TxutdVRqlmVcWKrt75d6MkevL46-99dwXwA3MwR50hNqakgW52HQ0Qr38DGeRkxQOvGx7mVNw_8Dk7hYH1swMHdxxWqZhrANQMJVdqeP4r3vHXCPoKR8PGVMTYkbH2N9KfEyEP_mpX1LOFvEl1C3LI50jkW5I2uLKR7oCHQXdRcq5V-3-_YLjWUtBToFjTCuDYAG-cTyK9-slScaKOPe16AAuIJJEY8usfWcMS_xbASaTQ-oYqFM0lOoUt0fwK89uoaTNkosOE5YJTEYe-4XEmtic3PI2ChMi7ZZdOTZ6ydP57YhzoG4brvcBx_ATFYBe3uLPCOpO9hQufHNk8wTq62CGWnR1XLeeGxKCihfQveNPQjKRCFvD39E1X6gzRdS9XuOStxzGoRtRGpMUPzirghvk5iyOYtAXo7G1-3dHsO7k12ThqKtwBMf4wqoxa6EZGL-jDZWTy_fIwAEOaYqXYmBPaeN2X4QdJAHsEkoSDyh-mD5wuvAL3kwuO3Y_v-LH6mX_LM7JNniMC5f2yE7WF-PH9moFhQRjpeGGHdPXvI03LoNWTtYAqvNzIS1Ke8ciPNR2VnW6KzXPB-nwMMPeWZ9hNZvak7N9tuSZMZpjmWkUDIegwUcKhrHw2lQ6Y1SeBSXmevMifv3IcQcdNXJzlT9fZomHeoFwqToJux_rVRtsY5N8tmrlx3FcwzO9ylXAILRCCy72_2-_lsgh6POYX-mUEJ3lak4Q1ClnteYc1E2n5Gh4ZgeTNuDl7h0p5zm3DIZu823vpiTzxcr_bxvaapzhiyLHBrI3G6NijJGIT5fURFJLsLbTi1LZJHK4D-uSGIayN7h9mDR4JXipEpySYAIHUlc94ACBb3tbGHFjLrgH9DdDTMeGDMItqSuWaknk7PNztpNJb-1EvqLzRJFW6gClddEn5enlsQ6mH1gWAfLScIYqPcj2jNjluWK1k911zxBsIir4QH7pTvaWTX4pUvOzC6xK92jJhUSomm4D8ocLahgYRnbqk7qGECXboRS1nnnckJg6-CUeRRHTFPfKdvOVwNvr_RR5DgJLx-xGzDr4mOssh-zjA-IRTbh1Di1gkrmzlo_kMQzrjn4k9osYrp--tAyiYXDA507p0pGTJzwaErhbkDB8Y4hbdiDJsR1aQaubsFTGvcydyA5O9x8P2UfeaJHzE6ZCOuBxDDZdbEqI_CKk9e8jJEZDIs3rO_-LQUu2fCSOj2O7Vez6pDmUxlE_nQ613V-D-Jj4RxUA61u-ls2NN26PAK3QhCiTkywBrgL1KMpuAPH9GmU-xL9IwIy9KdupYu6yCtR061y5epUrMqBYVnVaDPKSxNgFINqQ-iowUivacs28yH0a7DEGc1wWev_HsJlqXuuijEmu61QxKrUwWU-fST7JpoghHBJCbh-cgP5fbn9n6bBs2AX2P7Nk7aYNsRm27noee5_o1mqPdUFYqWKOkUFHlo39IJYuI0TMJMSiRwykgaeEb20oE-gnBDyN4mH_h6u34WnL_6PGSPRF0YPnmIOPG02tVKMbE5AOBBVzX9LUZ2Z1pR6VNwksA5gTdpblRgu-B-GEU9W82ODPXqxIi7yBQUo_AbFQiq8Y_Nb1mCsb7LbKOq_vX0Ul8Slwjk5GJoBCxE3fQCRdUhKh-EJcphSS5TZpkP_9u9WFA0J-HWHENL5RWzniRRhMXCRE4OnlE8JhoNFdImzzfdj4VicF0VbNGg42hxtYm3ucMFj6u01jzKGF0tdUqmFytN1J3Ql7_3OW1WcVqphkU8NNwey6iw8wgOigS1enfh1pkrmnjATq4xrQdrI91TFQSfEVNLmXnLwg6Bb1C0Uk63Wrr8uN0PdoB5r_qguWJS7DfE3VzcW1jV8ujiIKY6p_T_XPedrDzttMpsK6isPCFZRmI6yGRL_uLZLqoVqhASKo6qSyOB1Un1LbFukD-vR55v87ni30POysTjMhIuBVFAfYf5M0s9hso3jhkD02Iq6gQ1b06Y2GgAFbAiQXVfbpe_vGfMFxn8fwnKzEwlqEY9f9lc7VshpKARGGxCC9UT32YTSyY4JphNoWosziPmGJjsPgWFkcOyRFjqzUigTJvOM5daWXV6n7zpvczDDZ30juoB-QZcbpkBKIJ6_Cen7Q75dePMxzW8aFdlZizfnRVfc0fAgBiILJG-b5T-m5a_LOY2c8MdJj_J_OBk_96YAWAa66RCfhOv2w2vLVYNnHshcq4oRhs1Abv7Qj79WqtQnO76rgq5gNEtRY7VScWwsFE0bYQG0SGq-wqkZVSpqovNyvxPYafrKFgMmNzkkzAqj5M8YvffKFSb-5W7dg3-p2fNB7_N8uWBj4JJkPzLAvD6WI2q_UPPofevXPwh9Fbh6eVQKJKUTLimS8CTFdp29tEGPiKMtfcqUHn2WRR-rCui4fUi0wl8_b-9I3S8pgPtTY0AXn6jx2iJ2Brppx42gxlOW0uI2VUM04_LyzI2BtbTy9tFXn8k0UctwZnwgolBsCK2EJ2GZcbQcGTvGgVNexScO-sCKd0uOi8xW7WkF9yoT1CH7a8Pj32dTjaDe9YfJGivH5UQRMmLJyRaKcvNxZf7poVKgwEb5zmVWgZ5Jlk-OKvvjbAxx7xo5gASrB1jSdIXAjnpzYKpq9tvhFC7WyAdqpH5f0DRDpBX-XpXVslDJI5-IS_282jMllDwXOa1dnJorJ7ITrSFYSHgAPoebCuwzFHDuCVHNEeHIXuiBI48Abyr5-IVQcoqKUxDQywUew0uh00K6NTQLEK7_AADFE9TzPTWAYCspTJ4FYsldz0UAXFMuFhJAWzM24d3WfvEPLzf0qe6suxntkWkUhvoumNjcTHnxu2Bf-0h7ux-lyXP7u5xukFGo8wvAKTA8_WQbGGyHYTv_Lxkw5uarzGviFqPHbaZJMtxiVlZUYeCG9aSMun5d_RvX2KduzGrgfscwzMThI3l795BEODNlgvh6vNPL_MxVmJL-S6OPlh2cXeUVdwNfTH426hC7nU79_D4PjSHf41qz6v2bhVz3-hSDJZkcKRCGJbbZy_dPlfTT1UGMdIY5P2s-NbOEKkNxUQ6OMXu7keEkm7kIK_XUPMl-3bJVkrxi0UcK1TYFeSrE-bn7W55UNh_9JLSyQ9gzDf4OeoP06O6SwCPdJAtpucyLVH8sW9Jp8jCcJdj5jUP4H4ReHHa1svy3lrT22ZNtQWUT_9r6hSj8fnuuJCRaLxB5SmCZkVOXIplxwcgHAgy7Lz9sW9nQKxtl9zLyBDoNeWJ8pqkIWt3V1ZUt7b-zxK5k61BCjc0bpjbI7neLy12JUAmxkGkao4n9qACMDL6RQa0rPmGXBY3dOi-PWYnEycVChpr04t2NoRF_ihGfJRWytPED-xapkYsRQ3YikMg7ZcHXCvQh5LVC76HX29lgAC1gsRHYFO-C417L1ezwXAeGWbDJsZE67DKdCjWIbVpx1lv3vdkNji53sb8Afdmc8OI9ccJXHim7MTVgpFYWhe1jC1NHu123xhKXAqsp6P67w0Db4kiFnv-FeVDe14xnxIs6CiUE38O_YAn2HCQYQuTsGvNgeKVWiBCLpDdrrsQ8SJiUgBENFh5TvS62Hl7yttLg5o3f2AEH8uys3xlzulypFkutFMA-x_MInl9w9T5o4sGLm8niUW5zps5mQ0EyNF0IpdvivVe42qcl4xIfdLypevZthOE5hvpOqLR0VFThb5ReZ4VGqdMKwenDoplLAuhnsXLCJ1m3jW7tZOTyhZbkWl5Fq9FxzmKZZDhjxoOP1jiybzoSxT1uxeQXxdE2E2x7qd1774nX5tiDSUQnSmCLp8GnJ6jYaHktnn8f-FM0=",
+        "summary": []
+      },
+      {
+        "id": "msg_0ea2974403b45104006a6c32fa22a4819aa53e00cdcfcc63c1",
+        "type": "message",
+        "status": "completed",
+        "content": [
+          {
+            "type": "output_text",
+            "annotations": [
+              {
+                "type": "url_citation",
+                "end_index": 194,
+                "start_index": 131,
+                "title": "뱅크샐러드 | 금융을 넘어 건강 자산까지",
+                "url": "https://www.banksalad.com/?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 320,
+                "start_index": 261,
+                "title": "토스",
+                "url": "https://www.toss.market/?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 487,
+                "start_index": 414,
+                "title": "다 되는 머니트리•머니트리카드(온누리상품권, 제로페이, 휴대폰결제)",
+                "url": "https://www.imoneytree.co.kr/card?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 654,
+                "start_index": 554,
+                "title": "마음놓고 금융하다, \n카카오페이",
+                "url": "https://www.kakaocorp.com/page/service/service/KakaoPay?lang=ko&utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 842,
+                "start_index": 716,
+                "title": "‎네이버페이 앱 - App Store",
+                "url": "https://apps.apple.com/kr/app/%EB%84%A4%EC%9D%B4%EB%B2%84%ED%8E%98%EC%9D%B4/id1554807824?utm_source=openai"
+              },
+              {
+                "type": "url_citation",
+                "end_index": 1085,
+                "start_index": 1017,
+                "title": "가계부 어플 추천 TOP 5 – 무료 앱부터 자동 연동까지 비교 - 코리안앱스 | 필수 앱 추천 및 스마트폰 활용법",
+                "url": "https://korean-apps.com/?p=76&utm_source=openai"
+              }
+            ],
+            "logprobs": [],
+            "text": "아래 앱들 중 사용 목적(자동 연동 vs 단순 수기, 카카오/네이버 생태계 이용 여부)에 따라 골라보세요.\n\n- 뱅크샐러드 — 은행·카드·투자·대출 등 자산을 한 곳에 통합해 자동으로 분류·분석해줌. 금융 통합 관리를 원할 때 추천. ([banksalad.com](https://www.banksalad.com/?utm_source=openai))  \n- 토스 — 송금·계좌·카드 내역과 연동돼 소비 내역·예산 관리를 간편하게 제공. UI가 심플해 초보자에게 좋음. ([toss.market](https://www.toss.market/?utm_source=openai))  \n- 머니트리(터치형 머니 플랫폼) — 포인트·간편결제·카드 내역 등을 모아보기 좋고 결제·캐시 관리 기능이 강함. 간편한 포인트/캐시 통합 관리를 원할 때 유용. ([imoneytree.co.kr](https://www.imoneytree.co.kr/card?utm_source=openai))  \n- 카카오페이 — 카카오 생태계(카톡, 카카오뱅크 등)를 많이 쓰면 소비·청구서·증빙 관리를 한곳에서 보기 편함. ([kakaocorp.com](https://www.kakaocorp.com/page/service/service/KakaoPay?lang=ko&utm_source=openai))  \n- 네이버페이(네이버) — 네이버 쇼핑·페이 결제 내역 자동 반영되고 네이버 서비스 이용자가 쓰기 편함. ([apps.apple.com](https://apps.apple.com/kr/app/%EB%84%A4%EC%9D%B4%EB%B2%84%ED%8E%98%EC%9D%B4/id1554807824?utm_source=openai))\n\n간단 팁: 1) 은행·카드 연동 가능 여부를 먼저 확인하세요(금융사 일부는 연동 제한 있음). 2) 자동연동을 쓰면 편리하지만 개인정보·연동 권한을 확인해 안전 설정(앱 권한·이중인증 등)하세요. 3) 직접 써보고 한 달 정도 비교해 보고 최종 결정하는 걸 권합니다. 관련 비교 기사 참조(간단 순위/비교). ([korean-apps.com](https://korean-apps.com/?p=76&utm_source=openai))\n\n원하시면(1) 자동연동이 꼭 필요한지, (2) 카카오/네이버 이용 비중, (3) 가족 공유 필요 여부 알려주시면 더 맞춤으로 골라드릴게요."
+          }
+        ],
+        "role": "assistant"
+      }
+    ],
+    "parallel_tool_calls": true,
+    "presence_penalty": 0,
+    "previous_response_id": null,
+    "prompt_cache_key": null,
+    "prompt_cache_retention": "in_memory",
+    "reasoning": {
+      "context": "current_turn",
+      "effort": "medium",
+      "mode": "standard",
+      "summary": null
+    },
+    "safety_identifier": null,
+    "service_tier": "default",
+    "store": true,
+    "temperature": 1,
+    "text": {
+      "format": {
+        "type": "text"
+      },
+      "verbosity": "medium"
+    },
+    "tool_choice": "required",
+    "tool_usage": {
+      "image_gen": {
+        "input_tokens": 0,
+        "input_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 0
+        },
+        "output_tokens": 0,
+        "output_tokens_details": {
+          "image_tokens": 0,
+          "text_tokens": 0
+        },
+        "total_tokens": 0
+      },
+      "web_search": {
+        "num_requests": 2
+      }
+    },
+    "tools": [
+      {
+        "type": "web_search",
+        "return_token_budget": "default",
+        "search_content_types": [
+          "text"
+        ],
+        "search_context_size": "medium",
+        "user_location": {
+          "type": "approximate",
+          "city": null,
+          "country": "KR",
+          "region": null,
+          "timezone": null
+        }
+      }
+    ],
+    "top_logprobs": 0,
+    "top_p": 1,
+    "truncation": "disabled",
+    "usage": {
+      "input_tokens": 13674,
+      "input_tokens_details": {
+        "cache_write_tokens": 0,
+        "cached_tokens": 0
+      },
+      "output_tokens": 2433,
+      "output_tokens_details": {
+        "reasoning_tokens": 1792
+      },
+      "total_tokens": 16107
+    },
+    "user": null,
+    "metadata": {},
+    "output_text": "아래 앱들 중 사용 목적(자동 연동 vs 단순 수기, 카카오/네이버 생태계 이용 여부)에 따라 골라보세요.\n\n- 뱅크샐러드 — 은행·카드·투자·대출 등 자산을 한 곳에 통합해 자동으로 분류·분석해줌. 금융 통합 관리를 원할 때 추천. ([banksalad.com](https://www.banksalad.com/?utm_source=openai))  \n- 토스 — 송금·계좌·카드 내역과 연동돼 소비 내역·예산 관리를 간편하게 제공. UI가 심플해 초보자에게 좋음. ([toss.market](https://www.toss.market/?utm_source=openai))  \n- 머니트리(터치형 머니 플랫폼) — 포인트·간편결제·카드 내역 등을 모아보기 좋고 결제·캐시 관리 기능이 강함. 간편한 포인트/캐시 통합 관리를 원할 때 유용. ([imoneytree.co.kr](https://www.imoneytree.co.kr/card?utm_source=openai))  \n- 카카오페이 — 카카오 생태계(카톡, 카카오뱅크 등)를 많이 쓰면 소비·청구서·증빙 관리를 한곳에서 보기 편함. ([kakaocorp.com](https://www.kakaocorp.com/page/service/service/KakaoPay?lang=ko&utm_source=openai))  \n- 네이버페이(네이버) — 네이버 쇼핑·페이 결제 내역 자동 반영되고 네이버 서비스 이용자가 쓰기 편함. ([apps.apple.com](https://apps.apple.com/kr/app/%EB%84%A4%EC%9D%B4%EB%B2%84%ED%8E%98%EC%9D%B4/id1554807824?utm_source=openai))\n\n간단 팁: 1) 은행·카드 연동 가능 여부를 먼저 확인하세요(금융사 일부는 연동 제한 있음). 2) 자동연동을 쓰면 편리하지만 개인정보·연동 권한을 확인해 안전 설정(앱 권한·이중인증 등)하세요. 3) 직접 써보고 한 달 정도 비교해 보고 최종 결정하는 걸 권합니다. 관련 비교 기사 참조(간단 순위/비교). ([korean-apps.com](https://korean-apps.com/?p=76&utm_source=openai))\n\n원하시면(1) 자동연동이 꼭 필요한지, (2) 카카오/네이버 이용 비중, (3) 가족 공유 필요 여부 알려주시면 더 맞춤으로 골라드릴게요."
+  }
+}

@@ -29,6 +29,13 @@
       "when": 1785406004153,
       "tag": "0003_condemned_silhouette",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785435561339,
+      "tag": "0004_good_rick_jones",
+      "breakpoints": true
     }
   ]
 }

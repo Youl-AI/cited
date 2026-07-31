@@ -50,3 +50,9 @@ next-env.d.ts
 
 # git worktree (서브에이전트 구현용 격리 체크아웃)
 /.worktrees/
+
+# 질의 검수용 임시 파일 (audit:queries가 만든다). 고객 데이터라 커밋 금지.
+/audit-queries.*.json
+
+# 크몽 납품용 PDF (audit:pdf가 만든다). 고객 데이터라 커밋 금지.
+/cited-*.pdf

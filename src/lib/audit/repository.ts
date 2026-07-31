@@ -1,5 +1,6 @@
 import { createHmac, randomBytes } from 'node:crypto'
-import { and, desc, eq, gte, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, ne, sql } from 'drizzle-orm'
+import type { AuditTier } from '@/lib/audit/tiers'
 import { db, schema } from '@/lib/db'
 import type { AuditSource, FreeAudit } from '@/lib/db/schema'
 import { env } from '@/lib/env'
@@ -42,10 +43,21 @@ export interface CreateAuditArgs {
   /** `parseHostname`이 정규화한 호스트명. 없으면 소유 판정을 하지 않는다 */
   selfDomains: string[]
   ipHash: string
+  /** 진단 티어. 웹 폼 경로는 항상 'free' — 유료는 CLI(`audit:new`)로만 만든다 */
+  tier?: AuditTier
+  /** 지역형 업종의 지역. `audit:new --region` */
+  region?: string | null
+  /** PREMIUM 재측정의 원본. `audit:remeasure`만 채운다 */
+  parentId?: string | null
 }
 
 /** 폼 경로 전용. `source`는 'web' 기본값을 그대로 쓴다. */
 export async function createAuditRequest(args: CreateAuditArgs): Promise<FreeAudit> {
+  // ★ 웹 폼으로 유료 티어가 들어오면 안 된다. 결제는 크몽에서 일어나고,
+  //   폼은 tier를 보내지 않는다 — 보냈다면 조작된 요청이다.
+  if (args.tier && args.tier !== 'free') {
+    throw new Error(`웹 신청은 무료 진단만 가능합니다 (tier=${args.tier})`)
+  }
   const rows = await db
     .insert(schema.freeAudits)
     .values({ id: newAuditId(), status: 'requested', ...args })
@@ -190,4 +202,31 @@ export async function countRecentByIpHash(ipHash: string, sinceHours: number): P
     .from(schema.freeAudits)
     .where(and(eq(schema.freeAudits.ipHash, ipHash), gte(schema.freeAudits.createdAt, since)))
   return rows[0]?.n ?? 0
+}
+
+/**
+ * 검수 끝난 질의를 동결한다.
+ *
+ * ★ 발송 전(status가 'sent'가 아닐 때)에만 허용한다. 발송 후에 질의를 바꾸면
+ *   저장된 결과와 질의가 어긋나고, 재측정(전후 비교)의 근거가 사라진다.
+ */
+export async function freezeQueries(auditId: string, queries: string[]): Promise<void> {
+  const rows = await db
+    .update(schema.freeAudits)
+    .set({ queries })
+    .where(and(eq(schema.freeAudits.id, auditId), ne(schema.freeAudits.status, 'sent')))
+    .returning({ id: schema.freeAudits.id })
+  if (rows.length === 0) {
+    throw new Error(`동결 실패: ${auditId} — 없는 건이거나 이미 발송됐습니다`)
+  }
+}
+
+/** 개선 가이드 저장. 발송 후에도 허용한다 — 가이드는 측정 조건이 아니라 해설이다 */
+export async function saveGuide(auditId: string, guideMd: string): Promise<void> {
+  const rows = await db
+    .update(schema.freeAudits)
+    .set({ guideMd })
+    .where(eq(schema.freeAudits.id, auditId))
+    .returning({ id: schema.freeAudits.id })
+  if (rows.length === 0) throw new Error(`가이드 저장 실패: 없는 건입니다 (${auditId})`)
 }

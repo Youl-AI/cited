@@ -14,8 +14,11 @@
  *   어느 것이 운영자가 통과시킨 것인지 구분할 수 없고, 인증 게이트가 실제로
  *   작동하는지 감사할 수 없게 된다.
  */
+import { isRegionalCategory } from '@/lib/audit/queries'
 import { createVerifiedAudit, hashIp } from '@/lib/audit/repository'
 import { MAX_COMPETITORS, parseHostname } from '@/lib/audit/request-schema'
+import { AUDIT_TIER_IDS, AUDIT_TIERS, isPaidTier } from '@/lib/audit/tiers'
+import type { AuditTier } from '@/lib/audit/tiers'
 import { AUDIT_SOURCES } from '@/lib/db/schema'
 import type { AuditSource } from '@/lib/db/schema'
 
@@ -33,13 +36,16 @@ const email = option('--email')
 const competitorsArg = option('--competitors')
 const domainsArg = option('--domains')
 const sourceArg = option('--source') ?? 'kmong'
+const tierArg = (option('--tier') ?? 'free') as AuditTier
+const region = option('--region')
 
 const [brandName, category] = argv
 
 if (!brandName || !category || !email) {
   console.error(
     '사용법: pnpm audit:new "<브랜드>" "<카테고리>" --email <이메일>' +
-      ' [--competitors a,b] [--domains a,b] [--source kmong|manual]',
+      ' [--competitors a,b] [--domains a,b] [--source kmong|manual]' +
+      ` [--tier ${AUDIT_TIER_IDS.join('|')}] [--region "강남"]`,
   )
   process.exit(1)
 }
@@ -52,6 +58,19 @@ if (!(AUDIT_SOURCES as readonly string[]).includes(sourceArg)) {
 //   여기서 먼저 막아야 사용법을 알려줄 수 있다.
 if (sourceArg === 'web') {
   console.error("source에 'web'을 쓸 수 없습니다. 폼을 거친 신청에만 쓰는 값입니다.")
+  process.exit(1)
+}
+if (!(AUDIT_TIER_IDS as readonly string[]).includes(tierArg)) {
+  console.error(`알 수 없는 tier: ${tierArg} (${AUDIT_TIER_IDS.join(' | ')})`)
+  process.exit(1)
+}
+// ★ 지역형 업종은 지역 없이 등록을 거부한다 — 실행 시점(executeAudit)에도
+//   막히지만, 여기서 잡아야 크몽 고객에게 "지역 알려주세요"를 주문 접수
+//   시점에 물을 수 있다.
+if (isRegionalCategory(category) && !region?.trim()) {
+  console.error(
+    `'${category}'은(는) 지역이 필요한 업종입니다. --region "강남" 처럼 지역을 넣으세요.`,
+  )
   process.exit(1)
 }
 
@@ -100,10 +119,13 @@ const created = await createVerifiedAudit({
   // IP가 없다. 운영자 등록임을 나타내는 고정 값을 해시한다 — ipHash는 notNull이고
   // 스팸 관측용이므로 빈 문자열을 넣으면 웹 신청과 섞인다.
   ipHash: hashIp('cli'),
+  tier: tierArg,
+  region: region?.trim() || null,
 })
 
 console.log(`등록 완료: ${created.id}`)
 console.log(`  ${created.brandName} · ${created.category} · source=${created.source}`)
+console.log(`  티어: ${AUDIT_TIERS[tierArg].label}${region ? ` · 지역: ${region}` : ''}`)
 console.log(
   `  경쟁사 ${competitors.length}개${competitors.length ? `: ${competitors.join(', ')}` : ''}`,
 )
@@ -112,4 +134,8 @@ console.log(
     ? `  우리 도메인: ${selfDomains.join(', ')}`
     : '  [주의] --domains 없음 — 인용 출처의 소유 판정을 하지 않습니다',
 )
-console.log(`\n실행: pnpm audit:run ${created.id} --dry`)
+if (isPaidTier(tierArg)) {
+  console.log(`\n다음: pnpm audit:queries ${created.id} --brief "<서비스 설명>"`)
+} else {
+  console.log(`\n실행: pnpm audit:run ${created.id} --dry`)
+}

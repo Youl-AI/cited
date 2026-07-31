@@ -245,7 +245,16 @@ export function createChatgptEngine(opts: ChatgptEngineOptions = {}): Engine {
             model,
             input: query,
             instructions: SYSTEM_PROMPT,
-            tools: [{ type: 'web_search' }],
+            // ★ `user_location`이 없으면 검색이 미국 결과로 쏠린다. 2026-07-31
+            //   실측: 금융 질의에 Zelle·Wise·Fidelity가 추천으로 나왔다. 소비자
+            //   ChatGPT는 IP·계정·앱 언어로 사용자가 한국임을 알지만, 생 API
+            //   호출에는 그 신호가 하나도 없다. 우리가 재야 하는 것은 **실제
+            //   한국 사용자가 보는 답변**이므로 국가만 KR로 고정한다.
+            //
+            //   도시·지역은 넣지 않는다 — 감사는 전국 단위이고, 감사별 지역
+            //   조준은 승인된 적 없는 별개의 제품 결정이다. 프롬프트에 "국내
+            //   서비스만" 따위를 넣는 것도 금지 — 측정을 조작하는 것이다.
+            tools: [{ type: 'web_search', user_location: { type: 'approximate', country: 'KR' } }],
             // ★ 강제하지 않으면 검색이 실행되지 않는다. 실측에서 툴만 붙이고
             //   두었더니 `web_search_call`이 아예 없었고 인용도 0건이었다 —
             //   모델이 학습된 지식으로만 답한 것이다.

@@ -5,6 +5,7 @@
 //   `@/lib/env`가 이 모듈에 딸려 들어와 순수성이 깨진다. 마스킹 함수는
 //   그래서 './mask'에 따로 있다.
 import type { AuditResult } from '@/lib/audit/result'
+import { AUDIT_TIERS, type AuditTier } from '@/lib/audit/tiers'
 import { engineLabel } from '@/lib/plans'
 import { formatInterval, formatPercent } from '@/lib/stats/wilson'
 import { maskEmail } from './mask'
@@ -114,7 +115,7 @@ ${row('신청자', maskEmail(audit.email))}
 }
 
 /**
- * 무료 진단 리포트 메일.
+ * 진단 리포트 메일. `tier`를 생략하면 무료 진단으로 취급한다.
  *
  * ★ 리포트의 실질을 **메일 본문에 담는다.** 링크만 보내면 대부분은 안 누른다.
  *   특히 인용 출처는 0% 고객이 유일하게 집행할 수 있는 정보이므로 본문에 넣는다.
@@ -123,8 +124,13 @@ ${row('신청자', maskEmail(audit.email))}
  *   [2%, 87%]다. 이 넓이가 곧 유료 전환의 근거이고, 숨기면 첫 유료 리포트에서
  *   숫자가 달라졌을 때 답할 수가 없다.
  */
-export function auditReportEmail(params: { result: AuditResult; url: string }): EmailContent {
-  const { result, url } = params
+export function auditReportEmail(params: {
+  result: AuditResult
+  url: string
+  /** 생략하면 무료. 유료 메일에는 유료 판매 문구를 넣지 않는다 — 이미 산 사람이다. */
+  tier?: AuditTier
+}): EmailContent {
+  const { result, url, tier = 'free' } = params
   const brand = escapeHtml(result.brandName)
   const rate = formatPercent(result.citedRate.point)
 
@@ -197,6 +203,15 @@ ${selfLine}
 <table style="border-collapse:collapse;margin:0 0 28px;font-size:14px">${sourceRows}</table>`
       : ''
 
+  // ★ 무료 메일의 이 문단은 유료 전환의 근거이고, 유료 메일에서는 같은 자리가
+  //   "왜 이 숫자를 믿어도 되는가"의 근거다. 유료 고객에게 유료 플랜을 팔지 않는다.
+  const methodology =
+    tier === 'free'
+      ? `<p style="margin:0 0 24px;padding:14px;border-left:3px solid #e8e6e1;color:#5a5652;font-size:14px">무료 진단은 <strong>질의 3개를 1회</strong> 측정합니다. 그래서 신뢰구간이 ${formatInterval(result.citedRate)}로 넓습니다 — 이 범위 안 어디든 될 수 있다는 뜻입니다. 유료 플랜은 <strong>주 3회</strong> 측정해 이 구간을 좁히고 주간 변화를 판정합니다. 1회 측정으로는 변화를 알 수 없습니다.</p>`
+      : // 반복 횟수는 티어 설정에서 읽는다 — 하드코딩하면 설정을 바꿨을 때
+        // 메일이 실제와 다른 횟수를 말하게 된다.
+        `<p style="margin:0 0 24px;padding:14px;border-left:3px solid #e8e6e1;color:#5a5652;font-size:14px">이 리포트는 질의 ${result.byQuery.length}개를 각 <strong>${AUDIT_TIERS[tier].samplesPerEngine}회 반복</strong> 측정해 답변 ${result.totalAnswers}개로 만들었습니다. 신뢰구간 ${formatInterval(result.citedRate)}는 반복 측정으로 좁힌 값입니다 — AI 답변은 물을 때마다 바뀌므로, 한 번 물어서 나온 숫자는 믿을 수 없습니다.</p>`
+
   return {
     // 제목은 평문 헤더다 — 이스케이프하지 않는다 (auditVerificationEmail 참고).
     subject: `[Cited] ${result.brandName} AI 언급률 ${rate} — 진단 리포트`,
@@ -209,7 +224,7 @@ ${selfLine}
   <div style="margin-top:6px;color:#8a8580">답변 ${result.totalAnswers}개 중 ${result.citedRate.k}개에서 언급 · 신뢰구간 ${formatInterval(result.citedRate)}</div>
 </div>
 
-<p style="margin:0 0 24px;padding:14px;border-left:3px solid #e8e6e1;color:#5a5652;font-size:14px">무료 진단은 <strong>질의 3개를 1회</strong> 측정합니다. 그래서 신뢰구간이 ${formatInterval(result.citedRate)}로 넓습니다 — 이 범위 안 어디든 될 수 있다는 뜻입니다. 유료 플랜은 <strong>주 3회</strong> 측정해 이 구간을 좁히고 주간 변화를 판정합니다. 1회 측정으로는 변화를 알 수 없습니다.</p>
+${methodology}
 
 ${sov}
 ${unresolved}

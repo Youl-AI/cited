@@ -2,8 +2,17 @@
 
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { KNOWN_CATEGORIES, generateAuditQueries } from '@/lib/audit/queries'
+import { KNOWN_CATEGORIES, generateAuditQueries, isRegionalCategory } from '@/lib/audit/queries'
 import { PLANS, engineLabels } from '@/lib/plans'
+
+/**
+ * 랜딩 탭에 보여줄 업종 — 전국형만. 지역형 업종은 지역 없이는 질의를 만들 수
+ * 없고(의도적으로 던진다), 랜딩이 지역을 지어내 보여주면 "복사해 간 질문 =
+ * 실제 측정 질문" 약속이 깨진다. 그래서 탭에서 뺀다.
+ */
+const DISPLAY_CATEGORIES: readonly string[] = KNOWN_CATEGORIES.filter(
+  (c) => !isRegionalCategory(c),
+)
 
 /**
  * 질의 프로토콜 카드 — 랜딩의 신뢰 섹션.
@@ -51,7 +60,7 @@ export function QueryProtocol({
 }: {
   specimenQuery?: string
 }) {
-  const [category, setCategory] = useState<string>(KNOWN_CATEGORIES[0] ?? '패션')
+  const [category, setCategory] = useState<string>(DISPLAY_CATEGORIES[0] ?? '패션')
   const [copied, setCopied] = useState<string | null>(null)
 
   // 브랜드명 인자는 의도적으로 쓰이지 않는다(질의에 안 들어간다). 그 사실
@@ -89,7 +98,7 @@ export function QueryProtocol({
         aria-label="업종 선택"
         className="flex flex-wrap gap-1.5 border-b border-border px-4 py-3 sm:px-5"
       >
-        {KNOWN_CATEGORIES.map((label) => (
+        {DISPLAY_CATEGORIES.map((label) => (
           <button
             key={label}
             type="button"

@@ -6,8 +6,18 @@ import { FlowStrip, NO_ACCOUNT_NOTE } from '@/components/audit/flow'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { KNOWN_CATEGORIES } from '@/lib/audit/queries'
+import { KNOWN_CATEGORIES, isRegionalCategory } from '@/lib/audit/queries'
 import { MAX_COMPETITORS } from '@/lib/audit/request-schema'
+
+/**
+ * 자동완성 목록은 전국형 업종만. 지역형 업종(치과 등)은 지역 없이는 질의를
+ * 만들 수 없는데 이 폼에는 지역 입력이 없다(region은 CLI 전용 — A안 결정).
+ * 목록에 올리면 처리할 수 없는 신청을 부추기게 되고, `audit:run`에서야 막혀
+ * "영업일 1일" 약속이 깨진다. 랜딩 탭(`query-protocol.tsx`)과 같은 필터다.
+ */
+const SUGGESTED_CATEGORIES: readonly string[] = KNOWN_CATEGORIES.filter(
+  (c) => !isRegionalCategory(c),
+)
 
 /**
  * 무료 진단 신청 폼.
@@ -119,7 +129,7 @@ export function RequestForm() {
           placeholder="패션"
         />
         <datalist id={ids.categoryList}>
-          {KNOWN_CATEGORIES.map((category) => (
+          {SUGGESTED_CATEGORIES.map((category) => (
             <option key={category} value={category} />
           ))}
         </datalist>
