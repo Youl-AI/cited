@@ -31,10 +31,15 @@ export interface EditorQuota {
  *   `createBrandAction`의 `pendingBrandId` 검사가 "미동결 브랜드가 둘"인 상태
  *   자체를 순차 경로에서는 막지만, 동시 생성까지는 못 막는다
  *   (task-4-report.md "리뷰 수정" 참고 — 트랜잭션 없는 드라이버의 한계다).
+ *
+ * @param brandId 몫을 계산할 대상 브랜드. **null이면 "아직 만들지 않은 브랜드"**로
+ *   보고 활성 브랜드 전부를 사용분에 넣는다 — `createBrandAction`이 "이 계정에
+ *   새 브랜드를 하나 더 만들 질의가 남아 있는가"를 물을 때 쓴다(브랜드를 만들기
+ *   전에는 뺄 id가 없다). 빈 문자열 같은 센티널을 쓰면 조용히 뜻이 바뀐다.
  */
 export async function loadEditorQuota(
   userId: string,
-  brandId: string,
+  brandId: string | null,
   subscription: Subscription,
 ): Promise<EditorQuota> {
   const limits = resolveLimits(subscription.plan, subscription.queryPacks)
@@ -44,7 +49,7 @@ export async function loadEditorQuota(
     .where(
       and(
         eq(schema.brands.userId, userId),
-        ne(schema.brands.id, brandId),
+        ...(brandId === null ? [] : [ne(schema.brands.id, brandId)]),
         eq(schema.brands.isActive, true),
       ),
     )

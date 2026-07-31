@@ -63,7 +63,7 @@ vi.mock('@/lib/onboarding/generation', async () => {
   }
 })
 
-const { freezeQueriesAction, generateQueriesAction } = await import('./actions')
+const { createBrandAction, freezeQueriesAction, generateQueriesAction } = await import('./actions')
 
 const CATEGORY = '패션'
 const TEMPLATES = generateAuditQueries(CATEGORY, '바디텍')
@@ -213,6 +213,84 @@ describe('freezeQueriesAction — 동결 레이스 (I-1)', () => {
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.reason).toContain('다시 시도')
+  })
+})
+
+describe('freezeQueriesAction — 선점 뒤 계정 한도 재확인 (N-1)', () => {
+  // ★ 예전에는 선점 **앞의** 스냅샷을 다시 비교했다. 그 값은 범위 검사가 이미 쓴
+  //   같은 스냅샷이라 절대 참이 될 수 없는 죽은 분기였는데, 주석은 "살아 있는
+  //   방어"라고 주장하고 있었다.
+  test('선점 사이에 다른 브랜드가 한도를 채웠으면 되돌리고 거절한다', async () => {
+    mocks.loadEditorQuota.mockResolvedValueOnce({
+      quota: 30,
+      queriesOnOtherBrands: 0,
+      maxQueries: 30,
+    })
+    // 선점 뒤 재조회 — 그사이 다른 브랜드가 25개를 동결했다.
+    mocks.loadEditorQuota.mockResolvedValueOnce({
+      quota: 5,
+      queriesOnOtherBrands: 25,
+      maxQueries: 30,
+    })
+    const result = await freezeQueriesAction({ brandId: 'brd_1', queries: queriesOfLength(10) })
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.reason).toContain('다른 브랜드가 25개')
+    // 질의 행은 한 줄도 건드리지 않고 선점만 되돌린다.
+    expect(mocks.writes).toEqual(['claim', 'release'])
+  })
+
+  test('재조회가 여전히 여유롭다면 그대로 진행한다', async () => {
+    setQuota(0)
+    const result = await freezeQueriesAction({ brandId: 'brd_1', queries: queriesOfLength(10) })
+    expect(result).toEqual({ ok: true, value: { frozen: 10 } })
+    expect(mocks.loadEditorQuota).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('createBrandAction — 동결 불가능한 브랜드를 만들지 않는다 (N-2)', () => {
+  function setCreateGate(overrides: Record<string, unknown> = {}): void {
+    mocks.loadOnboardingGate.mockResolvedValue({
+      user: { id: 'usr_1', email: 'a@b.c', name: '고객' },
+      subscription: { plan: 'business', queryPacks: 0, status: 'active' },
+      limits: { maxBrands: 3, maxQueries: 30, maxCompetitors: 5 },
+      brandCount: 1,
+      pendingBrandId: null,
+      frozenBrandCount: 1,
+      state: 'complete',
+      ...overrides,
+    })
+  }
+  const input = { name: '바디텍', category: '패션', competitors: ['경쟁사'], siteUrl: '' }
+
+  // ★ 브랜드 한도만 보면 quota=0인 브랜드를 만들어 줄 수 있다 — 그 브랜드는
+  //   어떤 입력으로도 동결되지 않고 `needs-queries`가 영구히 남는다.
+  test('남은 질의가 템플릿 3개보다 적으면 만들지 않는다', async () => {
+    setCreateGate()
+    mocks.loadEditorQuota.mockResolvedValue({
+      quota: 2,
+      queriesOnOtherBrands: 28,
+      maxQueries: 30,
+    })
+    const result = await createBrandAction(input)
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.reason).toContain('28개')
+    expect(mocks.writes).toEqual([])
+  })
+
+  test('남은 질의가 3개 이상이면 만든다', async () => {
+    setCreateGate()
+    mocks.loadEditorQuota.mockResolvedValue({
+      quota: 3,
+      queriesOnOtherBrands: 27,
+      maxQueries: 30,
+    })
+    const result = await createBrandAction(input)
+    expect(result.ok).toBe(true)
+    expect(mocks.writes).toEqual(['insert'])
+    // 아직 만들지 않은 브랜드라 뺄 id가 없다 — null을 넘겨 활성 브랜드 전부를 센다.
+    expect(mocks.loadEditorQuota).toHaveBeenCalledWith('usr_1', null, expect.anything())
   })
 })
 

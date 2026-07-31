@@ -6,7 +6,7 @@ import {
   createCustomQueryGenerator,
   type CustomQueryGeneratorOptions,
 } from '@/lib/audit/custom-queries'
-import { generateAuditQueries } from '@/lib/audit/queries'
+import { AUDIT_QUERY_COUNT, generateAuditQueries } from '@/lib/audit/queries'
 import {
   checkCustomQueries,
   normalizeQueryKey,
@@ -17,6 +17,7 @@ import type { Brand, QuerySource } from '@/lib/db/schema'
 import { kstWeekday } from '@/lib/kst'
 import { logger } from '@/lib/logger'
 import { brandFormSchema } from '@/lib/onboarding/brand-schema'
+import { quotaBlockedReason } from '@/lib/onboarding/editor'
 import { claimQueryFreeze, releaseQueryFreeze } from '@/lib/onboarding/freeze'
 import { loadOnboardingGate } from '@/lib/onboarding/gate'
 import {
@@ -37,7 +38,7 @@ export async function createBrandAction(
   raw: unknown,
 ): Promise<ActionResult<{ brandId: string }>> {
   const gate = await loadOnboardingGate()
-  if (gate.state === 'no-plan' || !gate.limits) {
+  if (gate.state === 'no-plan' || !gate.limits || !gate.subscription) {
     return { ok: false, reason: '활성 플랜이 없습니다. 운영자에게 문의해 주세요.' }
   }
   if (gate.brandCount >= gate.limits.maxBrands) {
@@ -57,6 +58,24 @@ export async function createBrandAction(
     return {
       ok: false,
       reason: '먼저 등록한 브랜드의 질의를 확정해 주세요.',
+    }
+  }
+  // ★ 브랜드 한도만 보면 **동결이 영원히 불가능한 브랜드**를 만들어 줄 수 있다.
+  //   Business(질의 30개)에서 첫 브랜드가 30개를 다 쓴 계정이 브랜드 2를 만들면
+  //   그 브랜드의 quota는 0이라 어떤 입력으로도 확정되지 않는다 — `needs-queries`가
+  //   영구히 남고 `/onboarding`은 계속 질의 단계로 되돌리므로, 고객은 온보딩을
+  //   끝낼 방법도 브랜드를 지울 방법도 없다(질의 한도는 **계정 전체**다,
+  //   quota.ts 주석). 만들기 전에 막는 편이 만들고 나서 사과하는 것보다 낫다.
+  //   브랜드 id가 아직 없으므로 `null`을 넘겨 활성 브랜드 전부를 사용분에 넣는다.
+  const accountQuota = await loadEditorQuota(gate.user.id, null, gate.subscription)
+  if (accountQuota.quota < AUDIT_QUERY_COUNT) {
+    return {
+      ok: false,
+      reason:
+        `새 브랜드에 쓸 질의가 남지 않았습니다 — 계정 한도 ${accountQuota.maxQueries}개 중 ` +
+        `${accountQuota.queriesOnOtherBrands}개를 이미 쓰고 있어 ${accountQuota.quota}개가 ` +
+        `남았습니다. 브랜드마다 업종 공통 질의 ${AUDIT_QUERY_COUNT}개는 반드시 들어가므로 ` +
+        `그만큼도 채울 수 없습니다. 기존 브랜드의 질의를 줄이거나 질의 팩을 추가해 주세요.`,
     }
   }
   const parsed = brandFormSchema(gate.limits.maxCompetitors).safeParse(raw)
@@ -182,6 +201,27 @@ export async function generateQueriesAction(input: {
   }
 }
 
+/**
+ * 선점 되돌리기. **던지지 않는다** — 되돌리기 자체가 실패해도(DB 순단) 그것을
+ * 밖으로 흘리면 Next의 일반 오류 화면이 뜨면서 호출부의 친절한 안내가 사라지고,
+ * 되돌리지도 못한 채 원인이 로그에 남지 않는다. 브랜드는 "동결됐는데 질의가 없는"
+ * 상태로 남으므로(cron이 그 브랜드를 고른다) 반드시 기록한다.
+ */
+async function safeReleaseFreeze(
+  brandId: string,
+  userId: string,
+  frozenAt: Date,
+): Promise<void> {
+  try {
+    await releaseQueryFreeze({ brandId, userId, frozenAt })
+  } catch (releaseError) {
+    logger.error('onboarding.freeze_release_failed', {
+      brandId,
+      reason: releaseError instanceof Error ? releaseError.name : 'unknown',
+    })
+  }
+}
+
 export async function freezeQueriesAction(input: {
   brandId: string
   queries: string[]
@@ -212,14 +252,11 @@ export async function freezeQueriesAction(input: {
   // 하한은 템플릿 수다 — `validateCustomQueries`가 템플릿 전부 포함을 요구하므로
   // 그보다 적을 수 있는 방법이 없다(상품 약속: 무료 샘플과 같은 질문 3개).
   const minCount = templateTexts.length
-  if (quota.quota < minCount) {
-    // ★ 이 경우 진짜 이유는 개수가 아니다. "템플릿이 빠졌습니다"로 번역되면
-    //   고객은 영영 엉뚱한 곳을 고친다.
-    return {
-      ok: false,
-      reason: `계정 전체 질의 한도(${quota.maxQueries}개)가 남지 않았습니다 — 다른 브랜드가 ${quota.queriesOnOtherBrands}개를 쓰고 있습니다. 다른 브랜드의 질의를 줄이거나 질의 팩을 추가해 주세요.`,
-    }
-  }
+  // ★ 이 경우 진짜 이유는 개수가 아니다. "템플릿이 빠졌습니다"로 번역되면
+  //   고객은 영영 엉뚱한 곳을 고친다. 문장은 에디터 화면과 공유한다
+  //   (editor.ts `quotaBlockedReason` — 같은 상태에 두 설명이 나오면 안 된다).
+  const blocked = quotaBlockedReason({ ...quota, minCount })
+  if (blocked) return { ok: false, reason: blocked }
   if (cleaned.length < minCount || cleaned.length > quota.quota) {
     return {
       ok: false,
@@ -239,16 +276,6 @@ export async function freezeQueriesAction(input: {
   // ★ 검증은 서버가 최종 책임진다 — 화면의 실시간 검증과 같은 함수, 같은 규칙.
   const verdict = checkCustomQueries(cleaned, ctx)
   if (!verdict.ok) return { ok: false, reason: verdict.reason }
-  // ★ 계정 전체 한도 재확인. quota가 상한이 된 지금 이 검사는 **살아 있는 방어**다
-  //   (개수를 quota로 고정하던 시절에는 도달할 수 없는 죽은 코드였다).
-  //   `loadEditorQuota` 조회와 여기 사이에 다른 브랜드가 동결되면 합계가 한도를
-  //   넘을 수 있다 — 그 창은 아직 열려 있다(리포트 "리뷰 수정" 참고).
-  if (quota.queriesOnOtherBrands + verdict.queries.length > quota.maxQueries) {
-    return {
-      ok: false,
-      reason: `계정 전체 질의 한도(${quota.maxQueries}개)를 넘습니다 — 다른 브랜드가 ${quota.queriesOnOtherBrands}개를 쓰고 있습니다.`,
-    }
-  }
 
   const templates = new Set(templateTexts.map(normalizeQueryKey))
   // ★ **동결 자리를 먼저 잡는다.** 질의를 먼저 갈아끼우면 동시 제출 두 건 중
@@ -262,6 +289,28 @@ export async function freezeQueriesAction(input: {
     queryQuota: verdict.queries.length,
   })
   if (!claimed) return { ok: false, reason: '이미 확정된 질의입니다.' }
+
+  // ★ 계정 전체 한도를 **선점 뒤에 다시 읽는다.**
+  //   예전에는 여기서 위의 `quota` 스냅샷을 다시 비교하며 "살아 있는 방어"라는
+  //   주석을 달고 있었지만, 그 값은 범위 검사(`cleaned.length ≤ quota.quota`)가
+  //   이미 쓴 같은 스냅샷이라 **절대 참이 될 수 없는 죽은 분기**였다. 실제 위험은
+  //   `loadEditorQuota` 조회와 이 지점 사이에 다른 브랜드가 동결되는 경우이므로,
+  //   스냅샷을 새로 떠야 방어가 성립한다.
+  //
+  //   ★ 이것도 창을 **좁힐 뿐 닫지는 못한다**: 경쟁 요청이 선점만 하고 아직 질의
+  //     행을 넣지 않았으면 그 몫은 여기서도 보이지 않는다(질의 행을 세는 계산이다).
+  //     neon-http에는 트랜잭션이 없어 선점과 집계를 원자적으로 묶을 수단이 없다 —
+  //     완전한 차단은 계정 단위 사용량을 조건부 UPDATE로 잡아야 하고 그건 스키마
+  //     변경이다. 남은 창은 "동시 생성으로 미동결 브랜드가 둘"인 계정뿐이다
+  //     (`createBrandAction`의 `pendingBrandId` 검사가 순차 경로는 막는다).
+  const after = await loadEditorQuota(gate.user.id, brand.id, gate.subscription)
+  if (after.queriesOnOtherBrands + verdict.queries.length > after.maxQueries) {
+    await safeReleaseFreeze(brand.id, gate.user.id, frozenAt)
+    return {
+      ok: false,
+      reason: `계정 전체 질의 한도(${after.maxQueries}개)를 넘습니다 — 다른 브랜드가 ${after.queriesOnOtherBrands}개를 쓰고 있습니다. 새로고침 후 다시 확인해 주세요.`,
+    }
+  }
 
   try {
     // 동결 전 임시 상태가 남아 있을 수 있으므로 브랜드의 질의를 전부 갈아끼운다.
@@ -278,14 +327,7 @@ export async function freezeQueriesAction(input: {
     // neon-http에는 트랜잭션이 없다 — 선점을 손으로 되돌린다. 되돌리기까지
     // 실패하면 브랜드는 "동결됐는데 질의가 없는" 상태로 남으므로 반드시 남긴다
     // (cron이 이 브랜드를 고르게 된다 — 운영자 개입이 필요한 유일한 경우다).
-    try {
-      await releaseQueryFreeze({ brandId: brand.id, userId: gate.user.id, frozenAt })
-    } catch (releaseError) {
-      logger.error('onboarding.freeze_release_failed', {
-        brandId: brand.id,
-        reason: releaseError instanceof Error ? releaseError.name : 'unknown',
-      })
-    }
+    await safeReleaseFreeze(brand.id, gate.user.id, frozenAt)
     logger.error('onboarding.freeze_failed', {
       brandId: brand.id,
       reason: error instanceof Error ? error.name : 'unknown',

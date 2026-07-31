@@ -14,6 +14,31 @@ export function queriesStepPath(brandId: string): string {
   return `/onboarding/queries?brand=${encodeURIComponent(brandId)}`
 }
 
+/**
+ * 확정이 **구조적으로 불가능한** 상태의 이유. 통과 상태면 null.
+ *
+ * ★ 남은 몫(`quota`)이 템플릿 수보다 적으면 어떤 입력으로도 동결이 안 된다.
+ *   이때 진짜 이유는 "질의 개수"가 아니라 "다른 브랜드가 계정 한도를 다 쓰고
+ *   있다"이므로, 개수 이야기로 번역되면 고객은 영영 엉뚱한 곳을 고친다.
+ *
+ * ★ 화면(에디터 진입)과 서버(`freezeQueriesAction`)가 **같은 문장**을 쓴다.
+ *   두 곳이 각자 문장을 지어내면 고객은 같은 상태에 두 가지 설명을 듣는다.
+ */
+export function quotaBlockedReason(args: {
+  quota: number
+  queriesOnOtherBrands: number
+  maxQueries: number
+  /** 최소 질의 수 = 업종 템플릿 수 (`generateAuditQueries`의 길이) */
+  minCount: number
+}): string | null {
+  if (args.quota >= args.minCount) return null
+  return (
+    `계정 전체 질의 한도(${args.maxQueries}개)가 남지 않았습니다 — 다른 브랜드가 ` +
+    `${args.queriesOnOtherBrands}개를 쓰고 있습니다. 다른 브랜드의 질의를 줄이거나 ` +
+    `질의 팩을 추가해 주세요.`
+  )
+}
+
 export interface EditorInit {
   queries: string[]
   source: 'frozen' | 'template'
