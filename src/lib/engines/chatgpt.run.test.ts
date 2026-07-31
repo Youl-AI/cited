@@ -55,12 +55,16 @@ describe('chatgptEngine.run — 요청 구성', () => {
     expect(create.mock.calls[0]?.[0]?.input).toBe('러닝화 추천')
   })
 
-  it('웹검색을 강제한다', async () => {
+  it('웹검색을 강제하고 한국 사용자 위치를 싣는다', async () => {
     // 강제하지 않으면 검색이 실행되지 않고, 그러면 모델의 학습 데이터를 재게 된다.
+    // user_location이 없으면 검색이 미국 결과로 쏠린다 (2026-07-31 실측:
+    // 금융 질의에 Zelle·Wise·Fidelity). 국가만 고정한다 — 도시·지역 금지.
     create.mockResolvedValue(okResponse)
     await engine().run('q', { sampleIndex: 0 })
     const body = create.mock.calls[0]?.[0]
-    expect(body.tools).toEqual([{ type: 'web_search' }])
+    expect(body.tools).toEqual([
+      { type: 'web_search', user_location: { type: 'approximate', country: 'KR' } },
+    ])
     expect(body.tool_choice).toBe('required')
   })
 
