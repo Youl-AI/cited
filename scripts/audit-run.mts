@@ -1,13 +1,17 @@
 /**
  * 진단 1건을 실행하고 리포트를 메일로 보낸다.
  *
- *   pnpm audit:run aud_xxx --base-url https://cited.co.kr   실행 후 발송
- *   pnpm audit:run aud_xxx --dry                            실행만 (결과 확인용)
+ *   pnpm audit:run aud_xxx --base-url https://cited.co.kr   측정 + 발송 한 번에
+ *   pnpm audit:run aud_xxx --dry                            측정 + 저장 (발송 없음)
  *
  * ★ --dry를 먼저 써라. 초기에는 리포트를 눈으로 보고 나서 보내야 한다.
  *   자동 공개로 넘어가는 기준이 "손으로 고칠 게 없어진 시점"이다.
  *
- * ★ --dry도 **돈이 든다.** 수집과 판정을 실제로 부른다. 저장과 발송만 건너뛴다.
+ * ★ --dry도 **돈이 든다.** 수집과 판정을 실제로 부른다. 발송만 건너뛴다 —
+ *   결과는 저장하므로, 확인이 끝나면 `audit:publish`가 재측정 없이 그대로
+ *   보낸다 (0원). --dry 확인 후 --base-url로 재실행하면 측정을 **두 번** 사고
+ *   (건당 ≈2,400원 × 2), 고객은 운영자가 확인한 것과 **다른** 측정을 받는다
+ *   (2026-07-31 리허설 발견 #1). --base-url 직행은 재측정이 필요할 때만.
  *
  * ★ **발송에는 `--base-url`이 필요하다.** 이 스크립트는 `.env.local`을 읽으므로
  *   `NEXT_PUBLIC_APP_URL`이 개발용 `http://localhost:3000`이다. 2026-07-30 첫
@@ -19,7 +23,7 @@ import { createAliasGenerator } from '@/lib/audit/aliases'
 import { createCostMeter } from '@/lib/audit/cost'
 import { executeAudit } from '@/lib/audit/execute'
 import { parseBaseUrlFlag, reportUrl, resolveReportBaseUrl } from '@/lib/audit/report-url'
-import { getAudit, markFailed, markRunning, markSent } from '@/lib/audit/repository'
+import { getAudit, markFailed, markRunning, markSent, saveResult } from '@/lib/audit/repository'
 import { AUDIT_TIERS } from '@/lib/audit/tiers'
 import { sendEmail } from '@/lib/email/send'
 import { auditReportEmail } from '@/lib/email/templates'
@@ -186,7 +190,22 @@ if (result.hasSelfDomains) {
 }
 
 if (dry) {
-  console.log('\n--dry 모드입니다. 저장·발송하지 않았습니다.')
+  // ★ dry 결과를 저장한다 — 확인이 끝나면 `audit:publish`가 이 측정을 그대로
+  //   보낸다. 버리면 발송 때 재측정해야 해서 원가가 두 배(≈4,800원)가 되고,
+  //   고객은 운영자가 확인한 것과 다른 측정을 받는다 (2026-07-31 리허설
+  //   발견 #1). status·sentAt은 건드리지 않으므로 리포트 페이지는 여전히
+  //   404다(페이지가 status === 'sent'를 요구) — 미검수 결과가 새지 않는다.
+  if (audit.status === 'sent') {
+    // 발송된 건의 dry는 참고 측정일 뿐이다. 저장하면 고객이 이미 받은
+    // 리포트의 숫자가 바뀐다 — `saveResult`의 가드도 같은 이유로 거부한다.
+    console.log('\n--dry 완료. 이미 발송된 건이라 결과를 저장하지 않았습니다.')
+  } else {
+    await saveResult(audit.id, result)
+    console.log('\n--dry 완료. 측정 결과를 저장했습니다 (발송 안 함).')
+    console.log('  이 측정을 재측정 없이 그대로 보내려면 (0원):')
+    console.log(`    pnpm audit:publish ${audit.id} --base-url https://cited.co.kr`)
+    console.log('  다시 측정하려면 --dry를 재실행하세요 — 마지막 측정이 저장됩니다.')
+  }
   process.exit(0)
 }
 
