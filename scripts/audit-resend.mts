@@ -60,7 +60,13 @@ const url = reportUrl(resolved.baseUrl, audit.id)
 console.log(`재발송: ${audit.brandName} · ${maskEmail(audit.email)}`)
 console.log(`링크: ${url}`)
 
-const sent = await sendEmail({ to: audit.email, content: auditReportEmail({ result, url }) })
+// ★ tier를 반드시 넘긴다 — 생략하면 무료 본문이 된다(`auditReportEmail`의
+//   기본값). 재발송의 첫 대상은 유료 건이다: 배송 체크리스트가 모든 발송
+//   실패를 이 스크립트로 보내는데, 유료 고객에게 무료 판촉 문단이 나가면 안 된다.
+const sent = await sendEmail({
+  to: audit.email,
+  content: auditReportEmail({ result, url, tier: audit.tier }),
+})
 if (!sent.ok) {
   console.error(`발송 실패: ${sent.reason}`)
   console.error(`수동 전달용 링크: ${url}`)

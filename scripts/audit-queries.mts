@@ -36,6 +36,13 @@ if (!isPaidTier(audit.tier)) {
   console.error(`무료 진단은 템플릿 질의를 씁니다 (tier=${audit.tier}). 이 단계가 필요 없습니다.`)
   process.exit(1)
 }
+// ★ 재측정 건은 질의를 원본에서 복제한다(`audit-remeasure.mts`) — 전후 비교의
+//   유효성이 "같은 질의"에 걸려 있다. 여기서 새로 만들거나 다시 동결하면
+//   비교가 조용히 거짓이 되므로, 생성·동결 둘 다 들어가기 전에 거부한다.
+if (audit.parentId) {
+  console.error('재측정 건입니다 — 질의는 원본에서 복제됩니다. 새로 만들면 전후 비교가 무효가 됩니다.')
+  process.exit(1)
+}
 
 const tierCfg = AUDIT_TIERS[audit.tier]
 const file = `audit-queries.${audit.id}.json`

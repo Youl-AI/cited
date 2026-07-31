@@ -5,7 +5,7 @@
 //   `@/lib/env`가 이 모듈에 딸려 들어와 순수성이 깨진다. 마스킹 함수는
 //   그래서 './mask'에 따로 있다.
 import type { AuditResult } from '@/lib/audit/result'
-import type { AuditTier } from '@/lib/audit/tiers'
+import { AUDIT_TIERS, type AuditTier } from '@/lib/audit/tiers'
 import { engineLabel } from '@/lib/plans'
 import { formatInterval, formatPercent } from '@/lib/stats/wilson'
 import { maskEmail } from './mask'
@@ -208,7 +208,9 @@ ${selfLine}
   const methodology =
     tier === 'free'
       ? `<p style="margin:0 0 24px;padding:14px;border-left:3px solid #e8e6e1;color:#5a5652;font-size:14px">무료 진단은 <strong>질의 3개를 1회</strong> 측정합니다. 그래서 신뢰구간이 ${formatInterval(result.citedRate)}로 넓습니다 — 이 범위 안 어디든 될 수 있다는 뜻입니다. 유료 플랜은 <strong>주 3회</strong> 측정해 이 구간을 좁히고 주간 변화를 판정합니다. 1회 측정으로는 변화를 알 수 없습니다.</p>`
-      : `<p style="margin:0 0 24px;padding:14px;border-left:3px solid #e8e6e1;color:#5a5652;font-size:14px">이 리포트는 질의 ${result.byQuery.length}개를 각 <strong>3회 반복</strong> 측정해 답변 ${result.totalAnswers}개로 만들었습니다. 신뢰구간 ${formatInterval(result.citedRate)}는 반복 측정으로 좁힌 값입니다 — AI 답변은 물을 때마다 바뀌므로, 한 번 물어서 나온 숫자는 믿을 수 없습니다.</p>`
+      : // 반복 횟수는 티어 설정에서 읽는다 — 하드코딩하면 설정을 바꿨을 때
+        // 메일이 실제와 다른 횟수를 말하게 된다.
+        `<p style="margin:0 0 24px;padding:14px;border-left:3px solid #e8e6e1;color:#5a5652;font-size:14px">이 리포트는 질의 ${result.byQuery.length}개를 각 <strong>${AUDIT_TIERS[tier].samplesPerEngine}회 반복</strong> 측정해 답변 ${result.totalAnswers}개로 만들었습니다. 신뢰구간 ${formatInterval(result.citedRate)}는 반복 측정으로 좁힌 값입니다 — AI 답변은 물을 때마다 바뀌므로, 한 번 물어서 나온 숫자는 믿을 수 없습니다.</p>`
 
   return {
     // 제목은 평문 헤더다 — 이스케이프하지 않는다 (auditVerificationEmail 참고).
