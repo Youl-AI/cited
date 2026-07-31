@@ -141,6 +141,14 @@ function e2eFakeGenerator(): CustomQueryGeneratorOptions | undefined {
 export async function generateQueriesAction(input: {
   brandId: string
   count: number
+  /**
+   * 지금 에디터에 들어 있는 질의(빈 칸 제외). 생성기에 "이것과 겹치지 말라"고
+   * 넘긴다 — 없으면 같은 브랜드의 재생성이 매번 같은 페이로드라 같은 후보가
+   * 돌아오고, 그때는 크레딧이 이미 나간 뒤다(custom-queries.ts `existing` 주석).
+   * 신뢰하지 않아도 되는 값이다: 프롬프트 힌트일 뿐이고, 이름이 섞여 있으면
+   * 생성기가 거른다.
+   */
+  existing?: string[]
 }): Promise<ActionResult<{ queries: string[]; used: number; limit: number }>> {
   const gate = await loadOnboardingGate()
   // ★ 유료 게이트 — AI 생성은 돈이 드는 기능이다 (회당 ~3원 + 남용 리스크).
@@ -180,6 +188,7 @@ export async function generateQueriesAction(input: {
       ...(brand.region ? { region: brand.region } : {}),
       competitors: brand.competitors.map((c) => c.name),
       count,
+      ...(input.existing && input.existing.length > 0 ? { existing: input.existing } : {}),
     })
     return { ok: true, value: { queries, used: credit.used, limit: QUERY_GENERATION_LIMIT } }
   } catch (error) {

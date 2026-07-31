@@ -155,13 +155,62 @@ describe('QueryEditor — 줄 조작', () => {
   })
 })
 
+// ★ 템플릿 줄 잠금은 **값 기준**이라(자리가 아니라 `normalizeQueryKey`), 아무 줄에나
+//   템플릿과 같은 글자가 들어오면 그 줄도 잠길 수 있다. 그런데 그 줄은 동시에
+//   **중복 질의**라 확정이 막힌다 — 잠기고(수정 불가) 삭제 버튼도 없으면 고객은
+//   새로고침으로 편집을 통째로 버리는 것 말고 빠져나갈 길이 없다. 잠그는 것은
+//   각 템플릿의 **첫 번째** 줄 하나뿐이어야 한다.
+describe('QueryEditor — 템플릿과 같은 글자가 두 번 들어온 줄', () => {
+  test('직접 타이핑한 중복은 삭제할 수 있고, 지우면 다시 확정된다', () => {
+    renderEditor([...templates, '직장인 출근룩 어디서 참고해?'])
+    fireEvent.change(screen.getAllByRole('textbox')[3]!, { target: { value: templates[0]! } })
+
+    // 첫 줄(진짜 템플릿)만 잠기고, 같은 글자를 친 4번 줄은 살아 있어야 한다
+    expect(screen.getAllByRole('textbox')[0]).toHaveAttribute('readonly')
+    expect(screen.getAllByRole('textbox')[3]).not.toHaveAttribute('readonly')
+    expect(screen.getByRole('button', { name: '질의 4 삭제' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/중복 질의/)
+    expect(screen.getByRole('button', { name: '확정하기' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: '질의 4 삭제' }))
+    expect(screen.getByRole('status')).toHaveTextContent(/확정할 수 있습니다/)
+    expect(screen.getByRole('button', { name: '확정하기' })).toBeEnabled()
+  })
+
+  // ★ 생성기 프롬프트는 템플릿을 모르고, 템플릿은 그 업종에서 가장 전형적인
+  //   질문이다 — 생성 결과가 템플릿과 겹치는 것은 특이 사례가 아니다.
+  test('AI 생성이 템플릿과 같은 질의를 돌려줘도 그 줄을 지울 수 있다', async () => {
+    vi.mocked(generateQueriesAction).mockResolvedValueOnce({
+      ok: true,
+      value: { queries: [templates[0]!], used: 1, limit: 5 },
+    })
+    renderEditor(templates, { quota: 4 })
+    fireEvent.click(screen.getByRole('button', { name: 'AI 후보 1개 만들기' }))
+
+    await waitFor(() => expect(screen.getAllByRole('textbox')).toHaveLength(4))
+    expect(screen.getAllByRole('textbox')[3]).not.toHaveAttribute('readonly')
+    expect(screen.getByRole('button', { name: '질의 4 삭제' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/중복 질의/)
+    expect(screen.getByRole('button', { name: '확정하기' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: '질의 4 삭제' }))
+    expect(screen.getByRole('status')).toHaveTextContent(/확정할 수 있습니다/)
+    expect(screen.getByRole('button', { name: '확정하기' })).toBeEnabled()
+  })
+})
+
 describe('QueryEditor — AI 생성', () => {
   test('빈 칸이 있으면 그 칸을 채운다', async () => {
     renderEditor([...templates, ''], { quota: 5 })
     fireEvent.click(screen.getByRole('button', { name: '줄 추가' }))
     fireEvent.click(screen.getByRole('button', { name: /빈 칸 1개 채우기/ }))
+    // ★ 지금 화면의 질의를 같이 보낸다 — 겹치는 후보로 유료 크레딧을 태우지 않기 위해
     await waitFor(() =>
-      expect(generateQueriesAction).toHaveBeenCalledWith({ brandId: 'brd_x', count: 1 }),
+      expect(generateQueriesAction).toHaveBeenCalledWith({
+        brandId: 'brd_x',
+        count: 1,
+        existing: templates,
+      }),
     )
     await waitFor(() =>
       expect(screen.getAllByRole('textbox')[3]).toHaveValue('새로 만든 후보 질의 하나 알려줘'),
@@ -172,7 +221,11 @@ describe('QueryEditor — AI 생성', () => {
     renderEditor(templates, { quota: 4 })
     fireEvent.click(screen.getByRole('button', { name: 'AI 후보 1개 만들기' }))
     await waitFor(() =>
-      expect(generateQueriesAction).toHaveBeenCalledWith({ brandId: 'brd_x', count: 1 }),
+      expect(generateQueriesAction).toHaveBeenCalledWith({
+        brandId: 'brd_x',
+        count: 1,
+        existing: templates,
+      }),
     )
     await waitFor(() => expect(screen.getAllByRole('textbox')).toHaveLength(4))
   })
@@ -203,6 +256,9 @@ describe('QueryEditor — AI 생성', () => {
 describe('QueryEditor — 동결', () => {
   test('확정은 두 단계다 — 동결의 뜻을 먼저 보여준다', async () => {
     renderEditor([...templates, '직장인 출근룩 어디서 참고해?'])
+    // ★ 빈 줄을 하나 만들어 둔 채로 확정한다 — 그래야 아래의 "빈 칸을 넘기지
+    //   않는다"가 실제로 검증된다(빈 줄이 없으면 그 단언은 아무것도 증명하지 않는다).
+    fireEvent.click(screen.getByRole('button', { name: '줄 추가' }))
     fireEvent.click(screen.getByRole('button', { name: '확정하기' }))
     expect(screen.getByText(/동결 후에는 바꾸지 않습니다/)).toBeInTheDocument()
     expect(freezeQueriesAction).not.toHaveBeenCalled()

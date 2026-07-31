@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { nextMeasurement } from '@/lib/kst'
 import { loadOnboardingGate } from '@/lib/onboarding/gate'
@@ -19,7 +20,11 @@ export const metadata = { title: '온보딩 — 완료' }
  * requireUser는 loadOnboardingGate 안에서 호출된다 ((app) 그룹 규칙 충족).
  */
 export default async function OnboardingDonePage() {
-  await loadOnboardingGate()
+  const gate = await loadOnboardingGate()
+  // ★ 게이트 결과를 버리면 플랜 없는 계정이 "질의가 동결됐습니다"와 다음 측정
+  //   시각을 읽는다 — 동결된 것이 없는데 예약된 것처럼 보인다. 형제 페이지
+  //   (`onboarding/page.tsx`·`queries/page.tsx`)와 같은 판정·같은 목적지로 보낸다.
+  if (gate.state === 'no-plan') redirect('/dashboard')
   const next = nextMeasurement(new Date())
   return (
     <div className="mx-auto max-w-2xl">

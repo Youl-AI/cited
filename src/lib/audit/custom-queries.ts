@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { z } from 'zod'
+import { normalizeQueryKey } from '@/lib/audit/query-rules'
 import { env } from '@/lib/env'
 
 /**
@@ -30,6 +31,8 @@ const SYSTEM_PROMPT = `한국 소비자가 AI 챗봇에게 실제로 묻는 말�
 - 서로 겹치지 않는 다양한 의도: 가격, 비교, 초보 질문, 위치, 상황별(선물·처음·급함).
 - 지역이 주어지면 대부분의 질문에 자연스럽게 지역을 넣되, 지역과 무관하게
   성립하는 일반 질문(개념·차이·선택 기준)이 1~2개 섞여도 좋습니다.
+- existing에 이미 있는 질문과 같거나 사실상 같은 뜻의 질문은 만들지 마세요.
+  그 질문들이 다루지 않은 의도를 고르세요.
 - 요청된 개수만큼만 만듭니다.`
 
 export interface GenerateCustomQueriesArgs {
@@ -40,6 +43,17 @@ export interface GenerateCustomQueriesArgs {
   brief?: string
   competitors: readonly string[]
   count: number
+  /**
+   * 이미 쓰고 있는 질의. **겹치지 말라고 미리 말하기 위한 것이다.**
+   *
+   * ★ 없으면 페이로드가 무상태라 같은 브랜드의 [재생성]이 매번 바이트까지 같은
+   *   요청이 되고, 같은 후보가 돌아오기 쉽다. 중복이 돌아온 시점에는 유료
+   *   크레딧(브랜드당 5회) 중 1회가 이미 나간 뒤다 — 받아 놓고 화면에서 걸러 봐야
+   *   슬롯만 조용히 빈다. 막을 수 있는 유일한 자리가 여기다.
+   *   선택 필드다: 넘기지 않으면 예전과 **완전히 같은 페이로드**가 나간다
+   *   (`scripts/audit-queries.mts`의 기존 호출이 그대로 동작한다).
+   */
+  existing?: readonly string[]
 }
 
 export interface CustomQueryGeneratorOptions {
@@ -63,11 +77,32 @@ export function createCustomQueryGenerator(opts: CustomQueryGeneratorOptions = {
     // ★ 프롬프트에 브랜드명·경쟁사명을 넣지 않는다. 생성 모델이 이름을 질의에
     //   섞으면 어차피 validateCustomQueries가 거부하지만, 애초에 모르게 하는
     //   것이 낫다. 검증은 방어선이지 1차 수단이 아니다.
+    //
+    // ★ `existing`은 **고객이 편집 중인 문장**이라 이름이 섞여 있을 수 있다
+    //   (확정에서 거부될 줄이라도 편집 중에는 존재한다). 그대로 실으면 위 규칙이
+    //   `existing`이라는 뒷문으로 뚫린다 — 중립성을 지키는 자리가 여기이므로
+    //   거르는 자리도 여기다(호출부마다 기억해야 하는 규칙으로 만들지 않는다).
+    //   비교 기준은 `validateCustomQueries`와 같은 `normalizeQueryKey`다.
+    const brandKey = normalizeQueryKey(args.brandName)
+    const competitorKeys = args.competitors
+      .map((c) => normalizeQueryKey(c))
+      .filter((c) => c.length > 0)
+    const existing = (args.existing ?? [])
+      .map((q) => q.trim())
+      .filter((q) => q.length > 0)
+      .filter((q) => {
+        const key = normalizeQueryKey(q)
+        if (brandKey.length > 0 && key.includes(brandKey)) return false
+        return !competitorKeys.some((c) => key.includes(c))
+      })
     const prompt = JSON.stringify(
       {
         category: args.category,
         region: args.region ?? null,
         service: args.brief ?? null,
+        // 넘기지 않았거나 전부 걸러졌으면 키 자체를 넣지 않는다 — 기존 호출자의
+        // 페이로드가 한 바이트도 달라지지 않게 한다.
+        ...(existing.length > 0 ? { existing } : {}),
         count: args.count,
       },
       null,

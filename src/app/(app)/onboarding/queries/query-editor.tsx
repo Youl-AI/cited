@@ -84,9 +84,34 @@ export function QueryEditor({
     () => new Set(templates.map((t) => normalizeQueryKey(t))),
     [templates],
   )
-  /** 지금 이 줄이 업종 공통 질의인가 — 값으로 판정한다(자리로 판정하면 재배치에 어긋난다) */
-  const isTemplateRow = (value: string): boolean =>
-    value.trim().length > 0 && templateKeys.has(normalizeQueryKey(value))
+  /**
+   * 같은 글자의 질의 중 **첫 줄**의 자리. 잠금이 값 기준이라 필요하다.
+   *
+   * ★ 값으로만 잠그면 템플릿과 글자가 같은 줄이 **둘** 생겼을 때 둘 다 잠긴다.
+   *   그런데 그 둘은 동시에 중복이라 `checkCustomQueries`가 `중복 질의`로 막는다 —
+   *   읽기 전용이라 고칠 수 없고 [삭제]도 없어 확정이 영구히 막히는 막다른 골목이
+   *   된다(빠져나갈 길은 새로고침뿐이고, 그러면 편집이 통째로 날아간다).
+   *   둘째 줄이 생기는 경로는 특이하지 않다: 고객이 직접 같은 문장을 치거나,
+   *   AI 생성이 템플릿과 겹치는 후보를 돌려준다(생성기는 템플릿을 모르고,
+   *   템플릿은 그 업종에서 가장 전형적인 질문이다).
+   *   그래서 **각 템플릿마다 첫 줄 하나만** 잠근다. 자리로 판정하지 않는다는
+   *   원래 이유(재배치·재생성에도 어긋나지 않는다)는 그대로 유지된다 —
+   *   여기서 쓰는 자리는 "같은 값 중 몇 번째인가"이지 고정된 슬롯이 아니다.
+   */
+  const firstRowOfKey = useMemo(() => {
+    const first = new Map<string, number>()
+    queries.forEach((q, i) => {
+      const key = normalizeQueryKey(q)
+      if (q.trim().length > 0 && !first.has(key)) first.set(key, i)
+    })
+    return first
+  }, [queries])
+  /** 지금 이 줄이 업종 공통 질의인가 — 값으로 판정하되 같은 값의 첫 줄만 잠근다 */
+  const isTemplateRow = (value: string, index: number): boolean => {
+    if (value.trim().length === 0) return false
+    const key = normalizeQueryKey(value)
+    return templateKeys.has(key) && firstRowOfKey.get(key) === index
+  }
 
   const cleaned = useMemo(
     () => queries.map((q) => q.trim()).filter((q) => q.length > 0),
@@ -104,6 +129,13 @@ export function QueryEditor({
         reason: `질의는 ${minCount}개 이상이어야 합니다 (지금 ${cleaned.length}개).`,
       }
     }
+    // ★ **도달 불가능한 서버 미러다.** 줄 수는 세 곳에서 이미 quota로 막힌다
+    //   (초기 `slice(0, quota)` · `addRow` · 생성 결과 `slice(0, quota)`)이고
+    //   `cleaned.length ≤ queries.length`이므로 이 분기는 참이 될 수 없다.
+    //   "살아 있는 방어"라고 적지 않는 이유는 N-1과 같다 — 못 터지는 방어에
+    //   방어라고 써 두면 다음 사람이 그 보장을 믿고 위쪽 상한을 푼다.
+    //   그럼에도 남겨 두는 것은 판정 순서를 서버(`freezeQueriesAction`)와 눈으로
+    //   맞춰 읽기 위해서다. 상한 로직을 고칠 때 여기가 실제 방어가 된다.
     if (cleaned.length > quota) {
       return {
         ok: false,
@@ -172,7 +204,11 @@ export function QueryEditor({
     setConfirming(false)
     setBusyRow(row ?? -1)
     startTransition(async () => {
-      const result = await generateQueriesAction({ brandId, count })
+      // ★ 지금 화면에 있는 질의를 같이 보낸다 — 겹치는 후보로 크레딧을 태우지
+      //   않기 위해서다. 걸러 내는 것이 아니라 **애초에 다르게 만들라**고
+      //   말하는 것이다: 받아 놓고 화면에서 지우면 슬롯이 조용히 비고, 그때는
+      //   이미 5회 중 1회가 나간 뒤다 (custom-queries.ts `existing` 주석).
+      const result = await generateQueriesAction({ brandId, count, existing: cleaned })
       setBusyRow(null)
       if (!result.ok) {
         // 서버 문구를 그대로 보여준다 — 원인 구분은 서버가 이미 했다.
@@ -266,17 +302,21 @@ export function QueryEditor({
 
       <ul className="space-y-2">
         {queries.map((value, i) => {
-          const locked = isTemplateRow(value)
+          const locked = isTemplateRow(value, i)
           return (
             <li key={i} className="flex items-start gap-2">
               <span className="mt-2 w-7 shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
                 q{i + 1}
               </span>
               <div className="min-w-0 flex-1 space-y-1">
+                {/* ★ 생성 중에는 입력도 잠근다. 결과가 빈 칸에 들어가므로(`generateMore`),
+                    기다리는 동안 그 칸에 친 글자는 결과가 도착하는 순간 말없이 덮인다 —
+                    버튼만 막고 입력을 열어 두면 "쓰던 문장이 사라졌다"가 된다. */}
                 <Input
                   className="h-9"
                   value={value}
                   readOnly={locked}
+                  disabled={busy}
                   aria-label={`질의 ${i + 1}`}
                   aria-readonly={locked || undefined}
                   onChange={(e) => setQuery(i, e.target.value)}
