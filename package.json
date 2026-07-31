@@ -32,7 +32,8 @@
     "measure": "tsx --conditions=react-server --env-file=.env.local scripts/measure.mts",
     "label:collect": "tsx --conditions=react-server --env-file=.env.local scripts/label-collect.mts",
     "label": "tsx --conditions=react-server scripts/label.mts",
-    "test:golden": "vitest run --config vitest.golden.config.ts"
+    "test:golden": "vitest run --config vitest.golden.config.ts",
+    "usage": "tsx --env-file=.env.local scripts/usage-report.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.115.0",
