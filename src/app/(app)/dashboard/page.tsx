@@ -1,6 +1,7 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { requireUser } from '@/lib/session'
+import { loadOnboardingGate } from '@/lib/onboarding/gate'
 
 export const metadata = { title: '대시보드' }
 
@@ -14,8 +15,15 @@ export const metadata = { title: '대시보드' }
 //
 //   빈 화면은 방향을 주는 자리다. 지금 실제로 받을 수 있는 것이 무료 진단이므로
 //   거기로 보낸다. 정기 측정이 열리면 이 파일이 통째로 바뀐다.
+//
+// ★ Task 3부터 이 화면이 온보딩 게이트를 겸한다. 활성 플랜이 있는데 브랜드가
+//   없는 계정은 여기 머물면 안 된다 — 등록 경로가 없어 다시 막다른 골목이 된다.
+//   requireUser는 loadOnboardingGate 안에서 호출된다 ((app) 그룹 규칙 충족).
 export default async function DashboardPage() {
-  const user = await requireUser()
+  const gate = await loadOnboardingGate()
+  if (gate.state === 'needs-onboarding') redirect('/onboarding')
+  const user = gate.user
+  // 아래 JSX는 기존 스텁 그대로다 — 이 태스크는 게이트만 단다. Task 9가 교체한다.
   return (
     <div className="max-w-2xl space-y-4">
       <h1 className="text-2xl font-semibold tracking-tight">대시보드</h1>
