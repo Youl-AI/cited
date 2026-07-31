@@ -345,8 +345,11 @@ export function ResultView({
         </p>
       </section>
 
-      {/* ── 유료 전환 ────────────────────────────────────────── */}
-      <section className="rounded-lg border border-border bg-card p-6 sm:p-7 print:break-inside-avoid">
+      {/* ── 유료 전환 ──────────────────────────────────────────
+          ★ 인쇄(PDF)에서는 숨긴다. PDF는 크몽 납품물이고, 납품 문서에 실린
+            자사 요금제 유도는 크몽 직거래 유도 정책 위반 소지가 있다 —
+            계정 제재 리스크. 화면(웹)에서는 유지한다. */}
+      <section className="rounded-lg border border-border bg-card p-6 sm:p-7 print:hidden">
         <h2 className="text-lg font-semibold tracking-tight">
           이 리포트는 <Metric>1</Metric>회 측정입니다
         </h2>
