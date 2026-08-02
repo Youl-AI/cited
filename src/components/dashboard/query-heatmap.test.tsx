@@ -47,6 +47,40 @@ describe('QueryHeatmap', () => {
     expect(screen.getByLabelText('측정 없음')).toBeInTheDocument()
   })
 
+  /**
+   * ★ §4.2의 계약 값 두 개를 못박는다.
+   *   - 램프: `P = round(6 + 74 × point)` — 6%(0%)에서 80%(100%)까지.
+   *     `round(100 × point)` 같은 그럴듯한 변이는 0%를 배경 없음으로 만든다.
+   *   - 글자색 반전: 정확히 P ≥ 50에서 `--primary-foreground`로 바뀐다.
+   *     P=49(43/74)와 P=50(44/74)로 경계 양쪽을 잡는다 — 문턱을 95로 옮기는
+   *     변이도 여기서 RED가 된다.
+   */
+  test('셀 채움은 P = round(6 + 74 × point) 램프이고 글자색은 정확히 P ≥ 50에서 반전된다 (§4.2)', () => {
+    render(
+      <QueryHeatmap
+        points={[
+          point('r1', [
+            { queryText: 'q-zero', interval: wilsonInterval(0, 6) }, // point 0 → P=6
+            { queryText: 'q-full', interval: wilsonInterval(6, 6) }, // point 1 → P=80
+            { queryText: 'q-49', interval: wilsonInterval(43, 74) }, // P=49 — 반전 직전
+            { queryText: 'q-50', interval: wilsonInterval(44, 74) }, // P=50 — 반전 시작
+          ]),
+        ]}
+      />,
+    )
+    const styleOf = (text: string) => screen.getByText(text).getAttribute('style') ?? ''
+    expect(styleOf('0/6')).toContain('color-mix(in oklab, var(--primary) 6%, transparent)')
+    expect(styleOf('6/6')).toContain('color-mix(in oklab, var(--primary) 80%, transparent)')
+    expect(styleOf('43/74')).toContain('color: var(--foreground)')
+    expect(styleOf('44/74')).toContain('color: var(--primary-foreground)')
+  })
+
+  test('셀 title은 질의 · 회차 날짜 · 점추정 (구간)이다 (§4.2)', () => {
+    render(<QueryHeatmap points={[point('r1', [{ queryText: 'q-a', interval: wilsonInterval(2, 6) }])]} />)
+    // 픽스처의 measuredAt은 2026-08-03 — 날짜가 축과 같은 MM.DD로 들어간다.
+    expect(screen.getByText('2/6')).toHaveAttribute('title', expect.stringContaining('q-a · 08.03 · '))
+  })
+
   test('행 순서는 최신 회차의 byQuery 순서 그대로다 — 화면에서 재정렬하지 않는다', () => {
     // 주어진 순서가 가나다순도, 언급률 오름차순도 아니게 만든다 — 어떤 재정렬이든 RED가 된다.
     const p = point('r1', [

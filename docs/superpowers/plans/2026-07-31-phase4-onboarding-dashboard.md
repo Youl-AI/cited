@@ -4502,8 +4502,8 @@ export function QueryHeatmap({ points }: { points: RunPoint[] }) {
           </tr>
         </thead>
         <tbody>
-          {heat.rows.map((row) => (
-            <tr key={row.queryText} className="border-b border-border last:border-b-0">
+          {heat.rows.map((row, rowIndex) => (
+            <tr key={`${rowIndex}-${row.queryText}`} className="border-b border-border last:border-b-0">
               <th scope="row" className="max-w-64 truncate px-4 py-2 text-left text-sm font-normal">
                 {row.queryText}
               </th>
@@ -4525,7 +4525,7 @@ export function QueryHeatmap({ points }: { points: RunPoint[] }) {
                       background: `color-mix(in oklab, var(--primary) ${p}%, transparent)`,
                       color: p >= 50 ? 'var(--primary-foreground)' : 'var(--foreground)',
                     }}
-                    title={`${row.queryText} · ${formatPercent(cell.point)} (${formatInterval(cell)})`}
+                    title={`${row.queryText} · ${run.measuredAt.slice(5, 7)}.${run.measuredAt.slice(8, 10)} · ${formatPercent(cell.point)} (${formatInterval(cell)})`}
                   >
                     {cell.k}/{cell.n}
                   </td>
@@ -4623,16 +4623,23 @@ export function BrandPicker({
 
 - [ ] **Step 8: 대시보드 페이지 교체 — `src/app/(app)/dashboard/page.tsx`**
 
+★ 게이트는 Task 4의 `resolveDashboardEntry`를 그대로 쓴다 — `needs-onboarding`
+문자열만 보고 튕기면 "미동결 브랜드 + 동결 브랜드 0" 계정이 온보딩과 대시보드
+사이에 갇힌다(Task 4가 막은 함정). 튕기는 것은 동결 브랜드가 0일 때뿐이고,
+미동결 브랜드는 배너로 안내한다. 아래 코드는 구현과 바이트 단위로 같다.
+
 ```tsx
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Button } from '@/components/ui/button'
 import { BrandPicker } from '@/components/dashboard/brand-picker'
 import { HeadlineCard } from '@/components/dashboard/headline-card'
 import { QueryHeatmap } from '@/components/dashboard/query-heatmap'
 import { TrendChart } from '@/components/dashboard/trend-chart'
+import { Button } from '@/components/ui/button'
 import { loadDashboard } from '@/lib/dashboard/load'
+import { queriesStepPath } from '@/lib/onboarding/editor'
 import { loadOnboardingGate } from '@/lib/onboarding/gate'
+import { resolveDashboardEntry } from '@/lib/onboarding/state'
 
 export const metadata = { title: '대시보드' }
 
@@ -4643,7 +4650,15 @@ export default async function DashboardPage({
 }) {
   // requireUser는 loadOnboardingGate 안에서 호출된다 ((app) 규칙).
   const gate = await loadOnboardingGate()
-  if (gate.state === 'needs-onboarding') redirect('/onboarding')
+  // ★ 강제 리다이렉트 판정은 순수 함수가 한다 (Task 4). 튕기는 것은 "측정 중인
+  //   것이 하나도 없을 때"뿐이다 — 미동결 브랜드가 있어도 동결된 브랜드가 있으면
+  //   대시보드를 그리고 배너로 안내한다 (state.ts `resolveDashboardEntry` 주석).
+  const entry = resolveDashboardEntry({
+    state: gate.state,
+    pendingBrandId: gate.pendingBrandId,
+    frozenBrandCount: gate.frozenBrandCount,
+  })
+  if (entry.kind === 'redirect') redirect(entry.to)
 
   if (gate.state === 'no-plan') {
     // 기존 빈 대시보드 유지 (스펙 ② — 플랜 없는 계정은 무료 진단 안내).
@@ -4673,6 +4688,19 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-10">
+      {entry.pendingBrandId && (
+        // 튕기지 않고 알린다 (Task 4). 이미 측정 중인 브랜드가 있으므로 대시보드를
+        // 막을 이유가 없고, 그렇다고 미동결 브랜드를 잊게 두면 그 브랜드는 영영
+        // 측정되지 않는다 — 이어서 갈 링크를 항상 눈에 보이는 자리에 둔다.
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed">
+          아직 질의를 확정하지 않은 브랜드가 있습니다. 확정 전까지 그 브랜드는 측정되지
+          않습니다.{' '}
+          <Link href={queriesStepPath(entry.pendingBrandId)} className="font-medium underline">
+            이어서 확정하기
+          </Link>
+        </p>
+      )}
+
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="font-mono text-xs tracking-[0.14em] text-muted-foreground uppercase">

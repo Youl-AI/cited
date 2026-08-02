@@ -52,6 +52,15 @@ describe('TrendChart', () => {
     expect(container.querySelector('[data-testid="trend-band"]')).not.toBeNull()
   })
 
+  // ★ 끊는 규칙의 반대 방향 — 조건이 같은 멀쩡한 선을 괜히 끊으면 "매주 재고
+  //   있다"는 참인 사실이 화면에서 사라진다. 과잉 끊김(모든 세그먼트 분리)도
+  //   과소 끊김만큼 거짓이다. (브리프 Step 3의 테스트 그대로.)
+  test('조건이 같으면 선을 잇는다 — 멀쩡한 선을 괜히 끊지 않는다', () => {
+    const { container } = render(<TrendChart points={[point('r1', 20), point('r2', 25)]} />)
+    expect(container.querySelectorAll('[data-testid="trend-line"]')).toHaveLength(1)
+    expect(screen.queryByText(/비교하지 않습니다/)).toBeNull()
+  })
+
   test('엔진 토글이 있고 계측값 요약이 aria로 노출된다', () => {
     render(<TrendChart points={[point('r1', 20)]} />)
     expect(screen.getByRole('button', { name: '전체' })).toBeInTheDocument()
@@ -79,7 +88,7 @@ describe('TrendChart', () => {
       <TrendChart points={[point('r1', 20), point('r2', 25, { skippedBefore: 1 })]} />,
     )
     expect(container.querySelectorAll('[data-testid="trend-line"]')).toHaveLength(0)
-    expect(screen.getByText(/측정이 빠진/)).toBeInTheDocument()
+    expect(screen.getByText(/측정이 없던/)).toBeInTheDocument()
   })
 
   test('n=0 회차는 0% 점으로 그리지 않는다 — 측정 없음이지 0%가 아니다', () => {

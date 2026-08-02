@@ -29,8 +29,10 @@ export function QueryHeatmap({ points }: { points: RunPoint[] }) {
           </tr>
         </thead>
         <tbody>
-          {heat.rows.map((row) => (
-            <tr key={row.queryText} className="border-b border-border last:border-b-0">
+          {heat.rows.map((row, rowIndex) => (
+            // key에 인덱스를 섞는 이유: buildHeatmap의 행에는 id가 없고 질의
+            // 텍스트가 중복될 수 있다 — 텍스트만 쓰면 key가 충돌한다.
+            <tr key={`${rowIndex}-${row.queryText}`} className="border-b border-border last:border-b-0">
               <th scope="row" className="max-w-64 truncate px-4 py-2 text-left text-sm font-normal">
                 {row.queryText}
               </th>
@@ -52,7 +54,7 @@ export function QueryHeatmap({ points }: { points: RunPoint[] }) {
                       background: `color-mix(in oklab, var(--primary) ${p}%, transparent)`,
                       color: p >= 50 ? 'var(--primary-foreground)' : 'var(--foreground)',
                     }}
-                    title={`${row.queryText} · ${formatPercent(cell.point)} (${formatInterval(cell)})`}
+                    title={`${row.queryText} · ${run.measuredAt.slice(5, 7)}.${run.measuredAt.slice(8, 10)} · ${formatPercent(cell.point)} (${formatInterval(cell)})`}
                   >
                     {cell.k}/{cell.n}
                   </td>

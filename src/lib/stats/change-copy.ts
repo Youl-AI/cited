@@ -13,6 +13,9 @@ export function changeSentence(verdict: ChangeVerdict): string {
     case 'down':
       return '신뢰구간이 겹치지 않습니다 — 통계적으로 유의미한 하락입니다.'
     case 'incomparable':
-      return '두 측정의 조건(엔진 구성)이 달라 변화를 비교할 수 없습니다.'
+      // incomparable의 원인은 엔진 구성만이 아니다 — 질의 집합 수정, 판정기
+      // 버전 상승도 같은 판정을 낸다. 원인 하나만 집어 말하면 나머지 경우에
+      // 거짓 이유가 되므로, 어느 원인에서든 참인 문장으로 쓴다.
+      return '두 측정의 조건(엔진 구성·질의 집합·판정기 버전)이 달라 변화를 비교할 수 없습니다.'
   }
 }
