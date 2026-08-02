@@ -11,6 +11,7 @@ import {
   engineIdsIn,
   parseRunResult,
   toRunPoint,
+  toRunPoints,
   type RunPoint,
 } from './data'
 
@@ -58,8 +59,29 @@ function makePoint(runId: string, over: Partial<RunPoint> = {}): RunPoint {
     competitors: ['29CM'],
     queryIds: ['q1', 'q2'],
     detectorVersion: 1,
+    skippedBefore: 0,
     result: makeResult(),
     ...over,
+  }
+}
+
+const SNAPSHOT: PlanSnapshot = {
+  plan: 'starter',
+  queryPacks: 0,
+  engines: ['chatgpt'],
+  samples: { llm: 3, serp: 0 },
+  queryIds: ['q1', 'q2'],
+  detectorVersion: 4,
+  competitors: ['29CM'],
+}
+
+/** `collection_runs` 한 행 흉내 — `toRunPoints`의 입력. */
+function makeRun(id: string, result: unknown, day = 3) {
+  return {
+    id,
+    startedAt: new Date(`2026-08-0${day}T18:30:00.000Z`),
+    planSnapshot: SNAPSHOT,
+    result,
   }
 }
 
@@ -89,15 +111,7 @@ describe('parseRunResult · toRunPoint', () => {
   })
 
   test('toRunPoint — 스냅샷 없는 회차는 null', () => {
-    const snapshot: PlanSnapshot = {
-      plan: 'starter',
-      queryPacks: 0,
-      engines: ['chatgpt'],
-      samples: { llm: 3, serp: 0 },
-      queryIds: ['q1', 'q2'],
-      detectorVersion: 4,
-      competitors: ['29CM'],
-    }
+    const snapshot: PlanSnapshot = SNAPSHOT
     const point = toRunPoint({
       id: 'r1',
       startedAt: new Date('2026-08-03T18:30:00Z'),
@@ -116,6 +130,26 @@ describe('parseRunResult · toRunPoint', () => {
     expect(
       toRunPoint({ id: 'r2', startedAt: new Date(), planSnapshot: snapshot, result: null }),
     ).toBeNull()
+    // 회차 하나만 보면 앞에 무엇이 버려졌는지 알 수 없다 — 언제나 0.
+    expect(point?.skippedBefore).toBe(0)
+  })
+
+  /**
+   * ★ `runs.map(toRunPoint).filter(...)`는 버려진 회차의 **자리**를 잃는다.
+   *   6/01 측정 → 6/08 스냅샷 저장 실패 → 6/15 측정이면, 남는 두 점은 조건이
+   *   같으니 비교 가능한 게 맞다. 그런데 그 사이에는 **잰 값이 없는 한 주**가
+   *   있다. 서수 축은 그 주를 통째로 감춰 6/01과 6/15를 옆칸에 나란히 앉힌다.
+   *   여기서 세어 두지 않으면 화면이 그 사실을 알 방법이 없다.
+   */
+  test('toRunPoints — 버려진 회차 수를 자리에 남긴다', () => {
+    const points = toRunPoints([
+      makeRun('a', makeResult(), 1),
+      makeRun('nosnap', null, 2), // succeeded인데 result IS NULL
+      makeRun('c', makeResult(), 3),
+      makeRun('d', makeResult(), 4),
+    ])
+    expect(points.map((p) => p.runId)).toEqual(['a', 'c', 'd'])
+    expect(points.map((p) => p.skippedBefore)).toEqual([0, 1, 0])
   })
 })
 
@@ -207,6 +241,78 @@ describe('buildTrend — comparableWithPrev', () => {
     expect(trend.map((p) => p.runId)).toEqual(['a', 'abc'])
     expect(trend[1]?.comparableWithPrev).toBe(false)
   })
+
+  /**
+   * ★ **의도된 과잉 발화를 못 박는다.** `sameConditions`는 엔진 집합이 바뀌면
+   *   개별 엔진 계열까지 끊는다 — chatgpt의 분모(30)는 그대로인데도. 그 선택의
+   *   근거는 `sameConditions` 주석에 한 문단으로 적혀 있지만, 지금까지 그것을
+   *   지키는 것은 산문뿐이었다. `engineId !== 'all'`이면 엔진 검사를 건너뛰도록
+   *   "최적화"해도 나머지 테스트는 전부 초록이다.
+   *
+   *   완화하고 싶으면 `sameConditions`에 옵션을 받아라 — 본문에 특수 케이스를
+   *   넣으면 어느 화면이 무엇을 포기했는지가 코드에서 사라진다.
+   */
+  test('엔진이 추가되면 개별 엔진 계열도 끊긴다 — 보수적 판정은 의도한 것이다', () => {
+    // gemini만 추가됐고 chatgpt의 숫자(8/30)는 두 회차가 완전히 같다.
+    const before = makePoint('a', {
+      engines: ['chatgpt'],
+      result: makeResult({ byEngine: { chatgpt: wilsonInterval(8, 30) } }),
+    })
+    const after = makePoint('ab', { engines: ['chatgpt', 'gemini'] })
+    const trend = buildTrend([before, after], 'chatgpt')
+    expect(trend.map((p) => p.interval.k)).toEqual([8, 8])
+    expect(trend.map((p) => p.comparableWithPrev)).toEqual([true, false])
+  })
+})
+
+/**
+ * 추이 선의 **간격**. `comparableWithPrev`는 조건이 같은지만 본다 — 두 점 사이에
+ * 측정이 통째로 빠진 주가 있어도 true다. 그 자체는 옳지만, 서수 축(점을 등간격
+ * 으로 찍는 축)은 2주 떨어진 두 점을 붙어 있는 두 점으로 그린다. "매주 재고
+ * 있다"는 인상이 거짓이 되는 자리이고, 화면이 알 방법은 이 값뿐이다.
+ *
+ * 원인은 둘 다 실재한다 — 스냅샷 저장만 실패한 `succeeded` 회차(`points`에
+ * 아예 못 들어온다)와, 답변이 하나도 없어 n=0인 회차(계열에서 빠진다).
+ */
+describe('buildTrend — runsSkippedBefore', () => {
+  test('연속한 회차 사이는 0 — 멀쩡한 간격을 벌리지 않는다', () => {
+    expect(
+      buildTrend([makePoint('a'), makePoint('ab')], 'all').map((p) => p.runsSkippedBefore),
+    ).toEqual([0, 0])
+  })
+
+  test('스냅샷이 없어 빠진 회차가 간격으로 남는다 (NULL 스냅샷)', () => {
+    // A → [스냅샷 저장 실패] → C. 조건은 셋 다 같아 comparable은 true다.
+    const points = toRunPoints([
+      makeRun('a', makeResult(), 1),
+      makeRun('nosnap', null, 2),
+      makeRun('c', makeResult(), 3),
+    ])
+    const trend = buildTrend(points, 'all')
+    expect(trend.map((p) => p.runId)).toEqual(['a', 'c'])
+    // 조건은 같다 — 여기서 선을 끊을 근거는 comparableWithPrev에 없다.
+    expect(trend.map((p) => p.comparableWithPrev)).toEqual([true, true])
+    // 그러나 그 사이에는 잰 값이 없는 회차가 하나 있다.
+    expect(trend.map((p) => p.runsSkippedBefore)).toEqual([0, 1])
+  })
+
+  test('n=0으로 빠진 회차도 같은 간격으로 남는다', () => {
+    const empty = makePoint('ab', { result: makeResult({ citedRate: wilsonInterval(0, 0) }) })
+    const trend = buildTrend([makePoint('a'), empty, makePoint('abc')], 'all')
+    expect(trend.map((p) => p.runId)).toEqual(['a', 'abc'])
+    expect(trend.map((p) => p.comparableWithPrev)).toEqual([true, true])
+    expect(trend.map((p) => p.runsSkippedBefore)).toEqual([0, 1])
+  })
+
+  test('두 원인이 겹치면 합쳐서 센다', () => {
+    const points = toRunPoints([
+      makeRun('a', makeResult(), 1),
+      makeRun('nosnap', null, 2),
+      makeRun('zero', makeResult({ citedRate: wilsonInterval(0, 0) }), 3),
+      makeRun('d', makeResult(), 4),
+    ])
+    expect(buildTrend(points, 'all').map((p) => p.runsSkippedBefore)).toEqual([0, 2])
+  })
 })
 
 describe('buildHeatmap', () => {
@@ -285,6 +391,53 @@ describe('buildSourceChanges · buildHeadline', () => {
     const rows = buildSourceChanges([prev, makePoint('ab')])
     expect(rows[0]).toMatchObject({ domain: 'blog.naver.com', answers: 12, prevAnswers: 7 })
     expect(rows[1]).toMatchObject({ domain: 'musinsa.com', prevAnswers: null })
+    // 조건이 같으니 화면이 "7 → 12" 화살표를 그려도 된다.
+    expect(rows.every((r) => r.comparableWithPrev)).toBe(true)
+  })
+
+  /**
+   * ★ 출처 표는 언급률 추이와 **같은 함정** 위에 앉아 있다. 화면은 이 행으로
+   *   "2 → 5" 같은 증감을 그리는데, 그 사이에 운영자가 질의를 셋 더 넣었다면
+   *   인용 수가 는 것은 브랜드가 한 일이 아니라 설정 변경이다. 추이는 선을
+   *   끊는데 표만 화살표를 그리면, 같은 거짓말이 표 모양으로 나갈 뿐이다.
+   *
+   *   `prevAnswers`를 null로 뭉개지 않는 이유도 여기 있다 — "직전에 없던
+   *   도메인(새로 등장)"과 "비교할 수 없는 회차"는 다른 사실이다.
+   */
+  test('조건이 바뀌면 comparableWithPrev=false — 설정 변경을 인용 증가로 그리지 않는다', () => {
+    const prevRow = (answers: number) => ({
+      domain: 'a.com',
+      answers,
+      pages: [],
+      owner: 'third-party' as const,
+      share: wilsonInterval(answers, 60),
+    })
+    const prev = makePoint('a', { result: makeResult({ sources: [prevRow(2)] }) })
+    const currResult = makeResult({ sources: [prevRow(5)] })
+
+    // 질의 집합이 바뀐 경우
+    const editedQueries = makePoint('ab', { queryIds: ['q1', 'q3'], result: currResult })
+    const q = buildSourceChanges([prev, editedQueries])
+    expect(q[0]).toMatchObject({ domain: 'a.com', answers: 5, prevAnswers: 2 })
+    expect(q[0]?.comparableWithPrev).toBe(false)
+
+    // 판정기 버전이 오른 경우
+    const bumped = makePoint('ab', { detectorVersion: 2, result: currResult })
+    expect(buildSourceChanges([prev, bumped])[0]?.comparableWithPrev).toBe(false)
+
+    // 엔진 구성이 바뀐 경우
+    const moreEngines = makePoint('ab', { engines: ['chatgpt'], result: currResult })
+    expect(buildSourceChanges([prev, moreEngines])[0]?.comparableWithPrev).toBe(false)
+
+    // 조건이 같으면 그대로 true (항상 false를 돌려주는 구현을 막는다)
+    const same = makePoint('ab', { result: currResult })
+    expect(buildSourceChanges([prev, same])[0]?.comparableWithPrev).toBe(true)
+  })
+
+  test('직전 회차가 아예 없으면 comparableWithPrev=false — 비교 자체가 없다', () => {
+    const rows = buildSourceChanges([makePoint('a')])
+    expect(rows.every((r) => r.prevAnswers === null)).toBe(true)
+    expect(rows.every((r) => r.comparableWithPrev)).toBe(false)
   })
 
   /**

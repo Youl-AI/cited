@@ -3205,22 +3205,42 @@ git commit -m "feat(cron): GitHub Actions 스케줄 — 월·수·금 KST 새벽
     - `parseRunResult(value: unknown): AuditResult | null`
       (검사하는 필드: `version`·`citedRate`·`byQuery`·`sources`·`byEngine`·`shareOfVoice`.
       그 외는 보지 않는다 — 과거 스냅샷 호환)
-    - `interface RunPoint { runId: string; measuredAt: string; engines: string[]; competitors: string[]; queryIds: string[]; detectorVersion: number; result: AuditResult }`
+    - `interface RunPoint { runId: string; measuredAt: string; engines: string[]; competitors: string[]; queryIds: string[]; detectorVersion: number; skippedBefore: number; result: AuditResult }`
       (`queryIds`·`detectorVersion`은 **비교 가능성 필드**다. 질의 집합이 바뀌면
-      `citedRate`의 분모가, 판정기 버전이 바뀌면 분자의 정의가 바뀐다 — `engines`와 같은 취급)
+      `citedRate`의 분모가, 판정기 버전이 바뀌면 분자의 정의가 바뀐다 — `engines`와 같은 취급.
+      `skippedBefore`는 이 회차 **직전에 스냅샷이 없어 버려진 회차 수**다 — 아래 `toRunPoints` 참고)
     - `toRunPoint(run: Pick<CollectionRun, 'id' | 'startedAt' | 'planSnapshot' | 'result'>): RunPoint | null`
-    - `interface TrendPoint { runId: string; measuredAt: string; interval: Interval; comparableWithPrev: boolean }`
+      (회차 하나만 보므로 `skippedBefore`는 언제나 0이다)
+    - `toRunPoints(runs: readonly Pick<CollectionRun, 'id' | 'startedAt' | 'planSnapshot' | 'result'>[]): RunPoint[]`
+      (★ **로더는 이것을 쓴다** — `runs.map(toRunPoint).filter(...)`가 아니다.
+      스냅샷이 없어 버려진 회차의 **자리**를 `skippedBefore`로 남긴다)
+    - `interface TrendPoint { runId: string; measuredAt: string; interval: Interval; comparableWithPrev: boolean; runsSkippedBefore: number }`
       (★ `comparableWithPrev: false`면 화면은 **선을 끊는다.** 두 점은 참이지만
-      그 사이 선분이 거짓이다. 첫 점은 이을 대상이 없으므로 true)
+      그 사이 선분이 거짓이다. 첫 점은 이을 대상이 없으므로 true.
+      ★ `runsSkippedBefore > 0`이면 두 점 **사이에 잰 값이 없는 회차**가 그만큼 있다 —
+      조건은 같아서 `comparableWithPrev`는 true인데도 그렇다. 원인은 둘이다:
+      스냅샷 저장만 실패한 회차(`points`에 못 들어온다)와 n=0 회차(계열에서 빠진다).
+      서수 축은 2주 떨어진 두 점을 옆칸에 붙여 그린다 — 화면은 이 구간에
+      연속성을 암시하면 안 된다. 첫 점은 0)
     - `buildTrend(points: readonly RunPoint[], engineId: string | 'all'): TrendPoint[]`
+      (★ 엔진 집합이 바뀌면 **개별 엔진 계열도** 끊는다. chatgpt의 분모는 그대로인데도
+      그렇다 — 의도된 과잉 발화이고 테스트가 못 박는다. 완화하려면 `sameConditions`
+      본문이 아니라 호출부 옵션으로 하라)
     - `engineIdsIn(points: readonly RunPoint[]): string[]`
     - `interface HeatmapView { runs: { runId: string; measuredAt: string }[]; rows: { queryText: string; cells: (Interval | null)[] }[] }`
     - `buildHeatmap(points: readonly RunPoint[], maxRuns?: number): HeatmapView`
     - `interface SovPoint { runId: string; measuredAt: string; interval: Interval; comparableWithPrev: boolean }`
       (SoV는 위 셋에 **경쟁사 집합까지** 같아야 comparable)
     - `buildSovTrend(points: readonly RunPoint[]): SovPoint[]`
-    - `interface SourceChangeRow { domain: string; owner: SourceOwner; selfDomainsKnown: boolean; answers: number; prevAnswers: number | null }`
-      (★ `SourceOwner`는 `'self' | 'competitor' | 'third-party'` — **null이 아니다.**
+    - `interface SourceChangeRow { domain: string; owner: SourceOwner; selfDomainsKnown: boolean; answers: number; prevAnswers: number | null; comparableWithPrev: boolean }`
+      (★ `comparableWithPrev: false`면 화면은 `prevAnswers → answers` **화살표를
+      그리면 안 된다.** 질의를 셋 더 넣은 다음 회차는 인용 수가 당연히 늘고,
+      판정기가 바뀌면 무엇을 인용으로 셌는지가 바뀐다 — "2 → 5"는 브랜드가 한
+      일이 아니라 설정 변경이다. 추이가 선을 끊는데 표만 화살표를 그리면 같은
+      거짓말이 표 모양으로 나갈 뿐이다. 직전 회차가 아예 없으면 false다.
+      `prevAnswers`를 null로 뭉개지 **않는** 이유: "직전에 없던 도메인(새로 등장)"과
+      "비교할 수 없는 회차"는 다른 사실이다.
+      ★ `SourceOwner`는 `'self' | 'competitor' | 'third-party'` — **null이 아니다.**
       `owner === null` 분기는 영원히 거짓이다. 그리고 `selfDomainsKnown: false`면
       `'third-party'`는 "남의 사이트"가 아니라 "자사 도메인을 몰라서 못 갈랐다"이다 —
       `AuditResult.hasSelfDomains`의 주석대로 화면이 이 둘을 반드시 갈라야 한다)
@@ -3234,7 +3254,11 @@ git commit -m "feat(cron): GitHub Actions 스케줄 — 월·수·금 KST 새벽
     - `loadDashboard(userId: string, brandId: string | undefined): Promise<DashboardData>`
       (이력 창 = 플랜의 `historyMonths` (null=무제한). ★ 구독 조회에 status 필터가
       **없다** — 해지한 고객도 자기가 돈 내고 받은 이력을 그대로 본다. 의도된 정책이고
-      `load.test.ts`가 못 박는다)
+      `load.test.ts`가 못 박는다.
+      ★ 브랜드가 있는데 구독 행이 없으면 **던진다** — 기본값을 두지 않는다.
+      이력 창은 플랜에서만 나오고, 플랜이 없으면 답이 없는 것이지 기본값이 있는 게 아니다.
+      `?? null`이면 무료 사용자에게 무제한 이력을, `?? 0`이면 돈 낸 고객의 회차를
+      통째로 감추는 정책이 조용히 생긴다)
     - `loadRunDetail(userId: string, runId: string): Promise<{ brandName: string; startedAt: string; result: AuditResult } | null>`
 
 - [ ] **Step 1: 실패하는 테스트 — 변화 문장 추출**
@@ -3299,6 +3323,7 @@ Run: `pnpm vitest run src/lib/stats src/components/audit` → PASS (기존 resul
 ```ts
 import { describe, expect, test } from 'vitest'
 import { AUDIT_RESULT_VERSION, type AuditResult } from '@/lib/audit/result'
+import type { PlanSnapshot } from '@/lib/db/schema'
 import { wilsonInterval } from '@/lib/stats/wilson'
 import {
   buildHeadline, buildHeatmap, buildSourceChanges, buildSovTrend, buildTrend,
@@ -3320,7 +3345,7 @@ function makeResult(over: Partial<AuditResult> = {}): AuditResult {
       { queryText: 'q-b', interval: wilsonInterval(5, 6) },
     ],
     sources: [
-      { domain: 'blog.naver.com', answers: 12, pages: [], owner: null, share: wilsonInterval(12, 60) },
+      { domain: 'blog.naver.com', answers: 12, pages: [], owner: 'third-party', share: wilsonInterval(12, 60) },
       { domain: 'musinsa.com', answers: 3, pages: [], owner: 'self', share: wilsonInterval(3, 60) },
     ],
     sourceSummary: { totalAnswers: 60, answersWithCitations: 40, distinctDomains: 9, selfAnswers: 3 },
@@ -3333,6 +3358,7 @@ function makePoint(runId: string, over: Partial<RunPoint> = {}): RunPoint {
   return {
     runId, measuredAt: `2026-08-0${runId.length}T18:30:00.000Z`,
     engines: ['chatgpt', 'gemini'], competitors: ['29CM'],
+    queryIds: ['q1', 'q2'], detectorVersion: 1, skippedBefore: 0,
     result: makeResult(), ...over,
   }
 }
@@ -3345,7 +3371,9 @@ describe('parseRunResult · toRunPoint', () => {
   })
 
   test('toRunPoint — 스냅샷 없는 회차는 null', () => {
-    const snapshot = { plan: 'starter', queryPacks: 0, engines: ['chatgpt'], samples: { llm: 3, serp: 0 }, queryIds: [], detectorVersion: 1, competitors: ['29CM'] }
+    // ★ `PlanSnapshot`으로 못 박아야 한다 — 그냥 두면 `plan: 'starter'`가
+    //   `string`으로 추론돼 `PlanId`에 대입되지 않는다.
+    const snapshot: PlanSnapshot = { plan: 'starter', queryPacks: 0, engines: ['chatgpt'], samples: { llm: 3, serp: 0 }, queryIds: ['q1', 'q2'], detectorVersion: 1, competitors: ['29CM'] }
     expect(
       toRunPoint({ id: 'r1', startedAt: new Date('2026-08-03T18:30:00Z'), planSnapshot: snapshot, result: makeResult() })?.runId,
     ).toBe('r1')
@@ -3401,7 +3429,7 @@ describe('buildSovTrend', () => {
 describe('buildSourceChanges · buildHeadline', () => {
   test('최신 출처 상위 + 직전 회차 답변 수', () => {
     const prev = makePoint('a', {
-      result: makeResult({ sources: [{ domain: 'blog.naver.com', answers: 7, pages: [], owner: null, share: wilsonInterval(7, 60) }] }),
+      result: makeResult({ sources: [{ domain: 'blog.naver.com', answers: 7, pages: [], owner: 'third-party', share: wilsonInterval(7, 60) }] }),
     })
     const rows = buildSourceChanges([prev, makePoint('ab')])
     expect(rows[0]).toMatchObject({ domain: 'blog.naver.com', answers: 12, prevAnswers: 7 })
@@ -3428,6 +3456,7 @@ Expected: FAIL — 모듈 없음
 ```ts
 import type { AuditResult } from '@/lib/audit/result'
 import type { CollectionRun, RunStatus } from '@/lib/db/schema'
+import type { SourceOwner } from '@/lib/stats/sources'
 import { judgeChange, type ChangeVerdict, type Interval } from '@/lib/stats/wilson'
 
 /**
@@ -3442,8 +3471,22 @@ import { judgeChange, type ChangeVerdict, type Interval } from '@/lib/stats/wils
 
 /**
  * 스냅샷 파서. 모양이 아니면 null — 실패 회차(result null)와 알 수 없는 구조를
- * 화면이 삼키지 않게 한다. 버전 필드가 있는 한 관대하게 읽는다(과거 스냅샷
- * 호환 — `AuditResult.version` 주석).
+ * 화면이 삼키지 않게 한다.
+ *
+ * ★ 관대함의 범위는 **이 모듈이 건드리지 않는 필드까지**다. 버전이 올라가며
+ *   `ranking`·`evidence` 같은 필드가 사라지거나 늘어나는 것은 통과시키되,
+ *   **이 모듈이 실제로 파고드는 필드는 전부 여기서 확인한다.** `engineIdsIn`은
+ *   `Object.keys(result.byEngine)`를, `buildSovTrend`는 `result.shareOfVoice.n`을
+ *   가드 없이 읽는다 — 여기서 안 보면 통과한 스냅샷이 화면에서 터진다.
+ *   (검사하는 것: `version`·`citedRate`·`byQuery`·`sources`·`byEngine`·
+ *   `shareOfVoice`. 그 외 필드는 보지 않는다.)
+ *
+ * ★ **`result IS NULL`인 `succeeded` 회차가 실제로 존재한다.** 측정은 끝났는데
+ *   스냅샷 저장(`saveRunResult`)만 실패한 경우로, 3단계 cron은 이미 성공으로
+ *   닫은 회차를 다시 실패로 덮지 않는다(덮으면 이미 측정한 브랜드에 유료
+ *   파이프라인이 한 번 더 돈다). 남는 신호는 `cron.measure.snapshot_save_failed`
+ *   로그 한 줄뿐이다. 그러니 상태가 아니라 **스냅샷 유무**로 판단해야 한다 —
+ *   status만 보고 0%로 그리면 돈 낸 고객에게 없는 측정을 보여주게 된다.
  */
 export function parseRunResult(value: unknown): AuditResult | null {
   if (!value || typeof value !== 'object') return null
@@ -3451,6 +3494,10 @@ export function parseRunResult(value: unknown): AuditResult | null {
   if (typeof v.version !== 'number') return null
   if (!v.citedRate || typeof v.citedRate !== 'object') return null
   if (!Array.isArray(v.byQuery) || !Array.isArray(v.sources)) return null
+  // byEngine은 엔진 id → Interval 맵이다. 배열이면 Object.keys가 인덱스를
+  // 엔진 id로 내놓는다 — 토글 목록에 '0'·'1'이 뜨는 대신 여기서 거른다.
+  if (!v.byEngine || typeof v.byEngine !== 'object' || Array.isArray(v.byEngine)) return null
+  if (!v.shareOfVoice || typeof v.shareOfVoice !== 'object') return null
   return value as AuditResult
 }
 
@@ -3462,6 +3509,35 @@ export interface RunPoint {
   engines: string[]
   /** planSnapshot.competitors — SoV 분모의 정의 (정렬돼 저장된다) */
   competitors: string[]
+  /**
+   * planSnapshot.queryIds — 이 회차가 실제로 물어본 질의 집합.
+   *
+   * ★ **비교 가능성 필드다.** `citedRate`의 분모는 "모든 질의에 대한 모든 답변"
+   *   이므로, 질의 하나만 바뀌어도 숫자가 움직인다 — 브랜드가 한 일이 없어도.
+   *   동결 후 질의 수정은 운영자 CLI로 **지원되는 경로**이므로(스펙 ②) 실제로
+   *   일어난다. 집합이 다른 회차끼리 ▲▼를 붙이면 설정 변경을 실적으로 보고하게
+   *   된다 — `engines`가 다른 주끼리 비교하지 않는 것과 정확히 같은 이유다.
+   */
+  queryIds: string[]
+  /**
+   * planSnapshot.detectorVersion — **무엇을 "언급"으로 셌는가**.
+   *
+   * ★ 이것도 비교 가능성 필드다. 판정기가 바뀌면 같은 원본 답변에서 나오는
+   *   언급 수가 달라진다. 분자가 정의째로 바뀌는 것이라 `queryIds`와 똑같이
+   *   다루지 않으면 판정기 개선이 고객 화면에서 "유의미한 상승"이 된다.
+   */
+  detectorVersion: number
+  /**
+   * 이 회차 **직전에 스냅샷이 없어 버려진 회차 수** (`toRunPoints`가 센다).
+   *
+   * ★ 시간 간격은 조건 비교로 보이지 않는다. 6/01 측정 → 6/08 스냅샷 저장 실패
+   *   → 6/15 측정이면 `sameConditions`는 셋 다 같으니 "비교 가능"이 맞다.
+   *   그런데 두 점 사이에는 **측정이 없던 한 주**가 있다. 서수 축(점을 등간격으로
+   *   찍는 축)은 그 주를 통째로 감춘다 — 6/01과 6/15가 옆칸에 나란히 앉는다.
+   *   여기서 세어 두지 않으면 화면이 그 사실을 알 방법이 없다.
+   *   `toRunPoint` 하나만 쓰면 언제나 0이다 (앞뒤 맥락이 없다).
+   */
+  skippedBefore: number
   result: AuditResult
 }
 
@@ -3475,14 +3551,101 @@ export function toRunPoint(
     measuredAt: run.startedAt.toISOString(),
     engines: [...run.planSnapshot.engines],
     competitors: [...run.planSnapshot.competitors],
+    queryIds: [...run.planSnapshot.queryIds],
+    detectorVersion: run.planSnapshot.detectorVersion,
+    // 회차 하나만 보면 앞에 무엇이 버려졌는지 알 수 없다 — `toRunPoints`가 채운다.
+    skippedBefore: 0,
     result,
   }
+}
+
+/**
+ * 회차 목록(오래된 → 최신) → 추이 입력. `runs.map(toRunPoint).filter(...)`와
+ * 다른 점은 **버려진 회차를 세어 남긴다**는 것 하나다.
+ *
+ * ★ 스냅샷이 없는 회차(`succeeded` + `result IS NULL`, `failed`)는 여기서
+ *   사라진다. 사라진 자리를 `skippedBefore`로 남기지 않으면, 화면은 일주일
+ *   떨어진 두 점을 붙어 있는 두 점으로 그린다 — 각 점은 참인데 그 사이의
+ *   "매주 재고 있다"는 인상이 거짓이 된다.
+ */
+export function toRunPoints(
+  runs: readonly Pick<CollectionRun, 'id' | 'startedAt' | 'planSnapshot' | 'result'>[],
+): RunPoint[] {
+  const out: RunPoint[] = []
+  let skipped = 0
+  for (const run of runs) {
+    const point = toRunPoint(run)
+    if (!point) {
+      skipped += 1
+      continue
+    }
+    out.push({ ...point, skippedBefore: skipped })
+    skipped = 0
+  }
+  return out
+}
+
+/** 순서 무관 문자열 집합 비교. 스냅샷이 정렬을 보장하지 않는 필드가 있다. */
+function sameSet(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false
+  const x = [...a].sort()
+  const y = [...b].sort()
+  return x.every((v, i) => v === y[i])
+}
+
+/**
+ * 두 회차가 **같은 조건에서 측정됐는가**. 여기 있는 셋 중 하나라도 다르면
+ * 두 숫자의 차이는 브랜드의 변화가 아니라 설정의 변화다.
+ *
+ *   - `engines` — 잰 엔진이 다르면 분모가 다르다 (설계 ③, `judgeChange`와 동일)
+ *   - `queryIds` — 물어본 질문이 다르면 분모가 다르다
+ *   - `detectorVersion` — 무엇을 언급으로 세는지가 다르면 분자가 다르다
+ *
+ * ★ 이 판정은 **보수적**이다. 엔진이 하나 늘어난 경우 개별 엔진 계열의 분모는
+ *   실제로 그대로지만, 그래도 끊는다. 잘못 이어 붙인 선(없는 상승)의 대가가
+ *   한 번 끊긴 선의 대가보다 비교할 수 없이 크다 — 이 제품이 파는 것이
+ *   정직한 측정이라서다.
+ *
+ * ★ 이 과잉 발화는 **의도된 것이고 테스트가 못 박는다**
+ *   (`buildTrend(points, 'chatgpt')` 계열도 엔진 집합이 바뀌면 끊긴다).
+ *   완화하고 싶으면 **이 함수 본문을 고치지 말고** 호출부가 넘기는 옵션
+ *   (예: `sameConditions(prev, curr, { ignoreEngines: true })`)으로 하라 —
+ *   그래야 어느 화면이 무엇을 포기했는지가 코드에 남는다. 본문에
+ *   `engineId !== 'all'` 같은 특수 케이스를 넣으면 그 결정이 사라진다.
+ */
+function sameConditions(prev: RunPoint, curr: RunPoint): boolean {
+  return (
+    sameSet(prev.engines, curr.engines) &&
+    sameSet(prev.queryIds, curr.queryIds) &&
+    prev.detectorVersion === curr.detectorVersion
+  )
 }
 
 export interface TrendPoint {
   runId: string
   measuredAt: string
   interval: Interval
+  /**
+   * 직전 추이 점과 같은 조건에서 측정됐는가 (`sameConditions`).
+   *
+   * ★ false면 화면은 **선을 끊어야 한다.** 점은 둘 다 참이지만 그 사이를 잇는
+   *   선분은 거짓이다 — Starter→Business 업그레이드로 엔진이 늘거나(플랜의
+   *   `engines`가 바뀐다), 운영자가 동결 질의를 고치거나, 판정기 버전이 오르면
+   *   숫자는 브랜드와 무관하게 움직인다. 첫 점은 이을 대상이 없으므로 true다.
+   */
+  comparableWithPrev: boolean
+  /**
+   * 직전 추이 점과 이 점 **사이에서 통째로 빠진 회차 수**. 0이면 두 점은
+   * 실제로 연속한 두 회차다. 첫 점은 이을 대상이 없으므로 0이다.
+   *
+   * ★ `comparableWithPrev`와 **다른 종류의 거짓말**을 막는다. 조건은 같은데
+   *   (그래서 comparable=true) 그 사이 회차가 스냅샷 없이 죽었거나(n=0,
+   *   `result IS NULL`, 실패) 하면, 두 점은 2주 떨어져 있는데 서수 축은
+   *   나란히 붙여 그린다. "매주 재고 있다"는 인상이 거짓이 되는 자리다.
+   *   화면은 이 값이 0이 아닌 구간에 연속성을 암시해선 안 된다 — 시간 축을
+   *   쓰거나(간격이 저절로 벌어진다), 끊거나, 최소한 표시해야 한다.
+   */
+  runsSkippedBefore: number
 }
 
 /** 추이 계열. 'all' = citedRate, 엔진 id = byEngine — 없는 회차는 뺀다. */
@@ -3491,10 +3654,29 @@ export function buildTrend(
   engineId: string | 'all',
 ): TrendPoint[] {
   const out: TrendPoint[] = []
+  // 비교 대상은 "직전 회차"가 아니라 **직전에 실제로 찍힌 점**이다. 빠진 회차
+  // 너머로 조건 비교를 하지 않으면 끊어야 할 구간을 이어 버린다.
+  let prev: RunPoint | null = null
+  // 빠진 회차 수. 원인이 둘이다 — 스냅샷이 아예 없어 `points`에 못 들어온 회차
+  // (`RunPoint.skippedBefore`가 실어 온다)와, 이 계열에서 n=0이라 빠지는 회차.
+  // 화면에서는 구분되지 않는다: 둘 다 "그 주에는 잰 값이 없다"이다.
+  let skipped = 0
   for (const p of points) {
+    skipped += p.skippedBefore
     const interval = engineId === 'all' ? p.result.citedRate : p.result.byEngine[engineId]
-    if (!interval || interval.n === 0) continue
-    out.push({ runId: p.runId, measuredAt: p.measuredAt, interval })
+    if (!interval || interval.n === 0) {
+      skipped += 1
+      continue
+    }
+    out.push({
+      runId: p.runId,
+      measuredAt: p.measuredAt,
+      interval,
+      comparableWithPrev: prev === null ? true : sameConditions(prev, p),
+      runsSkippedBefore: prev === null ? 0 : skipped,
+    })
+    prev = p
+    skipped = 0
   }
   return out
 }
@@ -3537,14 +3719,17 @@ export interface SovPoint {
   runId: string
   measuredAt: string
   interval: Interval
-  /** 직전 SoV 점과 경쟁사 집합이 같은가 — 다르면 잇지도 비교하지도 않는다 */
+  /**
+   * 직전 SoV 점과 조건이 같은가 — 다르면 잇지도 비교하지도 않는다.
+   * 추이(`sameConditions`)가 보는 셋 **위에 경쟁사 집합까지** 같아야 한다.
+   */
   comparableWithPrev: boolean
 }
 
 /**
  * 점유율 추이. SoV는 분모가 등록 경쟁사에 의존하는 유일한 지표라
  * (`PlanSnapshot.competitors` 주석), 집합이 바뀐 구간에는 비교를 걸지 않는다.
- * competitors는 스냅샷이 정렬해 저장하므로 배열 동등 비교로 충분하다.
+ * 경쟁사 집합만 보는 게 아니다 — 엔진·질의·판정기가 바뀌어도 SoV는 움직인다.
  */
 export function buildSovTrend(points: readonly RunPoint[]): SovPoint[] {
   const withSov = points.filter((p) => p.result.shareOfVoice.n > 0)
@@ -3555,18 +3740,56 @@ export function buildSovTrend(points: readonly RunPoint[]): SovPoint[] {
       measuredAt: p.measuredAt,
       interval: p.result.shareOfVoice,
       comparableWithPrev:
-        i === 0 ? true : JSON.stringify(prev?.competitors) === JSON.stringify(p.competitors),
+        prev === undefined
+          ? true
+          : sameConditions(prev, p) && sameSet(prev.competitors, p.competitors),
     }
   })
 }
 
 export interface SourceChangeRow {
   domain: string
-  owner: 'self' | 'competitor' | null
+  /**
+   * `SourceStat.owner`를 그대로 통과시킨다.
+   *
+   * ★ `'self' | 'competitor' | null`이 **아니다.** 2단계 `aggregateSources`는
+   *   소유를 모르는 도메인에 null이 아니라 `'third-party'`를 넣는다. 여기서
+   *   null로 좁히면 남의 사이트와 판정 불가가 한 값으로 뭉개져, "AI가 읽는
+   *   출처" 표에서 자사·경쟁사·제3자를 갈라 보여줄 수 없게 된다.
+   */
+  owner: SourceOwner
+  /**
+   * 이 회차가 **자사 도메인을 알고 있었는가** (`AuditResult.hasSelfDomains`).
+   *
+   * ★ false면 `owner: 'third-party'`를 "남의 사이트"로 읽으면 안 된다.
+   *   `aggregateSources`는 `'third-party'`를 순수한 fallthrough로 넣는다 —
+   *   `selfDomains`가 비어 있으면 **고객 본인 사이트까지 전부** 'third-party'다.
+   *   `hasSelfDomains`가 존재하는 이유가 정확히 이것이고("인용되지 않았다" vs
+   *   "도메인을 몰라서 못 셌다"), 그 주석은 "화면이 이 둘을 반드시 갈라야
+   *   한다"고 못 박는다. 이 값이 false인데 표가 "제3자"라고 단정하면
+   *   고객 자기 사이트를 남의 것이라고 말하는 화면이 된다.
+   */
+  selfDomainsKnown: boolean
   /** 최신 회차에서 이 도메인이 인용된 답변 수 */
   answers: number
   /** 직전 회차의 값. 그 회차에 없던 도메인이면 null */
   prevAnswers: number | null
+  /**
+   * 최신 회차와 직전 회차가 **같은 조건에서 측정됐는가** (`sameConditions`).
+   *
+   * ★ false면 화면은 `prevAnswers → answers` 화살표(증가/감소)를 그려선 안
+   *   된다. 질의를 셋 더 넣은 다음 회차는 출처 인용 수가 당연히 늘고, 판정기가
+   *   바뀌면 무엇을 인용으로 셌는지가 바뀐다 — "2 → 5"는 브랜드가 한 일이
+   *   아니라 설정 변경이다. 언급률 추이는 `comparableWithPrev`로 선을 끊는데
+   *   출처 표만 화살표를 그리면, 같은 거짓말이 표 모양으로 나갈 뿐이다.
+   *
+   * ★ 직전 회차가 아예 없으면 false다 — 비교 자체가 없다. (이 경우
+   *   `prevAnswers`는 전부 null이라 화면은 어차피 "새로 등장"을 쓴다.)
+   *   `prevAnswers`를 null로 뭉개지 **않는** 이유가 이것이다: "직전에 없던
+   *   도메인"과 "비교할 수 없는 회차"는 다른 사실이고, null 하나로 합치면
+   *   화면이 멀쩡히 있던 도메인을 "새로 등장"이라고 말하게 된다.
+   */
+  comparableWithPrev: boolean
 }
 
 /** 출처 상위 변화 (스펙 ⑤ — 도메인별 인용 수). 최신 회차 상위 topN 기준. */
@@ -3575,11 +3798,15 @@ export function buildSourceChanges(points: readonly RunPoint[], topN = 8): Sourc
   if (!latest) return []
   const prev = points[points.length - 2]
   const prevByDomain = new Map((prev?.result.sources ?? []).map((s) => [s.domain, s.answers]))
+  const selfDomainsKnown = latest.result.hasSelfDomains === true
+  const comparableWithPrev = prev !== undefined && sameConditions(prev, latest)
   return latest.result.sources.slice(0, topN).map((s) => ({
     domain: s.domain,
     owner: s.owner,
+    selfDomainsKnown,
     answers: s.answers,
     prevAnswers: prevByDomain.get(s.domain) ?? null,
+    comparableWithPrev,
   }))
 }
 
@@ -3594,6 +3821,12 @@ export function buildHeadline(points: readonly RunPoint[]): Headline {
   const latest = points[points.length - 1] ?? null
   const prev = points[points.length - 2] ?? null
   if (!latest) return { latest: null, prev: null, verdict: 'incomparable' }
+  // ★ 질의 집합·판정기 버전은 `judgeChange`가 모르는 조건이다 (그 함수는 엔진만
+  //   본다). 여기서 먼저 끊지 않으면 운영자의 질의 수정 한 번이 고객 화면에
+  //   "통계적으로 유의미한 상승입니다"로 나간다 — 브랜드는 아무것도 하지 않았는데.
+  if (prev && !sameConditions(prev, latest)) {
+    return { latest, prev, verdict: 'incomparable' }
+  }
   const verdict = judgeChange(prev?.result.citedRate ?? null, latest.result.citedRate, {
     ...(prev ? { prevEngines: prev.engines } : {}),
     currEngines: latest.engines,
@@ -3605,6 +3838,11 @@ export interface RunListItem {
   runId: string
   startedAt: string
   status: RunStatus
+  /**
+   * 스냅샷이 있는가. ★ `status === 'succeeded'`인데 false일 수 있다 —
+   * `parseRunResult` 주석 참고. 화면은 이 회차를 "스냅샷 없음"으로 써야 하고,
+   * 0%로 그리거나 목록에서 감춰선 안 된다.
+   */
   hasResult: boolean
 }
 ```
@@ -3622,7 +3860,12 @@ import type { AuditResult } from '@/lib/audit/result'
 import { db, schema } from '@/lib/db'
 import type { Brand } from '@/lib/db/schema'
 import { resolveLimits } from '@/lib/plans'
-import { parseRunResult, toRunPoint, type RunListItem, type RunPoint } from './data'
+import { parseRunResult, toRunPoints, type RunListItem, type RunPoint } from './data'
+
+/**
+ * 대시보드 DB 로더. 조립은 전부 `./data`(순수)가 하고 여기서는 읽기만 한다 —
+ * 그래야 `data.ts`가 클라이언트 컴포넌트에서도 import 가능한 채로 남는다.
+ */
 
 export interface DashboardData {
   brands: { id: string; name: string }[]
@@ -3651,9 +3894,27 @@ export async function loadDashboard(
   })
   // 이력 창 = 플랜의 historyMonths (null이면 무제한). 달력 월이 아니라 30일
   // 근사다 — 경계에서 하루 이틀 차이는 제품 약속("3개월")을 해치지 않는다.
-  const months = subscription
-    ? resolveLimits(subscription.plan, subscription.queryPacks).historyMonths
-    : 0
+  //
+  // ★ 구독 조회에 status 필터가 **없다.** 의도된 정책이다 — 해지한 고객도
+  //   자기가 돈 내고 받은 측정 이력을 그대로 본다. 정직한 측정을 소급해서
+  //   감추지 않는다 (`revokePlan`은 행을 지우지 않고 status만 'canceled'로
+  //   바꾼다). 이 정책은 `load.test.ts`가 못 박는다.
+  //
+  // ★ 구독 행이 없는 경우는 **도달하지 않는다.** `subscriptions.userId`는
+  //   `onDelete: 'restrict'`라 행이 사라지지 않고, 구독이 없는 사용자는
+  //   `createBrandAction`이 'no-plan'으로 막아 브랜드를 못 만들며, 브랜드가
+  //   없으면 위 `if (!selected)`에서 이미 돌아간다.
+  //
+  //   그래서 **기본값을 두지 않고 던진다.** 여기에 `?? null`(무제한)이나
+  //   `?? 0`(전부 숨김)을 두면, 도달 불가능하다던 분기가 언젠가 도달됐을 때
+  //   (예: 무료 대시보드가 열리는 날) 아무 소리 없이 정책을 하나 만들어 낸다 —
+  //   무료 사용자에게 무제한 이력을 주거나, 돈 낸 고객의 회차를 통째로 감추거나.
+  //   이력 창은 **플랜에서만** 나온다. 플랜이 없으면 답이 없는 것이지
+  //   기본값이 있는 게 아니다.
+  if (!subscription) {
+    throw new Error(`대시보드: 브랜드는 있는데 구독 행이 없습니다 (userId=${userId})`)
+  }
+  const months = resolveLimits(subscription.plan, subscription.queryPacks).historyMonths
   const conditions = [eq(schema.collectionRuns.brandId, selected.id)]
   if (months !== null) {
     conditions.push(
@@ -3672,11 +3933,17 @@ export async function loadDashboard(
   return {
     brands,
     selected,
-    points: runs.map(toRunPoint).filter((p): p is RunPoint => p !== null),
+    // ★ `map(toRunPoint).filter(...)`가 아니다. 스냅샷이 없어 버려진 회차의
+    //   **자리**를 `skippedBefore`로 남겨야, 화면이 2주 떨어진 두 점을 붙어
+    //   있는 두 점으로 그리지 않는다 (`toRunPoints` 주석).
+    points: toRunPoints(runs),
     runList: [...runs].reverse().map((r) => ({
       runId: r.id,
       startedAt: r.startedAt.toISOString(),
       status: r.status,
+      // ★ status가 아니라 스냅샷 유무로 판단한다. 측정은 성공했는데 스냅샷
+      //   저장만 실패한 회차(`succeeded` + `result IS NULL`)가 실제로 존재한다 —
+      //   `parseRunResult` 주석 참고.
       hasResult: parseRunResult(r.result) !== null,
     })),
   }
@@ -3719,6 +3986,22 @@ git commit -m "feat(dashboard): 스냅샷 기반 데이터 조립 — 추이·�
 밴드, 엔진 토글, 마커 모양, 히트맵 스케일(`P = round(6 + 74 × point)`),
 reduced-motion 전역 규칙. `IntervalBar`를 공용으로 추출해 리포트와 대시보드가
 같은 구간 표기를 쓴다.
+
+★ **이 태스크의 가장 중요한 규칙: 추이 차트는 끊이지 않는 선을 그리지 않는다.**
+Task 8의 `TrendPoint`는 그 판단에 필요한 값 둘을 이미 들고 온다.
+
+- `comparableWithPrev === false` — 엔진 구성·질의 집합·판정기 버전 중 하나가
+  바뀐 회차다. 분모나 분자의 **정의**가 달라졌으므로 두 숫자의 차이는 브랜드의
+  변화가 아니라 설정의 변화다. Starter→Business 업그레이드(엔진 추가), 운영자의
+  동결 질의 수정(스펙 ②의 지원 경로), 판정기 개선 — 셋 다 실제로 일어난다.
+- `runsSkippedBefore > 0` — 두 점 **사이에 잰 값이 없는 회차**가 그만큼 있다.
+  조건이 같아 `comparableWithPrev`는 true인데도 그렇다. 등간격 서수 축은 2주
+  떨어진 두 점을 옆칸에 붙여 그려 "매주 재고 있다"는 인상을 만든다.
+
+두 경우 모두 **선분도 오차 밴드도 잇지 않고**, 왜 끊겼는지를 캡션에 쓴다.
+`buildTrend`의 결과를 폴리라인 하나로 이어 버리면 — 각 점은 참인데 그 사이
+선분만 거짓인 — 이 제품이 팔지 않기로 한 종류의 그림이 나온다. 말없이 끊긴
+선은 버그로 읽히므로 이유 문장은 선택이 아니다.
 
 **Files:**
 - Create: `src/components/interval-bar.tsx` (result-view에서 추출)
@@ -3780,7 +4063,10 @@ import { wilsonInterval } from '@/lib/stats/wilson'
 import type { RunPoint } from '@/lib/dashboard/data'
 import { TrendChart } from './trend-chart'
 
-function point(runId: string, k: number): RunPoint {
+// ★ RunPoint는 `queryIds`·`detectorVersion`·`skippedBefore`까지 **필수**다
+//   (Task 8 Interfaces). 빠뜨리면 TS2322이고, 기본값을 지어 넣으면 조건 변경과
+//   빠진 회차가 픽스처에서 관측 불가능해진다 — 이 파일이 검증할 대상 그 자체다.
+function point(runId: string, k: number, over: Partial<RunPoint> = {}): RunPoint {
   const result = {
     version: AUDIT_RESULT_VERSION, brandName: 'b', category: 'c', competitors: [],
     engines: ['chatgpt', 'gemini'], aliases: [], measuredAt: '2026-08-03T18:30:00.000Z',
@@ -3791,7 +4077,10 @@ function point(runId: string, k: number): RunPoint {
     sourceSummary: { totalAnswers: 60, answersWithCitations: 0, distinctDomains: 0, selfAnswers: 0 },
     hasSelfDomains: false, unresolved: 0,
   } as AuditResult
-  return { runId, measuredAt: result.measuredAt, engines: result.engines, competitors: [], result }
+  return {
+    runId, measuredAt: result.measuredAt, engines: result.engines, competitors: [],
+    queryIds: ['q1', 'q2'], detectorVersion: 1, skippedBefore: 0, result, ...over,
+  }
 }
 
 describe('TrendChart', () => {
@@ -3804,6 +4093,40 @@ describe('TrendChart', () => {
     const { container } = render(<TrendChart points={[point('r1', 20), point('r2', 25)]} />)
     expect(container.querySelectorAll('[data-testid="trend-point"]')).toHaveLength(2)
     expect(container.querySelector('[data-testid="trend-band"]')).not.toBeNull()
+  })
+
+  test('조건이 같으면 선을 잇는다 — 멀쩡한 선을 괜히 끊지 않는다', () => {
+    const { container } = render(<TrendChart points={[point('r1', 20), point('r2', 25)]} />)
+    expect(container.querySelectorAll('[data-testid="trend-line"]')).toHaveLength(1)
+    expect(screen.queryByText(/비교하지 않습니다/)).toBeNull()
+  })
+
+  /**
+   * ★ 두 점은 참인데 그 사이 선분이 거짓인, 가장 알아채기 어려운 종류의 거짓말.
+   *   질의 집합이 바뀐 회차끼리는 `citedRate`의 분모가 다르다 — 운영자가 동결
+   *   질의를 한 줄 고친 다음 주에 고객이 "올랐다"고 읽으면 안 된다.
+   *   두 점이 각각 1점짜리 구간으로 갈리므로 선분은 0개다.
+   */
+  test('조건이 바뀐 구간은 선을 끊고 이유를 화면에 쓴다', () => {
+    const { container } = render(
+      <TrendChart points={[point('r1', 20), point('r2', 25, { queryIds: ['q1', 'q9'] })]} />,
+    )
+    expect(container.querySelectorAll('[data-testid="trend-point"]')).toHaveLength(2)
+    expect(container.querySelectorAll('[data-testid="trend-line"]')).toHaveLength(0)
+    expect(screen.getByText(/비교하지 않습니다/)).toBeInTheDocument()
+  })
+
+  /**
+   * ★ `comparableWithPrev`와 다른 종류의 문제다. 조건은 같으니 비교는 가능한데,
+   *   두 점 사이에 **잰 값이 없는 회차**가 있다. 서수 축은 2주 떨어진 두 점을
+   *   옆칸에 붙여 그려 "매주 재고 있다"는 인상을 만든다.
+   */
+  test('빠진 회차가 있으면 그 구간도 잇지 않는다', () => {
+    const { container } = render(
+      <TrendChart points={[point('r1', 20), point('r3', 25, { skippedBefore: 1 })]} />,
+    )
+    expect(container.querySelectorAll('[data-testid="trend-line"]')).toHaveLength(0)
+    expect(screen.getByText(/측정이 없던/)).toBeInTheDocument()
   })
 
   test('엔진 토글이 있고 계측값 요약이 aria로 노출된다', () => {
@@ -3834,7 +4157,11 @@ function point(runId: string, byQuery: AuditResult['byQuery']): RunPoint {
     sourceSummary: { totalAnswers: 6, answersWithCitations: 0, distinctDomains: 0, selfAnswers: 0 },
     hasSelfDomains: false, unresolved: 0,
   } as AuditResult
-  return { runId, measuredAt: result.measuredAt, engines: ['chatgpt'], competitors: [], result }
+  // RunPoint의 필수 필드 — Task 8 Interfaces 참고 (빠뜨리면 TS2322).
+  return {
+    runId, measuredAt: result.measuredAt, engines: ['chatgpt'], competitors: [],
+    queryIds: ['q1'], detectorVersion: 1, skippedBefore: 0, result,
+  }
 }
 
 describe('QueryHeatmap', () => {
@@ -3873,6 +4200,16 @@ import { formatInterval, formatPercent } from '@/lib/stats/wilson'
 /**
  * 추이 차트 — 점 + 오차 밴드 (디자인 언어 §4.1). 점만 찍고 구간을 감추지
  * 않는다. 의존성 없음 — 수제 SVG (IntervalBar 전례).
+ *
+ * ★ **선을 끊어야 하는 자리가 둘 있다.** 점은 전부 참인데 그 사이를 잇는
+ *   선분이 거짓인, 가장 알아채기 어려운 종류의 거짓말을 막는 장치다.
+ *     - `comparableWithPrev === false` — 엔진 구성·질의 집합·판정기 버전이
+ *       바뀌었다. 분모나 분자의 정의가 달라졌으므로 두 숫자의 차이는 브랜드의
+ *       변화가 아니라 설정의 변화다.
+ *     - `runsSkippedBefore > 0` — 그 사이에 잰 값이 없는 회차가 있다. 조건은
+ *       같아서 비교는 가능하지만, 등간격 서수 축이 2주를 1주로 보이게 한다.
+ *   두 경우 모두 **선분도 오차 밴드도 잇지 않고**, 왜 끊겼는지를 캡션에 쓴다.
+ *   말없이 끊긴 선은 버그로 읽힌다.
  */
 
 const ENGINE_COLOR: Record<string, string> = {
@@ -3890,6 +4227,20 @@ const IH = H - PAD.top - PAD.bottom
 
 function mmdd(iso: string): string {
   return `${iso.slice(5, 7)}.${iso.slice(8, 10)}`
+}
+
+/**
+ * 이을 수 있는 구간으로 자른다. 반환은 **전역 인덱스**의 묶음이다 — x 좌표는
+ * 계열 전체에서의 위치로 정해야 구간이 갈려도 점이 제자리에 남는다.
+ */
+function segmentsOf(series: TrendPoint[]): number[][] {
+  const out: number[][] = []
+  series.forEach((p, i) => {
+    const breaks = !p.comparableWithPrev || p.runsSkippedBefore > 0
+    if (i === 0 || breaks) out.push([i])
+    else out[out.length - 1]!.push(i)
+  })
+  return out
 }
 
 /** gemini/google은 휘도가 붙는다 — 색과 함께 마커 모양으로 가른다 (§2). */
@@ -3927,13 +4278,17 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
   const x = (i: number) => PAD.left + (n <= 1 ? IW / 2 : (i * IW) / (n - 1))
   const y = (v: number) => PAD.top + (1 - v) * IH
   const latest = series[n - 1]
+  const segments = segmentsOf(series)
+  // 왜 끊겼는지를 캡션에 쓴다 — 말없이 끊긴 선은 버그로 읽힌다.
+  const hasConditionBreak = series.some((p, i) => i > 0 && !p.comparableWithPrev)
+  const hasGap = series.some((p) => p.runsSkippedBefore > 0)
 
-  const bandPath =
-    n > 1
-      ? `M ${series.map((p, i) => `${x(i)},${y(p.interval.upper)}`).join(' L ')} L ${[...series]
-          .map((p, i) => `${x(n - 1 - i)},${y(series[n - 1 - i]!.interval.lower)}`)
-          .join(' L ')} Z`
-      : null
+  /** 한 구간의 오차 밴드 — 위쪽 경계를 따라가고 아래쪽 경계로 되짚어 닫는다. */
+  const bandPathOf = (idx: number[]) =>
+    `M ${idx.map((i) => `${x(i)},${y(series[i]!.interval.upper)}`).join(' L ')} L ${[...idx]
+      .reverse()
+      .map((i) => `${x(i)},${y(series[i]!.interval.lower)}`)
+      .join(' L ')} Z`
 
   return (
     <div>
@@ -3980,27 +4335,48 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
           </g>
         ))}
 
-        {/* 오차 밴드 — 점보다 먼저(아래에) 그린다 */}
-        {bandPath && <path d={bandPath} fill={color} opacity={0.14} data-testid="trend-band" />}
-        {n === 1 && latest && (
-          <rect
-            data-testid="trend-band"
-            x={x(0) - 5}
-            y={y(latest.interval.upper)}
-            width={10}
-            height={Math.max(y(latest.interval.lower) - y(latest.interval.upper), 1)}
-            fill={color}
-            opacity={0.25}
-          />
+        {/* 오차 밴드 — 점보다 먼저(아래에) 그린다. ★ 구간마다 따로 그린다:
+            선만 끊고 밴드를 통째로 이으면 같은 거짓말이 띠 모양으로 남는다. */}
+        {segments.map((idx) =>
+          idx.length > 1 ? (
+            <path
+              key={`band-${idx[0]}`}
+              d={bandPathOf(idx)}
+              fill={color}
+              opacity={0.14}
+              data-testid="trend-band"
+            />
+          ) : (
+            <rect
+              key={`band-${idx[0]}`}
+              data-testid="trend-band"
+              x={x(idx[0]!) - 5}
+              y={y(series[idx[0]!]!.interval.upper)}
+              width={10}
+              height={Math.max(
+                y(series[idx[0]!]!.interval.lower) - y(series[idx[0]!]!.interval.upper),
+                1,
+              )}
+              fill={color}
+              opacity={0.25}
+            />
+          ),
         )}
 
-        {n > 1 && (
-          <path
-            d={`M ${series.map((p, i) => `${x(i)},${y(p.interval.point)}`).join(' L ')}`}
-            fill="none"
-            stroke={color}
-            strokeWidth={1.5}
-          />
+        {/* ★ 계열 전체를 잇는 폴리라인 하나가 아니다. 조건이 바뀌었거나
+            (`comparableWithPrev === false`) 그 사이 회차가 빠진
+            (`runsSkippedBefore > 0`) 자리에서는 선분이 없다. */}
+        {segments.map((idx) =>
+          idx.length > 1 ? (
+            <path
+              key={`line-${idx[0]}`}
+              data-testid="trend-line"
+              d={`M ${idx.map((i) => `${x(i)},${y(series[i]!.interval.point)}`).join(' L ')}`}
+              fill="none"
+              stroke={color}
+              strokeWidth={1.5}
+            />
+          ) : null,
         )}
 
         {series.map((p, i) => (
@@ -4018,6 +4394,10 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
       </svg>
       <p className="mt-2 text-xs text-muted-foreground">
         점은 회차별 언급률, 띠는 95% 신뢰구간입니다. 구간이 겹치는 변화는 변화로 읽지 마세요.
+        {hasConditionBreak &&
+          ' 선이 끊긴 자리는 측정 조건(엔진 구성·질의 집합·판정기 버전)이 바뀐 곳입니다 — 분모나 분자의 정의가 달라져 앞뒤를 비교하지 않습니다.'}
+        {hasGap &&
+          ' 측정이 없던 회차가 있는 구간도 잇지 않습니다 — 점 사이 간격이 실제로 지난 기간과 다릅니다.'}
       </p>
     </div>
   )
@@ -4374,7 +4754,11 @@ import { wilsonInterval } from '@/lib/stats/wilson'
 import type { RunPoint } from '@/lib/dashboard/data'
 import { SourceChanges } from './source-changes'
 
-function point(runId: string, sources: AuditResult['sources']): RunPoint {
+// ★ RunPoint는 `queryIds`·`detectorVersion`·`skippedBefore`까지 **필수**다
+//   (Task 8 Interfaces). 빠뜨리면 TS2322. 그리고 `queryIds`·`detectorVersion`을
+//   두 회차가 **같게** 두어야 "2 → 5"가 실제로 그려진다 — 다르면 비교 불가라
+//   화살표가 나오지 않는 것이 옳은 동작이다.
+function point(runId: string, sources: AuditResult['sources'], over: Partial<RunPoint> = {}): RunPoint {
   const result = {
     version: AUDIT_RESULT_VERSION, brandName: 'b', category: 'c', competitors: [],
     engines: ['chatgpt'], aliases: [], measuredAt: '2026-08-03T18:30:00.000Z',
@@ -4383,9 +4767,14 @@ function point(runId: string, sources: AuditResult['sources']): RunPoint {
     sourceSummary: { totalAnswers: 6, answersWithCitations: 3, distinctDomains: sources.length, selfAnswers: 0 },
     hasSelfDomains: false, unresolved: 0,
   } as AuditResult
-  return { runId, measuredAt: result.measuredAt, engines: ['chatgpt'], competitors: [], result }
+  return {
+    runId, measuredAt: result.measuredAt, engines: ['chatgpt'], competitors: [],
+    queryIds: ['q1', 'q2'], detectorVersion: 1, skippedBefore: 0, result, ...over,
+  }
 }
-const src = (domain: string, answers: number, owner: 'self' | 'competitor' | null = null) =>
+// ★ `SourceOwner`는 `'self' | 'competitor' | 'third-party'`다 — null이 아니다.
+//   `aggregateSources`는 소유를 모르는 도메인에 'third-party'를 넣는다.
+const src = (domain: string, answers: number, owner: SourceOwner = 'third-party') =>
   ({ domain, answers, pages: [], owner, share: wilsonInterval(answers, 6) })
 
 describe('SourceChanges', () => {
@@ -4397,8 +4786,32 @@ describe('SourceChanges', () => {
     render(<SourceChanges points={[point('r1', []), point('r2', [src('new.com', 3)])]} />)
     expect(screen.getByText(/새로 등장/)).toBeInTheDocument()
   })
+
+  /**
+   * ★ 추이 차트가 선을 끊는 자리에서 이 표는 화살표를 그리면 안 된다.
+   *   운영자가 동결 질의를 셋 더 넣으면 인용 수는 당연히 는다 — "2 → 5"는
+   *   브랜드가 한 일이 아니라 설정 변경이고, 그걸 증가로 그리면 같은 거짓말이
+   *   표 모양으로 나갈 뿐이다. 도메인이 사라진 것은 아니므로 "새로 등장"도
+   *   틀린 말이다 — 화살표만 뺀다.
+   */
+  test('조건이 바뀐 회차끼리는 화살표를 그리지 않고 이유를 쓴다', () => {
+    render(
+      <SourceChanges
+        points={[
+          point('r1', [src('a.com', 2)]),
+          point('r2', [src('a.com', 5)], { queryIds: ['q1', 'q9'] }),
+        ]}
+      />,
+    )
+    expect(screen.queryByText('2 → 5')).toBeNull()
+    expect(screen.queryByText(/새로 등장/)).toBeNull()
+    expect(screen.getByText('5개')).toBeInTheDocument()
+    expect(screen.getByText(/증감을 표시하지 않습니다/)).toBeInTheDocument()
+  })
 })
 ```
+
+import에 `import type { SourceOwner } from '@/lib/stats/sources'`를 추가한다.
 
 Run: `pnpm vitest run src/components/dashboard/source-changes.test.tsx` → FAIL
 
@@ -4407,35 +4820,59 @@ Run: `pnpm vitest run src/components/dashboard/source-changes.test.tsx` → FAIL
 ```tsx
 import { buildSourceChanges, type RunPoint } from '@/lib/dashboard/data'
 
-/** 출처 상위 변화 — 도메인별 인용 답변 수, 직전 회차 대비 (스펙 ⑤). */
+/**
+ * 출처 상위 변화 — 도메인별 인용 답변 수, 직전 회차 대비 (스펙 ⑤).
+ *
+ * ★ **`comparableWithPrev`가 false면 `prev → curr` 화살표를 그리지 않는다.**
+ *   추이 차트가 선을 끊는 것과 같은 이유다: 질의를 셋 더 넣은 다음 회차는
+ *   인용 수가 당연히 늘고, 판정기가 바뀌면 무엇을 인용으로 셌는지가 바뀐다.
+ *   "2 → 5"는 브랜드가 한 일이 아니라 설정 변경이다. 추이만 끊고 이 표가
+ *   화살표를 그리면 같은 거짓말이 표 모양으로 나갈 뿐이다.
+ *   (도메인이 사라진 건 아니므로 "새로 등장"으로 떨어뜨려서도 안 된다 —
+ *    `prevAnswers`는 그대로 두고 화살표만 뺀다.)
+ *
+ * ★ `owner`는 `'self' | 'competitor' | 'third-party'`이고 **null이 아니다.**
+ *   그리고 `selfDomainsKnown === false`인 회차의 `'third-party'`는 "남의
+ *   사이트"가 아니라 "자사 도메인을 몰라 못 갈랐다"이다 — 그 회차에는
+ *   소유 배지를 달지 않는다.
+ */
 export function SourceChanges({ points }: { points: RunPoint[] }) {
   const rows = buildSourceChanges(points, 8)
   if (rows.length === 0) return null
+  const incomparable = rows.some((r) => !r.comparableWithPrev && r.prevAnswers !== null)
   return (
-    <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
-      {rows.map((row) => (
-        <li key={row.domain} className="flex items-baseline justify-between gap-4 px-5 py-3">
-          <span className="flex items-baseline gap-2 font-mono text-sm">
-            {row.domain}
-            {row.owner === 'self' && (
-              <span className="text-[0.625rem] tracking-[0.08em] text-primary uppercase">우리</span>
-            )}
-            {row.owner === 'competitor' && (
-              <span className="text-[0.625rem] tracking-[0.08em] text-incomplete-fg uppercase">경쟁사</span>
-            )}
-          </span>
-          <span className="shrink-0 font-mono text-sm tabular-nums text-muted-foreground">
-            {row.prevAnswers === null ? (
-              <>새로 등장 · {row.answers}개</>
-            ) : row.prevAnswers === row.answers ? (
-              <>{row.answers}개</>
-            ) : (
-              <>{row.prevAnswers} → {row.answers}</>
-            )}
-          </span>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+        {rows.map((row) => (
+          <li key={row.domain} className="flex items-baseline justify-between gap-4 px-5 py-3">
+            <span className="flex items-baseline gap-2 font-mono text-sm">
+              {row.domain}
+              {row.selfDomainsKnown && row.owner === 'self' && (
+                <span className="text-[0.625rem] tracking-[0.08em] text-primary uppercase">우리</span>
+              )}
+              {row.owner === 'competitor' && (
+                <span className="text-[0.625rem] tracking-[0.08em] text-incomplete-fg uppercase">경쟁사</span>
+              )}
+            </span>
+            <span className="shrink-0 font-mono text-sm tabular-nums text-muted-foreground">
+              {row.prevAnswers === null ? (
+                <>새로 등장 · {row.answers}개</>
+              ) : !row.comparableWithPrev || row.prevAnswers === row.answers ? (
+                <>{row.answers}개</>
+              ) : (
+                <>{row.prevAnswers} → {row.answers}</>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {incomparable && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          직전 회차와 측정 조건(엔진 구성·질의 집합·판정기 버전)이 달라 증감을 표시하지
+          않습니다 — 인용 수의 차이가 브랜드의 변화인지 설정의 변화인지 가를 수 없습니다.
+        </p>
+      )}
+    </>
   )
 }
 ```

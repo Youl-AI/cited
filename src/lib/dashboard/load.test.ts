@@ -66,6 +66,11 @@ function whereOf(sql: string): string {
   return flat(sql).split(' where ')[1] ?? ''
 }
 
+/** `order by` 이후만 — 정렬 방향은 이 절 안에서만 물어야 한다. */
+function orderByOf(sql: string): string {
+  return flat(sql).split(' order by ')[1] ?? ''
+}
+
 /**
  * 드리즐이 `select()`로 뽑는 컬럼 **순서 그대로** 위치 배열 행을 만든다.
  * (배열 모드 응답이라 순서가 곧 계약이다 — 손으로 나열하면 스키마가 바뀔 때
@@ -260,6 +265,21 @@ describe('loadDashboard — 이력 창과 정렬', () => {
   })
 
   /**
+   * ★ 이력 창은 **플랜에서만** 나온다. 구독 행이 없는 경로는 도달 불가능하지만
+   *   (`onDelete: 'restrict'` + `createBrandAction`의 'no-plan' 게이트),
+   *   기본값을 두면 그 분기가 언젠가 도달됐을 때 아무 소리 없이 정책을 하나
+   *   만들어 낸다 — 무료 사용자에게 무제한 이력을 주거나, 돈 낸 고객의 회차를
+   *   통째로 감추거나. 대답 없음을 기본값으로 덮지 않는다.
+   */
+  test('브랜드는 있는데 구독 행이 없으면 던진다 — 조용한 기본 이력 창은 없다', async () => {
+    capture.responses.push([brandRow()])
+    capture.responses.push([]) // 구독 없음
+    await expect(loadDashboard('u1', undefined)).rejects.toThrow(/구독 행이 없습니다/)
+    // 회차 쿼리까지 가지 않는다 — 어떤 창을 걸어야 할지 알 수 없으므로.
+    expect(capture.queries).toHaveLength(2)
+  })
+
+  /**
    * ★ `buildHeadline`·`buildSourceChanges`·`buildTrend`는 "마지막 두 개"를 집어
    *   최신·직전으로 쓴다. 정렬이 뒤집히면 화면이 **가장 오래된 회차를 최신이라고**
    *   말하고, 상승과 하락이 통째로 뒤바뀐다. 타입은 아무것도 못 잡는다.
@@ -269,7 +289,10 @@ describe('loadDashboard — 이력 창과 정렬', () => {
     await loadDashboard('u1', undefined)
     const runSql = flat(capture.queries[2]!.sql)
     expect(runSql).toContain('order by "collection_runs"."started_at"')
-    expect(runSql).not.toContain('desc')
+    // ★ **`order by` 절만** 본다. 평탄화한 SQL 전체에 'desc'가 없다고 주장하면,
+    //   `collection_runs`에 `description` 컬럼이 하나 생기는 날 정렬과 아무
+    //   상관없는 이유로 "정렬이 뒤집혔다"며 깨진다.
+    expect(orderByOf(runSql)).not.toContain('desc')
   })
 })
 
@@ -295,6 +318,23 @@ describe('loadDashboard — 스냅샷 없는 회차', () => {
     expect(nosnap?.status).toBe('succeeded')
     expect(nosnap?.hasResult).toBe(false)
     expect(data.runList.find((r) => r.runId === 'r-ok')?.hasResult).toBe(true)
+  })
+
+  /**
+   * ★ 빠진 회차의 **자리**까지 화면에 온다. 로더가
+   *   `runs.map(toRunPoint).filter(...)`로 걸러 버리면, 6/03과 6/17 사이에
+   *   측정이 없던 회차가 하나 있었다는 사실이 데이터에서 통째로 사라진다 —
+   *   서수 축 차트는 두 점을 옆칸에 나란히 앉히고, 고객은 매주 잰 것으로 읽는다.
+   */
+  test('스냅샷 없는 회차의 자리가 points에 간격으로 남는다', async () => {
+    stubDashboard([
+      runRow({ id: 'r1', result: makeResult(), startedAt: '2026-07-03T18:30:00.000Z' }),
+      runRow({ id: 'r-nosnap', result: null, startedAt: '2026-07-10T18:30:00.000Z' }),
+      runRow({ id: 'r3', result: makeResult(), startedAt: '2026-07-17T18:30:00.000Z' }),
+    ])
+    const data = await loadDashboard('u1', undefined)
+    expect(data.points.map((p) => p.runId)).toEqual(['r1', 'r3'])
+    expect(data.points.map((p) => p.skippedBefore)).toEqual([0, 1])
   })
 
   test('실패 회차도 목록에 남는다 — 감추면 "왜 이번 주 숫자가 없지"의 답이 사라진다', async () => {

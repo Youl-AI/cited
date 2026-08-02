@@ -18,19 +18,27 @@ const eslintConfig = defineConfig([
   // src/lib/detection/ 과 src/lib/stats/ 는 "저장된 원본 → 판정 결과"만 하는
   // 순수 함수여야 한다. 이 두 디렉터리가 순수해야 하는 이유는 두 가지다.
   //
-  // ★ src/lib/dashboard/data.ts 도 같은 경계 안이다 — 디렉터리가 아니라
-  //   **파일 하나**만 넣는다. 이유가 셋 다르다.
-  //     1. 이 파일은 클라이언트 컴포넌트에서 import된다(4단계 대시보드 화면).
-  //        db·drizzle이 값으로 한 줄이라도 섞이면 번들에 서버 코드가 끌려간다.
+  // ★ src/lib/dashboard/ 도 같은 경계 안이다 — **디렉터리 전체를 넣고
+  //   예외만 `ignores`로 뺀다.** 이 방향이 중요하다.
+  //     1. 이 디렉터리의 순수 모듈은 클라이언트 컴포넌트에서 import된다
+  //        (4단계 대시보드 화면). db·drizzle이 값으로 한 줄이라도 섞이면
+  //        번들에 서버 코드가 끌려간다.
   //     2. 같은 디렉터리의 `load.ts`가 정확히 `import { db } from '@/lib/db'`로
   //        시작한다 — **복사해 붙이기 좋은 템플릿이 옆에 있다.**
   //        (실측: 규칙 없이 data.ts에 db import를 넣었더니 lint·typecheck가
   //        둘 다 통과했다. "순수하다"는 주석만으로는 아무것도 못 막는다.)
-  //     3. 디렉터리 전체를 넣으면 `load.ts`(DB 로더가 본업)와
-  //        `data.test.ts`(`@/lib/audit/result`에서 값을 import한다)가 같이
-  //        걸린다. 순수해야 하는 것은 data.ts 하나다.
-  //   dashboard/ 에 순수 모듈을 더 만들면 이 목록에 파일명을 **명시적으로**
-  //   추가해라. 글롭으로 넓히지 마라 — 넓히는 순간 load.ts가 들어온다.
+  //     3. 파일명을 하나씩 나열하면 **새 파일이 기본적으로 무방비**다.
+  //        (실측: `files: ["src/lib/dashboard/data.ts"]`였을 때
+  //        `@/lib/db`를 import하는 `src/lib/dashboard/trend.ts`를 만들었더니
+  //        lint가 0 에러로 통과했다. 앞의 주석은 "새 파일을 목록에 추가해라"고
+  //        적혀 있었다 — 주석은 아무것도 강제하지 못한다. 그 주석이 바로 이
+  //        설정 파일이 다른 자리에서 거부하는 패턴이었다.)
+  //   그래서 기본값을 **보호**로 두고, 순수하지 않아도 되는 파일만 아래
+  //   `ignores`에 적는다. 새 파일은 자동으로 경계 안이고, 밖으로 빼려면
+  //   ignores에 한 줄을 **의도적으로** 적어야 한다.
+  //   예외는 지금 둘뿐이다.
+  //     - `load.ts` — DB 로더가 본업이다 (이 경계가 지키려는 대상의 반대편).
+  //     - `**/*.test.ts` — 테스트는 `@/lib/audit/result` 등에서 값을 import한다.
   //   1. 2단계의 골든 라벨 회귀 테스트(재현율 95%·정밀도 90% CI 게이트)가
   //      API 키·DB·네트워크 없이 돌아야 한다.
   //   2. 판정 로직이 바뀌면 저장해 둔 원본으로 전량 재판정할 수 있어야 한다.
@@ -62,8 +70,10 @@ const eslintConfig = defineConfig([
     files: [
       "src/lib/detection/**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}",
       "src/lib/stats/**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}",
-      "src/lib/dashboard/data.ts",
+      "src/lib/dashboard/**/*.{ts,tsx}",
     ],
+    // 경계 밖으로 빼는 예외는 여기에만 적는다 (위 ★ 참고).
+    ignores: ["src/lib/dashboard/load.ts", "src/lib/dashboard/**/*.test.ts"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -75,17 +85,18 @@ const eslintConfig = defineConfig([
                 "^(?!(?:\\./|@/lib/detection(?:/|$)|@/lib/stats(?:/|$)|vitest(?:/|$))).*",
               allowTypeImports: true,
               message:
-                "detection/ · stats/ · dashboard/data.ts 는 순수 함수여야 합니다. 허용: './…', '@/lib/detection…', '@/lib/stats…', 'vitest', 그리고 `import type`. 외부 I/O는 import하지 말고 인자로 주입받으세요. (설계 ① 핵심 원칙)",
+                "detection/ · stats/ · dashboard/ 는 순수 함수여야 합니다. 허용: './…', '@/lib/detection…', '@/lib/stats…', 'vitest', 그리고 `import type`. 외부 I/O는 import하지 말고 인자로 주입받으세요. (설계 ① 핵심 원칙)",
             },
             {
-              // ★ dashboard/data.ts 전용 구멍. 위 allow-list의 `./…`가 같은
+              // ★ dashboard/ 전용 구멍. 위 allow-list의 `./…`가 같은
               //   디렉터리의 **DB 로더**(`./load`)를 그대로 통과시킨다 —
-              //   경계에 파일 하나만 넣었기 때문에 생기는 틈이다.
+              //   `load.ts`를 ignores로 빼 두면 경계 안 파일이 그걸 값으로
+              //   끌어다 쓰는 길이 열린 채로 남는다.
               //   detection/ · stats/ 에는 load 모듈이 없어 방해되지 않는다.
               regex: "^\\./load(?:\\.[cm]?[jt]s)?$",
               allowTypeImports: true,
               message:
-                "dashboard/data.ts는 순수해야 합니다 — 같은 디렉터리의 DB 로더('./load')를 값으로 import하면 클라이언트 번들에 db가 끌려옵니다. 타입만 필요하면 `import type`을 쓰세요.",
+                "dashboard/ 의 순수 모듈은 DB를 몰라야 합니다 — 같은 디렉터리의 DB 로더('./load')를 값으로 import하면 클라이언트 번들에 db가 끌려옵니다. 타입만 필요하면 `import type`을 쓰세요.",
             },
             {
               // `../`로 경계 밖으로 나가는 상대경로. 위 regex는 `./`로 시작하는
@@ -93,7 +104,7 @@ const eslintConfig = defineConfig([
               regex: "\\.\\.",
               allowTypeImports: true,
               message:
-                "detection/ · stats/ · dashboard/data.ts 에서 상위 디렉터리 상대경로 금지 — 경계 밖의 모듈입니다. 인자로 주입받으세요.",
+                "detection/ · stats/ · dashboard/ 에서 상위 디렉터리 상대경로 금지 — 경계 밖의 모듈입니다. 인자로 주입받으세요.",
             },
           ],
         },

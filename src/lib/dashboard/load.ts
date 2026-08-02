@@ -3,7 +3,7 @@ import type { AuditResult } from '@/lib/audit/result'
 import { db, schema } from '@/lib/db'
 import type { Brand } from '@/lib/db/schema'
 import { resolveLimits } from '@/lib/plans'
-import { parseRunResult, toRunPoint, type RunListItem, type RunPoint } from './data'
+import { parseRunResult, toRunPoints, type RunListItem, type RunPoint } from './data'
 
 /**
  * 대시보드 DB 로더. 조립은 전부 `./data`(순수)가 하고 여기서는 읽기만 한다 —
@@ -43,16 +43,21 @@ export async function loadDashboard(
   //   감추지 않는다 (`revokePlan`은 행을 지우지 않고 status만 'canceled'로
   //   바꾼다). 이 정책은 `load.test.ts`가 못 박는다.
   //
-  // ★ 구독 행이 없는 분기는 **도달하지 않는다.** `subscriptions.userId`는
+  // ★ 구독 행이 없는 경우는 **도달하지 않는다.** `subscriptions.userId`는
   //   `onDelete: 'restrict'`라 행이 사라지지 않고, 구독이 없는 사용자는
   //   `createBrandAction`이 'no-plan'으로 막아 브랜드를 못 만들며, 브랜드가
-  //   없으면 위 `if (!selected)`에서 이미 돌아간다. 그래도 남겨 두는 값은
-  //   `null`(무제한)이다 — 이 자리에 0을 두면 "지금 이후"만 남기는
-  //   `gte(startedAt, now)`가 되어, 실제로 저장된 회차를 화면에서 통째로
-  //   감춘다. 도달 불가능한 분기의 기본값은 **덜 숨기는 쪽**이어야 한다.
-  const months = subscription
-    ? resolveLimits(subscription.plan, subscription.queryPacks).historyMonths
-    : null
+  //   없으면 위 `if (!selected)`에서 이미 돌아간다.
+  //
+  //   그래서 **기본값을 두지 않고 던진다.** 여기에 `?? null`(무제한)이나
+  //   `?? 0`(전부 숨김)을 두면, 도달 불가능하다던 분기가 언젠가 도달됐을 때
+  //   (예: 무료 대시보드가 열리는 날) 아무 소리 없이 정책을 하나 만들어 낸다 —
+  //   무료 사용자에게 무제한 이력을 주거나, 돈 낸 고객의 회차를 통째로 감추거나.
+  //   이력 창은 **플랜에서만** 나온다. 플랜이 없으면 답이 없는 것이지
+  //   기본값이 있는 게 아니다.
+  if (!subscription) {
+    throw new Error(`대시보드: 브랜드는 있는데 구독 행이 없습니다 (userId=${userId})`)
+  }
+  const months = resolveLimits(subscription.plan, subscription.queryPacks).historyMonths
   const conditions = [eq(schema.collectionRuns.brandId, selected.id)]
   if (months !== null) {
     conditions.push(
@@ -71,7 +76,10 @@ export async function loadDashboard(
   return {
     brands,
     selected,
-    points: runs.map(toRunPoint).filter((p): p is RunPoint => p !== null),
+    // ★ `map(toRunPoint).filter(...)`가 아니다. 스냅샷이 없어 버려진 회차의
+    //   **자리**를 `skippedBefore`로 남겨야, 화면이 2주 떨어진 두 점을 붙어
+    //   있는 두 점으로 그리지 않는다 (`toRunPoints` 주석).
+    points: toRunPoints(runs),
     runList: [...runs].reverse().map((r) => ({
       runId: r.id,
       startedAt: r.startedAt.toISOString(),

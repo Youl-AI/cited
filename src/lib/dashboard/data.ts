@@ -71,6 +71,17 @@ export interface RunPoint {
    *   다루지 않으면 판정기 개선이 고객 화면에서 "유의미한 상승"이 된다.
    */
   detectorVersion: number
+  /**
+   * 이 회차 **직전에 스냅샷이 없어 버려진 회차 수** (`toRunPoints`가 센다).
+   *
+   * ★ 시간 간격은 조건 비교로 보이지 않는다. 6/01 측정 → 6/08 스냅샷 저장 실패
+   *   → 6/15 측정이면 `sameConditions`는 셋 다 같으니 "비교 가능"이 맞다.
+   *   그런데 두 점 사이에는 **측정이 없던 한 주**가 있다. 서수 축(점을 등간격으로
+   *   찍는 축)은 그 주를 통째로 감춘다 — 6/01과 6/15가 옆칸에 나란히 앉는다.
+   *   여기서 세어 두지 않으면 화면이 그 사실을 알 방법이 없다.
+   *   `toRunPoint` 하나만 쓰면 언제나 0이다 (앞뒤 맥락이 없다).
+   */
+  skippedBefore: number
   result: AuditResult
 }
 
@@ -86,8 +97,36 @@ export function toRunPoint(
     competitors: [...run.planSnapshot.competitors],
     queryIds: [...run.planSnapshot.queryIds],
     detectorVersion: run.planSnapshot.detectorVersion,
+    // 회차 하나만 보면 앞에 무엇이 버려졌는지 알 수 없다 — `toRunPoints`가 채운다.
+    skippedBefore: 0,
     result,
   }
+}
+
+/**
+ * 회차 목록(오래된 → 최신) → 추이 입력. `runs.map(toRunPoint).filter(...)`와
+ * 다른 점은 **버려진 회차를 세어 남긴다**는 것 하나다.
+ *
+ * ★ 스냅샷이 없는 회차(`succeeded` + `result IS NULL`, `failed`)는 여기서
+ *   사라진다. 사라진 자리를 `skippedBefore`로 남기지 않으면, 화면은 일주일
+ *   떨어진 두 점을 붙어 있는 두 점으로 그린다 — 각 점은 참인데 그 사이의
+ *   "매주 재고 있다"는 인상이 거짓이 된다.
+ */
+export function toRunPoints(
+  runs: readonly Pick<CollectionRun, 'id' | 'startedAt' | 'planSnapshot' | 'result'>[],
+): RunPoint[] {
+  const out: RunPoint[] = []
+  let skipped = 0
+  for (const run of runs) {
+    const point = toRunPoint(run)
+    if (!point) {
+      skipped += 1
+      continue
+    }
+    out.push({ ...point, skippedBefore: skipped })
+    skipped = 0
+  }
+  return out
 }
 
 /** 순서 무관 문자열 집합 비교. 스냅샷이 정렬을 보장하지 않는 필드가 있다. */
@@ -110,6 +149,13 @@ function sameSet(a: readonly string[], b: readonly string[]): boolean {
  *   실제로 그대로지만, 그래도 끊는다. 잘못 이어 붙인 선(없는 상승)의 대가가
  *   한 번 끊긴 선의 대가보다 비교할 수 없이 크다 — 이 제품이 파는 것이
  *   정직한 측정이라서다.
+ *
+ * ★ 이 과잉 발화는 **의도된 것이고 테스트가 못 박는다**
+ *   (`buildTrend(points, 'chatgpt')` 계열도 엔진 집합이 바뀌면 끊긴다).
+ *   완화하고 싶으면 **이 함수 본문을 고치지 말고** 호출부가 넘기는 옵션
+ *   (예: `sameConditions(prev, curr, { ignoreEngines: true })`)으로 하라 —
+ *   그래야 어느 화면이 무엇을 포기했는지가 코드에 남는다. 본문에
+ *   `engineId !== 'all'` 같은 특수 케이스를 넣으면 그 결정이 사라진다.
  */
 function sameConditions(prev: RunPoint, curr: RunPoint): boolean {
   return (
@@ -132,6 +178,18 @@ export interface TrendPoint {
    *   숫자는 브랜드와 무관하게 움직인다. 첫 점은 이을 대상이 없으므로 true다.
    */
   comparableWithPrev: boolean
+  /**
+   * 직전 추이 점과 이 점 **사이에서 통째로 빠진 회차 수**. 0이면 두 점은
+   * 실제로 연속한 두 회차다. 첫 점은 이을 대상이 없으므로 0이다.
+   *
+   * ★ `comparableWithPrev`와 **다른 종류의 거짓말**을 막는다. 조건은 같은데
+   *   (그래서 comparable=true) 그 사이 회차가 스냅샷 없이 죽었거나(n=0,
+   *   `result IS NULL`, 실패) 하면, 두 점은 2주 떨어져 있는데 서수 축은
+   *   나란히 붙여 그린다. "매주 재고 있다"는 인상이 거짓이 되는 자리다.
+   *   화면은 이 값이 0이 아닌 구간에 연속성을 암시해선 안 된다 — 시간 축을
+   *   쓰거나(간격이 저절로 벌어진다), 끊거나, 최소한 표시해야 한다.
+   */
+  runsSkippedBefore: number
 }
 
 /** 추이 계열. 'all' = citedRate, 엔진 id = byEngine — 없는 회차는 뺀다. */
@@ -143,16 +201,26 @@ export function buildTrend(
   // 비교 대상은 "직전 회차"가 아니라 **직전에 실제로 찍힌 점**이다. 빠진 회차
   // 너머로 조건 비교를 하지 않으면 끊어야 할 구간을 이어 버린다.
   let prev: RunPoint | null = null
+  // 빠진 회차 수. 원인이 둘이다 — 스냅샷이 아예 없어 `points`에 못 들어온 회차
+  // (`RunPoint.skippedBefore`가 실어 온다)와, 이 계열에서 n=0이라 빠지는 회차.
+  // 화면에서는 구분되지 않는다: 둘 다 "그 주에는 잰 값이 없다"이다.
+  let skipped = 0
   for (const p of points) {
+    skipped += p.skippedBefore
     const interval = engineId === 'all' ? p.result.citedRate : p.result.byEngine[engineId]
-    if (!interval || interval.n === 0) continue
+    if (!interval || interval.n === 0) {
+      skipped += 1
+      continue
+    }
     out.push({
       runId: p.runId,
       measuredAt: p.measuredAt,
       interval,
       comparableWithPrev: prev === null ? true : sameConditions(prev, p),
+      runsSkippedBefore: prev === null ? 0 : skipped,
     })
     prev = p
+    skipped = 0
   }
   return out
 }
@@ -250,6 +318,22 @@ export interface SourceChangeRow {
   answers: number
   /** 직전 회차의 값. 그 회차에 없던 도메인이면 null */
   prevAnswers: number | null
+  /**
+   * 최신 회차와 직전 회차가 **같은 조건에서 측정됐는가** (`sameConditions`).
+   *
+   * ★ false면 화면은 `prevAnswers → answers` 화살표(증가/감소)를 그려선 안
+   *   된다. 질의를 셋 더 넣은 다음 회차는 출처 인용 수가 당연히 늘고, 판정기가
+   *   바뀌면 무엇을 인용으로 셌는지가 바뀐다 — "2 → 5"는 브랜드가 한 일이
+   *   아니라 설정 변경이다. 언급률 추이는 `comparableWithPrev`로 선을 끊는데
+   *   출처 표만 화살표를 그리면, 같은 거짓말이 표 모양으로 나갈 뿐이다.
+   *
+   * ★ 직전 회차가 아예 없으면 false다 — 비교 자체가 없다. (이 경우
+   *   `prevAnswers`는 전부 null이라 화면은 어차피 "새로 등장"을 쓴다.)
+   *   `prevAnswers`를 null로 뭉개지 **않는** 이유가 이것이다: "직전에 없던
+   *   도메인"과 "비교할 수 없는 회차"는 다른 사실이고, null 하나로 합치면
+   *   화면이 멀쩡히 있던 도메인을 "새로 등장"이라고 말하게 된다.
+   */
+  comparableWithPrev: boolean
 }
 
 /** 출처 상위 변화 (스펙 ⑤ — 도메인별 인용 수). 최신 회차 상위 topN 기준. */
@@ -259,12 +343,14 @@ export function buildSourceChanges(points: readonly RunPoint[], topN = 8): Sourc
   const prev = points[points.length - 2]
   const prevByDomain = new Map((prev?.result.sources ?? []).map((s) => [s.domain, s.answers]))
   const selfDomainsKnown = latest.result.hasSelfDomains === true
+  const comparableWithPrev = prev !== undefined && sameConditions(prev, latest)
   return latest.result.sources.slice(0, topN).map((s) => ({
     domain: s.domain,
     owner: s.owner,
     selfDomainsKnown,
     answers: s.answers,
     prevAnswers: prevByDomain.get(s.domain) ?? null,
+    comparableWithPrev,
   }))
 }
 
