@@ -79,13 +79,21 @@ export interface RunPoint {
    *   그런데 두 점 사이에는 **측정이 없던 한 주**가 있다. 서수 축(점을 등간격으로
    *   찍는 축)은 그 주를 통째로 감춘다 — 6/01과 6/15가 옆칸에 나란히 앉는다.
    *   여기서 세어 두지 않으면 화면이 그 사실을 알 방법이 없다.
-   *   `toRunPoint` 하나만 쓰면 언제나 0이다 (앞뒤 맥락이 없다).
    */
   skippedBefore: number
   result: AuditResult
 }
 
-export function toRunPoint(
+/**
+ * 회차 한 행 → 점 (스냅샷이 없으면 null).
+ *
+ * ★ **export하지 않는다.** 이 함수는 회차 하나만 보므로 `skippedBefore`에
+ *   넣을 수 있는 값이 0뿐인데, 그 0은 "앞에 버려진 회차가 없다"는 **답이 아니라
+ *   모름**이다. 밖으로 내보내면 `runs.map(toRunPoint)`가 언제나 손 닿는 곳에
+ *   있고, 그렇게 부른 호출부는 간격 신호를 통째로 잃은 채 조용히 컴파일된다 —
+ *   `load.ts`가 실제로 그렇게 하고 있었다. 공개 입구는 `toRunPoints` 하나다.
+ */
+function toRunPoint(
   run: Pick<CollectionRun, 'id' | 'startedAt' | 'planSnapshot' | 'result'>,
 ): RunPoint | null {
   const result = parseRunResult(run.result)
@@ -104,8 +112,8 @@ export function toRunPoint(
 }
 
 /**
- * 회차 목록(오래된 → 최신) → 추이 입력. `runs.map(toRunPoint).filter(...)`와
- * 다른 점은 **버려진 회차를 세어 남긴다**는 것 하나다.
+ * 회차 목록(오래된 → 최신) → 추이 입력. **이 모듈의 유일한 공개 입구다.**
+ * 한 회차씩 변환하는 것과 다른 점은 **버려진 회차를 세어 남긴다**는 것 하나다.
  *
  * ★ 스냅샷이 없는 회차(`succeeded` + `result IS NULL`, `failed`)는 여기서
  *   사라진다. 사라진 자리를 `skippedBefore`로 남기지 않으면, 화면은 일주일
@@ -268,27 +276,60 @@ export interface SovPoint {
    * 추이(`sameConditions`)가 보는 셋 **위에 경쟁사 집합까지** 같아야 한다.
    */
   comparableWithPrev: boolean
+  /**
+   * 직전 SoV 점과 이 점 **사이에서 통째로 빠진 회차 수** (`TrendPoint`와 같은
+   * 규칙, 첫 점은 0).
+   *
+   * ★ SoV 화면도 서수 축(점을 등간격으로 찍는 축)을 쓰므로 `TrendPoint`와
+   *   **똑같은 함정** 위에 있다. 조건은 같아서 `comparableWithPrev`는 true인데
+   *   두 점 사이에 잰 값이 없는 회차가 있으면, 2주가 1주로 보인다.
+   *
+   * ★ 여기서는 빠지는 원인이 **둘**이다 — 스냅샷이 없어 `points`에 아예 못
+   *   들어온 회차(`RunPoint.skippedBefore`가 실어 온다), 그리고 이 계열에서
+   *   `shareOfVoice.n === 0`이라 빠지는 회차. 후자는 답변이 없을 때만이 아니라
+   *   **경쟁사를 하나도 등록하지 않은 회차 전부**에서 난다 (`metrics.ts`:
+   *   경쟁사가 없으면 `wilsonInterval(0, 0)`). 경쟁사를 뒤늦게 등록한 고객은
+   *   그 앞 회차가 통째로 사라지는데, 이 값이 없으면 화면은 그 사실을 모른 채
+   *   첫 두 점을 나란히 붙여 그린다.
+   */
+  runsSkippedBefore: number
 }
 
 /**
  * 점유율 추이. SoV는 분모가 등록 경쟁사에 의존하는 유일한 지표라
  * (`PlanSnapshot.competitors` 주석), 집합이 바뀐 구간에는 비교를 걸지 않는다.
  * 경쟁사 집합만 보는 게 아니다 — 엔진·질의·판정기가 바뀌어도 SoV는 움직인다.
+ *
+ * 구조는 `buildTrend`와 같다 (빠진 회차를 세어 `runsSkippedBefore`로 남긴다).
  */
 export function buildSovTrend(points: readonly RunPoint[]): SovPoint[] {
-  const withSov = points.filter((p) => p.result.shareOfVoice.n > 0)
-  return withSov.map((p, i) => {
-    const prev = withSov[i - 1]
-    return {
+  const out: SovPoint[] = []
+  // 비교 대상은 "직전 회차"가 아니라 **직전에 실제로 찍힌 점**이다.
+  let prev: RunPoint | null = null
+  // 빠진 회차 수. 원인이 둘이다 — 스냅샷이 아예 없어 `points`에 못 들어온 회차
+  // (`RunPoint.skippedBefore`가 실어 온다)와, 여기서 n=0이라 빠지는 회차.
+  let skipped = 0
+  for (const p of points) {
+    skipped += p.skippedBefore
+    const interval = p.result.shareOfVoice
+    if (interval.n === 0) {
+      skipped += 1
+      continue
+    }
+    out.push({
       runId: p.runId,
       measuredAt: p.measuredAt,
-      interval: p.result.shareOfVoice,
+      interval,
       comparableWithPrev:
-        prev === undefined
+        prev === null
           ? true
           : sameConditions(prev, p) && sameSet(prev.competitors, p.competitors),
-    }
-  })
+      runsSkippedBefore: prev === null ? 0 : skipped,
+    })
+    prev = p
+    skipped = 0
+  }
+  return out
 }
 
 export interface SourceChangeRow {

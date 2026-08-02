@@ -10,7 +10,6 @@ import {
   buildTrend,
   engineIdsIn,
   parseRunResult,
-  toRunPoint,
   toRunPoints,
   type RunPoint,
 } from './data'
@@ -85,7 +84,7 @@ function makeRun(id: string, result: unknown, day = 3) {
   }
 }
 
-describe('parseRunResult · toRunPoint', () => {
+describe('parseRunResult · toRunPoints', () => {
   test('스냅샷이 아니면 null — 실패 회차·구버전을 화면이 삼키지 않는다', () => {
     expect(parseRunResult(null)).toBeNull()
     expect(parseRunResult({ 이상한: '값' })).toBeNull()
@@ -110,32 +109,23 @@ describe('parseRunResult · toRunPoint', () => {
     expect(parseRunResult({ ...makeResult(), byEngine: [] })).toBeNull()
   })
 
-  test('toRunPoint — 스냅샷 없는 회차는 null', () => {
-    const snapshot: PlanSnapshot = SNAPSHOT
-    const point = toRunPoint({
-      id: 'r1',
-      startedAt: new Date('2026-08-03T18:30:00Z'),
-      planSnapshot: snapshot,
-      result: makeResult(),
-    })
-    expect(point?.runId).toBe('r1')
+  test('스냅샷 없는 회차는 점이 되지 않고, 스냅샷 필드는 전부 실려 온다', () => {
+    const points = toRunPoints([makeRun('r1', makeResult(), 1), makeRun('r2', null, 2)])
+    expect(points.map((p) => p.runId)).toEqual(['r1'])
     // ★ 비교 가능성 판정에 쓰이는 스냅샷 필드는 전부 실어 와야 한다. 하나라도
     //   빠지면 그 조건 변경이 순수 모듈에서 관측 불가능해진다.
-    expect(point).toMatchObject({
+    expect(points[0]).toMatchObject({
       engines: ['chatgpt'],
       competitors: ['29CM'],
       queryIds: ['q1', 'q2'],
       detectorVersion: 4,
+      // 첫 회차 앞에는 버려진 것이 없다.
+      skippedBefore: 0,
     })
-    expect(
-      toRunPoint({ id: 'r2', startedAt: new Date(), planSnapshot: snapshot, result: null }),
-    ).toBeNull()
-    // 회차 하나만 보면 앞에 무엇이 버려졌는지 알 수 없다 — 언제나 0.
-    expect(point?.skippedBefore).toBe(0)
   })
 
   /**
-   * ★ `runs.map(toRunPoint).filter(...)`는 버려진 회차의 **자리**를 잃는다.
+   * ★ 한 회차씩 변환해 `filter`로 걸러 내는 방식은 버려진 회차의 **자리**를 잃는다.
    *   6/01 측정 → 6/08 스냅샷 저장 실패 → 6/15 측정이면, 남는 두 점은 조건이
    *   같으니 비교 가능한 게 맞다. 그런데 그 사이에는 **잰 값이 없는 한 주**가
    *   있다. 서수 축은 그 주를 통째로 감춰 6/01과 6/15를 옆칸에 나란히 앉힌다.
@@ -370,6 +360,72 @@ describe('buildSovTrend', () => {
   test('판정기 버전이 오르면 SoV도 끊긴다', () => {
     const bumped = makePoint('ab', { detectorVersion: 2 })
     expect(buildSovTrend([makePoint('a'), bumped])[1]?.comparableWithPrev).toBe(false)
+  })
+})
+
+/**
+ * 점유율 추이의 **간격**. `TrendPoint`와 같은 함정이고, SoV 화면도 같은 서수
+ * 축(점을 등간격으로 찍는 축)을 쓴다 — 조건이 같아 `comparableWithPrev`가 true인
+ * 두 점 사이에 잰 값이 없는 회차가 있으면 2주가 1주로 보인다.
+ *
+ * ★ SoV는 빠지는 원인이 추이보다 **하나 더** 있다. 스냅샷이 없어 `points`에 못
+ *   들어온 회차 말고도, `shareOfVoice.n === 0`인 회차가 여기서 빠진다. 그리고
+ *   그것은 답변이 없을 때만이 아니라 **경쟁사를 하나도 등록하지 않은 회차 전부**
+ *   에서 난다 (`metrics.ts`: 경쟁사가 없으면 SoV는 정의되지 않아 n=0). 경쟁사를
+ *   뒤늦게 등록한 고객은 그 앞 회차가 통째로 사라지는데, 이 값이 없으면 화면은
+ *   그 사실을 모른 채 남은 점들을 나란히 붙여 그린다.
+ */
+describe('buildSovTrend — runsSkippedBefore', () => {
+  test('연속한 회차 사이는 0 — 멀쩡한 간격을 벌리지 않는다', () => {
+    expect(
+      buildSovTrend([makePoint('a'), makePoint('ab')]).map((p) => p.runsSkippedBefore),
+    ).toEqual([0, 0])
+  })
+
+  test('스냅샷이 없어 빠진 회차가 간격으로 남는다 (NULL 스냅샷)', () => {
+    // A → [스냅샷 저장 실패] → C. 조건은 셋 다 같아 comparable은 true다.
+    const points = toRunPoints([
+      makeRun('a', makeResult(), 1),
+      makeRun('nosnap', null, 2),
+      makeRun('c', makeResult(), 3),
+    ])
+    const sov = buildSovTrend(points)
+    expect(sov.map((p) => p.runId)).toEqual(['a', 'c'])
+    // 조건은 같다 — 여기서 선을 끊을 근거는 comparableWithPrev에 없다.
+    expect(sov.map((p) => p.comparableWithPrev)).toEqual([true, true])
+    expect(sov.map((p) => p.runsSkippedBefore)).toEqual([0, 1])
+  })
+
+  test('경쟁사가 없어 n=0이던 회차도 같은 간격으로 남는다', () => {
+    // 경쟁사 미등록 회차 — metrics.ts가 SoV를 wilsonInterval(0, 0)으로 낸다.
+    const noCompetitors = makePoint('ab', {
+      result: makeResult({ shareOfVoice: wilsonInterval(0, 0) }),
+    })
+    const sov = buildSovTrend([makePoint('a'), noCompetitors, makePoint('abc')])
+    expect(sov.map((p) => p.runId)).toEqual(['a', 'abc'])
+    expect(sov.map((p) => p.comparableWithPrev)).toEqual([true, true])
+    expect(sov.map((p) => p.runsSkippedBefore)).toEqual([0, 1])
+  })
+
+  test('두 원인이 겹치면 합쳐서 센다', () => {
+    const points = toRunPoints([
+      makeRun('a', makeResult(), 1),
+      makeRun('nosnap', null, 2),
+      makeRun('zero', makeResult({ shareOfVoice: wilsonInterval(0, 0) }), 3),
+      makeRun('d', makeResult(), 4),
+    ])
+    expect(buildSovTrend(points).map((p) => p.runsSkippedBefore)).toEqual([0, 2])
+  })
+
+  /** 첫 점은 이을 대상이 없으므로 0 — `TrendPoint`와 같은 규칙. */
+  test('첫 점 앞에 버려진 회차가 있어도 0 — 이을 대상이 없다', () => {
+    const points = toRunPoints([
+      makeRun('nosnap', null, 1),
+      makeRun('b', makeResult(), 2),
+      makeRun('c', makeResult(), 3),
+    ])
+    expect(points[0]?.skippedBefore).toBe(1)
+    expect(buildSovTrend(points).map((p) => p.runsSkippedBefore)).toEqual([0, 0])
   })
 })
 

@@ -76,7 +76,7 @@ export async function loadDashboard(
   return {
     brands,
     selected,
-    // ★ `map(toRunPoint).filter(...)`가 아니다. 스냅샷이 없어 버려진 회차의
+    // ★ 회차를 한 건씩 변환해 `filter`하는 것이 아니다. 스냅샷이 없어 버려진 회차의
     //   **자리**를 `skippedBefore`로 남겨야, 화면이 2주 떨어진 두 점을 붙어
     //   있는 두 점으로 그리지 않는다 (`toRunPoints` 주석).
     points: toRunPoints(runs),

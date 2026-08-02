@@ -3209,11 +3209,12 @@ git commit -m "feat(cron): GitHub Actions 스케줄 — 월·수·금 KST 새벽
       (`queryIds`·`detectorVersion`은 **비교 가능성 필드**다. 질의 집합이 바뀌면
       `citedRate`의 분모가, 판정기 버전이 바뀌면 분자의 정의가 바뀐다 — `engines`와 같은 취급.
       `skippedBefore`는 이 회차 **직전에 스냅샷이 없어 버려진 회차 수**다 — 아래 `toRunPoints` 참고)
-    - `toRunPoint(run: Pick<CollectionRun, 'id' | 'startedAt' | 'planSnapshot' | 'result'>): RunPoint | null`
-      (회차 하나만 보므로 `skippedBefore`는 언제나 0이다)
     - `toRunPoints(runs: readonly Pick<CollectionRun, 'id' | 'startedAt' | 'planSnapshot' | 'result'>[]): RunPoint[]`
-      (★ **로더는 이것을 쓴다** — `runs.map(toRunPoint).filter(...)`가 아니다.
-      스냅샷이 없어 버려진 회차의 **자리**를 `skippedBefore`로 남긴다)
+      (★ **회차 → 점 변환의 유일한 공개 입구다.** 회차 하나짜리 변환 함수는
+      export하지 않는다 — 회차 하나만 보면 `skippedBefore`에 넣을 수 있는 값이
+      0뿐인데 그 0은 "앞에 버려진 회차가 없다"는 **답이 아니라 모름**이다.
+      내보내면 `runs.map(…)` 한 줄이 간격 신호를 통째로 잃은 채 조용히 컴파일된다.
+      이 함수는 스냅샷이 없어 버려진 회차의 **자리**를 `skippedBefore`로 남긴다)
     - `interface TrendPoint { runId: string; measuredAt: string; interval: Interval; comparableWithPrev: boolean; runsSkippedBefore: number }`
       (★ `comparableWithPrev: false`면 화면은 **선을 끊는다.** 두 점은 참이지만
       그 사이 선분이 거짓이다. 첫 점은 이을 대상이 없으므로 true.
@@ -3229,8 +3230,16 @@ git commit -m "feat(cron): GitHub Actions 스케줄 — 월·수·금 KST 새벽
     - `engineIdsIn(points: readonly RunPoint[]): string[]`
     - `interface HeatmapView { runs: { runId: string; measuredAt: string }[]; rows: { queryText: string; cells: (Interval | null)[] }[] }`
     - `buildHeatmap(points: readonly RunPoint[], maxRuns?: number): HeatmapView`
-    - `interface SovPoint { runId: string; measuredAt: string; interval: Interval; comparableWithPrev: boolean }`
-      (SoV는 위 셋에 **경쟁사 집합까지** 같아야 comparable)
+    - `interface SovPoint { runId: string; measuredAt: string; interval: Interval; comparableWithPrev: boolean; runsSkippedBefore: number }`
+      (SoV는 위 셋에 **경쟁사 집합까지** 같아야 comparable.
+      ★ `runsSkippedBefore`는 `TrendPoint`의 것과 같은 규칙이다 — 두 점 사이에 잰
+      값이 없는 회차가 그만큼 있다는 뜻이고, 첫 점은 0이다. SoV 화면도 같은 서수
+      축을 쓰므로 **같은 함정** 위에 있다. 여기서는 빠지는 원인이 둘인데 둘 다
+      실재한다: 스냅샷이 없어 `points`에 못 들어온 회차와, `shareOfVoice.n === 0`
+      이라 이 계열에서 빠지는 회차. 후자는 답변이 없을 때만이 아니라 **경쟁사를
+      하나도 등록하지 않은 회차 전부**에서 난다 — 경쟁사가 없으면 SoV는 정의되지
+      않아 `wilsonInterval(0, 0)`이다. 경쟁사를 뒤늦게 등록한 고객은 그 앞 회차가
+      통째로 사라진다)
     - `buildSovTrend(points: readonly RunPoint[]): SovPoint[]`
     - `interface SourceChangeRow { domain: string; owner: SourceOwner; selfDomainsKnown: boolean; answers: number; prevAnswers: number | null; comparableWithPrev: boolean }`
       (★ `comparableWithPrev: false`면 화면은 `prevAnswers → answers` **화살표를
@@ -3327,7 +3336,7 @@ import type { PlanSnapshot } from '@/lib/db/schema'
 import { wilsonInterval } from '@/lib/stats/wilson'
 import {
   buildHeadline, buildHeatmap, buildSourceChanges, buildSovTrend, buildTrend,
-  engineIdsIn, parseRunResult, toRunPoint, type RunPoint,
+  engineIdsIn, parseRunResult, toRunPoints, type RunPoint,
 } from './data'
 
 function makeResult(over: Partial<AuditResult> = {}): AuditResult {
@@ -3363,23 +3372,24 @@ function makePoint(runId: string, over: Partial<RunPoint> = {}): RunPoint {
   }
 }
 
-describe('parseRunResult · toRunPoint', () => {
+describe('parseRunResult · toRunPoints', () => {
   test('스냅샷이 아니면 null — 실패 회차·구버전을 화면이 삼키지 않는다', () => {
     expect(parseRunResult(null)).toBeNull()
     expect(parseRunResult({ 이상한: '값' })).toBeNull()
     expect(parseRunResult(makeResult())).not.toBeNull()
   })
 
-  test('toRunPoint — 스냅샷 없는 회차는 null', () => {
+  // ★ 회차 하나짜리 변환 함수는 export되지 않는다 (Task 8 Interfaces).
+  //   공개 입구는 `toRunPoints` 하나이고, 버려진 회차의 자리를 세어 남긴다.
+  test('스냅샷 없는 회차는 점이 되지 않고, 그 자리는 skippedBefore로 남는다', () => {
     // ★ `PlanSnapshot`으로 못 박아야 한다 — 그냥 두면 `plan: 'starter'`가
     //   `string`으로 추론돼 `PlanId`에 대입되지 않는다.
     const snapshot: PlanSnapshot = { plan: 'starter', queryPacks: 0, engines: ['chatgpt'], samples: { llm: 3, serp: 0 }, queryIds: ['q1', 'q2'], detectorVersion: 1, competitors: ['29CM'] }
-    expect(
-      toRunPoint({ id: 'r1', startedAt: new Date('2026-08-03T18:30:00Z'), planSnapshot: snapshot, result: makeResult() })?.runId,
-    ).toBe('r1')
-    expect(
-      toRunPoint({ id: 'r2', startedAt: new Date(), planSnapshot: snapshot, result: null }),
-    ).toBeNull()
+    const run = (id: string, result: unknown) =>
+      ({ id, startedAt: new Date('2026-08-03T18:30:00Z'), planSnapshot: snapshot, result })
+    const points = toRunPoints([run('r1', makeResult()), run('r2', null), run('r3', makeResult())])
+    expect(points.map((p) => p.runId)).toEqual(['r1', 'r3'])
+    expect(points.map((p) => p.skippedBefore)).toEqual([0, 1])
   })
 })
 
@@ -3535,13 +3545,21 @@ export interface RunPoint {
    *   그런데 두 점 사이에는 **측정이 없던 한 주**가 있다. 서수 축(점을 등간격으로
    *   찍는 축)은 그 주를 통째로 감춘다 — 6/01과 6/15가 옆칸에 나란히 앉는다.
    *   여기서 세어 두지 않으면 화면이 그 사실을 알 방법이 없다.
-   *   `toRunPoint` 하나만 쓰면 언제나 0이다 (앞뒤 맥락이 없다).
    */
   skippedBefore: number
   result: AuditResult
 }
 
-export function toRunPoint(
+/**
+ * 회차 한 행 → 점 (스냅샷이 없으면 null).
+ *
+ * ★ **export하지 않는다.** 이 함수는 회차 하나만 보므로 `skippedBefore`에
+ *   넣을 수 있는 값이 0뿐인데, 그 0은 "앞에 버려진 회차가 없다"는 **답이 아니라
+ *   모름**이다. 밖으로 내보내면 `runs.map(toRunPoint)`가 언제나 손 닿는 곳에
+ *   있고, 그렇게 부른 호출부는 간격 신호를 통째로 잃은 채 조용히 컴파일된다 —
+ *   `load.ts`가 실제로 그렇게 하고 있었다. 공개 입구는 `toRunPoints` 하나다.
+ */
+function toRunPoint(
   run: Pick<CollectionRun, 'id' | 'startedAt' | 'planSnapshot' | 'result'>,
 ): RunPoint | null {
   const result = parseRunResult(run.result)
@@ -3560,8 +3578,8 @@ export function toRunPoint(
 }
 
 /**
- * 회차 목록(오래된 → 최신) → 추이 입력. `runs.map(toRunPoint).filter(...)`와
- * 다른 점은 **버려진 회차를 세어 남긴다**는 것 하나다.
+ * 회차 목록(오래된 → 최신) → 추이 입력. **이 모듈의 유일한 공개 입구다.**
+ * 한 회차씩 변환하는 것과 다른 점은 **버려진 회차를 세어 남긴다**는 것 하나다.
  *
  * ★ 스냅샷이 없는 회차(`succeeded` + `result IS NULL`, `failed`)는 여기서
  *   사라진다. 사라진 자리를 `skippedBefore`로 남기지 않으면, 화면은 일주일
@@ -3724,27 +3742,60 @@ export interface SovPoint {
    * 추이(`sameConditions`)가 보는 셋 **위에 경쟁사 집합까지** 같아야 한다.
    */
   comparableWithPrev: boolean
+  /**
+   * 직전 SoV 점과 이 점 **사이에서 통째로 빠진 회차 수** (`TrendPoint`와 같은
+   * 규칙, 첫 점은 0).
+   *
+   * ★ SoV 화면도 서수 축(점을 등간격으로 찍는 축)을 쓰므로 `TrendPoint`와
+   *   **똑같은 함정** 위에 있다. 조건은 같아서 `comparableWithPrev`는 true인데
+   *   두 점 사이에 잰 값이 없는 회차가 있으면, 2주가 1주로 보인다.
+   *
+   * ★ 여기서는 빠지는 원인이 **둘**이다 — 스냅샷이 없어 `points`에 아예 못
+   *   들어온 회차(`RunPoint.skippedBefore`가 실어 온다), 그리고 이 계열에서
+   *   `shareOfVoice.n === 0`이라 빠지는 회차. 후자는 답변이 없을 때만이 아니라
+   *   **경쟁사를 하나도 등록하지 않은 회차 전부**에서 난다 (`metrics.ts`:
+   *   경쟁사가 없으면 `wilsonInterval(0, 0)`). 경쟁사를 뒤늦게 등록한 고객은
+   *   그 앞 회차가 통째로 사라지는데, 이 값이 없으면 화면은 그 사실을 모른 채
+   *   첫 두 점을 나란히 붙여 그린다.
+   */
+  runsSkippedBefore: number
 }
 
 /**
  * 점유율 추이. SoV는 분모가 등록 경쟁사에 의존하는 유일한 지표라
  * (`PlanSnapshot.competitors` 주석), 집합이 바뀐 구간에는 비교를 걸지 않는다.
  * 경쟁사 집합만 보는 게 아니다 — 엔진·질의·판정기가 바뀌어도 SoV는 움직인다.
+ *
+ * 구조는 `buildTrend`와 같다 (빠진 회차를 세어 `runsSkippedBefore`로 남긴다).
  */
 export function buildSovTrend(points: readonly RunPoint[]): SovPoint[] {
-  const withSov = points.filter((p) => p.result.shareOfVoice.n > 0)
-  return withSov.map((p, i) => {
-    const prev = withSov[i - 1]
-    return {
+  const out: SovPoint[] = []
+  // 비교 대상은 "직전 회차"가 아니라 **직전에 실제로 찍힌 점**이다.
+  let prev: RunPoint | null = null
+  // 빠진 회차 수. 원인이 둘이다 — 스냅샷이 아예 없어 `points`에 못 들어온 회차
+  // (`RunPoint.skippedBefore`가 실어 온다)와, 여기서 n=0이라 빠지는 회차.
+  let skipped = 0
+  for (const p of points) {
+    skipped += p.skippedBefore
+    const interval = p.result.shareOfVoice
+    if (interval.n === 0) {
+      skipped += 1
+      continue
+    }
+    out.push({
       runId: p.runId,
       measuredAt: p.measuredAt,
-      interval: p.result.shareOfVoice,
+      interval,
       comparableWithPrev:
-        prev === undefined
+        prev === null
           ? true
           : sameConditions(prev, p) && sameSet(prev.competitors, p.competitors),
-    }
-  })
+      runsSkippedBefore: prev === null ? 0 : skipped,
+    })
+    prev = p
+    skipped = 0
+  }
+  return out
 }
 
 export interface SourceChangeRow {
@@ -3933,7 +3984,7 @@ export async function loadDashboard(
   return {
     brands,
     selected,
-    // ★ `map(toRunPoint).filter(...)`가 아니다. 스냅샷이 없어 버려진 회차의
+    // ★ 회차를 한 건씩 변환해 `filter`하는 것이 아니다. 스냅샷이 없어 버려진 회차의
     //   **자리**를 `skippedBefore`로 남겨야, 화면이 2주 떨어진 두 점을 붙어
     //   있는 두 점으로 그리지 않는다 (`toRunPoints` 주석).
     points: toRunPoints(runs),
@@ -4056,12 +4107,22 @@ Run: `pnpm vitest run src/components/audit` → PASS (기존 테스트가 추출
 `src/components/dashboard/trend-chart.test.tsx`:
 
 ```tsx
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, test } from 'vitest'
+// @vitest-environment jsdom
+// ★ 위 지시자와 아래 두 줄은 이 저장소의 컴포넌트 테스트 규약이다
+//   (`vitest.config.ts`의 `environment: 'node'` 주석 · 기존 `result-view.test.tsx`).
+//   빠뜨리면 `tsc`는 통과하는데 실행이 깨진다 — jsdom 지시자가 없으면
+//   `document is not defined`, jest-dom import가 없으면 `toBeInTheDocument` 없음,
+//   `afterEach(cleanup)`이 없으면 앞 테스트의 DOM이 남아 `getBy*`가 중복으로 던진다.
+//   지시자는 **파일 첫 줄**이어야 한다.
+import '@testing-library/jest-dom/vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, test } from 'vitest'
 import { AUDIT_RESULT_VERSION, type AuditResult } from '@/lib/audit/result'
 import { wilsonInterval } from '@/lib/stats/wilson'
 import type { RunPoint } from '@/lib/dashboard/data'
 import { TrendChart } from './trend-chart'
+
+afterEach(cleanup)
 
 // ★ RunPoint는 `queryIds`·`detectorVersion`·`skippedBefore`까지 **필수**다
 //   (Task 8 Interfaces). 빠뜨리면 TS2322이고, 기본값을 지어 넣으면 조건 변경과
@@ -4141,12 +4202,18 @@ describe('TrendChart', () => {
 `src/components/dashboard/query-heatmap.test.tsx`:
 
 ```tsx
-import { render, screen } from '@testing-library/react'
-import { describe, expect, test } from 'vitest'
+// @vitest-environment jsdom
+// ★ 컴포넌트 테스트 규약 — 위 지시자·jest-dom import·afterEach(cleanup) 셋 다
+//   필수다 (`trend-chart.test.tsx` 주석 참고). tsc는 통과하고 실행이 깨진다.
+import '@testing-library/jest-dom/vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, test } from 'vitest'
 import { AUDIT_RESULT_VERSION, type AuditResult } from '@/lib/audit/result'
 import { wilsonInterval } from '@/lib/stats/wilson'
 import type { RunPoint } from '@/lib/dashboard/data'
 import { QueryHeatmap } from './query-heatmap'
+
+afterEach(cleanup)
 
 function point(runId: string, byQuery: AuditResult['byQuery']): RunPoint {
   const result = {
@@ -4659,6 +4726,24 @@ git commit -m "feat(dashboard): 헤드라인·추이 차트(점+오차 밴드·�
 문법. 다만 구독 고객에게 "무료 진단 리포트" 표제와 요금제 업셀은 틀린 말이라
 `variant='run'`을 추가한다(조립 재구현 금지 — 표제·업셀 두 지점만 분기).
 
+★ **점유율 추이도 끊이지 않는 선을 그리지 않는다 — Task 9의 추이 차트와 같은
+규칙이고 같은 이유다.** `SovTrend`는 `TrendChart`와 **똑같은 서수 축**
+(`x = (i) => PAD.left + (n <= 1 ? IW / 2 : (i * IW) / (n - 1))`)을 쓰므로,
+빠진 회차를 감추는 방식도 똑같다. `SovPoint`가 들고 오는 값 둘로 끊는다.
+
+- `comparableWithPrev === false` — 경쟁사 집합·엔진 구성·질의 집합·판정기 버전
+  중 하나가 바뀌었다. 분모나 분자의 **정의**가 달라졌다.
+- `runsSkippedBefore > 0` — 두 점 **사이에 잴 값이 없던 회차**가 그만큼 있다.
+  조건이 같아 `comparableWithPrev`는 true인데도 그렇다. 원인이 둘인데 둘 다
+  실재한다: 스냅샷 저장만 실패한 회차(`points`에 못 들어온다)와,
+  `shareOfVoice.n === 0`이라 이 계열에서 빠지는 회차. 후자는 답변이 없을 때만이
+  아니라 **경쟁사를 하나도 등록하지 않은 회차 전부**에서 난다 — 경쟁사가 없으면
+  SoV는 정의되지 않아 `wilsonInterval(0, 0)`이다. 경쟁사를 나중에 등록한 고객은
+  그 앞 회차가 통째로 사라지는데, 서수 축은 남은 점들을 옆칸에 붙여 그린다.
+
+두 경우 모두 **선분을 잇지 않고**, 왜 끊겼는지를 캡션에 쓴다 (Task 9와 같은
+`segmentsOf` 헬퍼). 말없이 끊긴 선은 버그로 읽힌다.
+
 **Files:**
 - Modify: `src/components/audit/result-view.tsx` (`variant?: 'audit' | 'run'` prop)
 - Create: `src/components/dashboard/sov-trend.tsx`
@@ -4667,7 +4752,8 @@ git commit -m "feat(dashboard): 헤드라인·추이 차트(점+오차 밴드·�
 - Create: `src/app/(app)/dashboard/runs/[runId]/page.tsx`
 - Modify: `src/app/(app)/dashboard/page.tsx` (섹션 3개 추가)
 - Test: `src/components/audit/result-view.test.tsx` (variant 케이스 추가),
-  `src/components/dashboard/source-changes.test.tsx`
+  `src/components/dashboard/source-changes.test.tsx`,
+  `src/components/dashboard/sov-trend.test.tsx`
 
 **Interfaces:**
 - Consumes: Task 8의 `buildSovTrend`·`buildSourceChanges`·`RunListItem`·
@@ -4747,12 +4833,19 @@ Run: `pnpm vitest run src/components/audit/result-view.test.tsx` → PASS
 `src/components/dashboard/source-changes.test.tsx`:
 
 ```tsx
-import { render, screen } from '@testing-library/react'
-import { describe, expect, test } from 'vitest'
+// @vitest-environment jsdom
+// ★ 컴포넌트 테스트 규약 — 위 지시자·jest-dom import·afterEach(cleanup) 셋 다
+//   필수다 (Task 9 `trend-chart.test.tsx` 주석 참고). tsc는 통과하고 실행이 깨진다.
+import '@testing-library/jest-dom/vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, test } from 'vitest'
 import { AUDIT_RESULT_VERSION, type AuditResult } from '@/lib/audit/result'
+import type { SourceOwner } from '@/lib/stats/sources'
 import { wilsonInterval } from '@/lib/stats/wilson'
 import type { RunPoint } from '@/lib/dashboard/data'
 import { SourceChanges } from './source-changes'
+
+afterEach(cleanup)
 
 // ★ RunPoint는 `queryIds`·`detectorVersion`·`skippedBefore`까지 **필수**다
 //   (Task 8 Interfaces). 빠뜨리면 TS2322. 그리고 `queryIds`·`detectorVersion`을
@@ -4811,9 +4904,75 @@ describe('SourceChanges', () => {
 })
 ```
 
-import에 `import type { SourceOwner } from '@/lib/stats/sources'`를 추가한다.
+`src/components/dashboard/sov-trend.test.tsx` — 위 ★ 규칙을 산문이 아니라
+테스트로 못 박는다. Task 9의 `trend-chart.test.tsx`와 같은 짝이다:
 
-Run: `pnpm vitest run src/components/dashboard/source-changes.test.tsx` → FAIL
+```tsx
+// @vitest-environment jsdom
+// ★ 컴포넌트 테스트 규약 — 위 지시자·jest-dom import·afterEach(cleanup) 셋 다
+//   필수다 (Task 9 `trend-chart.test.tsx` 주석 참고). tsc는 통과하고 실행이 깨진다.
+import '@testing-library/jest-dom/vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, test } from 'vitest'
+import { AUDIT_RESULT_VERSION, type AuditResult } from '@/lib/audit/result'
+import { wilsonInterval } from '@/lib/stats/wilson'
+import type { RunPoint } from '@/lib/dashboard/data'
+import { SovTrend } from './sov-trend'
+
+afterEach(cleanup)
+
+// ★ RunPoint는 `queryIds`·`detectorVersion`·`skippedBefore`까지 **필수**다
+//   (Task 8 Interfaces). `skippedBefore`가 곧 이 파일이 검증할 신호다.
+function point(runId: string, k: number, n: number, over: Partial<RunPoint> = {}): RunPoint {
+  const result = {
+    version: AUDIT_RESULT_VERSION, brandName: 'b', category: 'c', competitors: ['29CM'],
+    engines: ['chatgpt'], aliases: [], measuredAt: '2026-08-03T18:30:00.000Z',
+    totalAnswers: 6, citedRate: wilsonInterval(1, 6), shareOfVoice: wilsonInterval(k, n),
+    ranking: [], evidence: [], byEngine: {}, byQuery: [], sources: [],
+    sourceSummary: { totalAnswers: 6, answersWithCitations: 0, distinctDomains: 0, selfAnswers: 0 },
+    hasSelfDomains: false, unresolved: 0,
+  } as AuditResult
+  return {
+    runId, measuredAt: result.measuredAt, engines: ['chatgpt'], competitors: ['29CM'],
+    queryIds: ['q1', 'q2'], detectorVersion: 1, skippedBefore: 0, result, ...over,
+  }
+}
+
+describe('SovTrend', () => {
+  test('조건이 같고 회차가 연속하면 선을 잇는다 — 멀쩡한 선을 괜히 끊지 않는다', () => {
+    const { container } = render(<SovTrend points={[point('r1', 8, 20), point('r2', 12, 20)]} />)
+    expect(container.querySelectorAll('[data-testid="sov-point"]')).toHaveLength(2)
+    expect(container.querySelectorAll('[data-testid="sov-line"]')).toHaveLength(1)
+  })
+
+  test('경쟁사 집합이 바뀐 구간은 선을 끊고 이유를 쓴다', () => {
+    const { container } = render(
+      <SovTrend
+        points={[point('r1', 8, 20), point('r2', 12, 20, { competitors: ['29CM', '지그재그'] })]}
+      />,
+    )
+    expect(container.querySelectorAll('[data-testid="sov-line"]')).toHaveLength(0)
+    expect(screen.getByText(/비교하지 않습니다/)).toBeInTheDocument()
+  })
+
+  /**
+   * ★ 경쟁사를 등록하기 전 회차는 SoV가 정의되지 않아(n=0) 계열에서 통째로
+   *   빠진다. 조건은 그대로라 `comparableWithPrev`는 true다 — 이 구간을 끊는
+   *   근거는 `runsSkippedBefore`뿐이다. 없으면 서수 축이 두 점을 옆칸에 붙여
+   *   그리고, 고객은 그 사이에도 재고 있었던 것으로 읽는다.
+   */
+  test('점유율을 잴 수 없던 회차가 있으면 그 구간도 잇지 않는다', () => {
+    const { container } = render(
+      <SovTrend points={[point('r1', 8, 20), point('r2', 0, 0), point('r3', 12, 20)]} />,
+    )
+    expect(container.querySelectorAll('[data-testid="sov-point"]')).toHaveLength(2)
+    expect(container.querySelectorAll('[data-testid="sov-line"]')).toHaveLength(0)
+    expect(screen.getByText(/잴 수 없던 회차/)).toBeInTheDocument()
+  })
+})
+```
+
+Run: `pnpm vitest run src/components/dashboard` → FAIL
 
 - [ ] **Step 4: 구현 — `src/components/dashboard/source-changes.tsx`**
 
@@ -4880,19 +5039,46 @@ export function SourceChanges({ points }: { points: RunPoint[] }) {
 - [ ] **Step 5: 구현 — `src/components/dashboard/sov-trend.tsx`**
 
 ```tsx
-import { buildSovTrend, type RunPoint } from '@/lib/dashboard/data'
+import { buildSovTrend, type RunPoint, type SovPoint } from '@/lib/dashboard/data'
 import { formatInterval, formatPercent } from '@/lib/stats/wilson'
 
 /**
  * 점유율 추이 (디자인 언어 §4.3). 추이 차트와 같은 점+밴드 문법의 소형판.
- * 경쟁사 집합이 바뀐 점은 직전과 선으로 잇지 않는다 — 분모가 달라지면
- * 점유율은 설정 변경만으로도 움직인다.
+ *
+ * ★ **선을 끊어야 하는 자리가 둘 있다 — `trend-chart.tsx`와 같은 규칙이다.**
+ *   같은 서수 축을 쓰는 이상 같은 거짓말이 가능하다.
+ *     - `comparableWithPrev === false` — 경쟁사 집합·엔진 구성·질의 집합·판정기
+ *       버전이 바뀌었다. 분모가 달라지면 점유율은 설정 변경만으로도 움직인다.
+ *     - `runsSkippedBefore > 0` — 그 사이에 잴 값이 없던 회차가 있다. 조건은
+ *       같아서 비교는 가능하지만, 등간격 축이 2주를 1주로 보이게 한다.
+ *       원인 중 하나가 **경쟁사 미등록**이다 — 경쟁사가 없으면 SoV는 정의되지
+ *       않아 그 회차가 통째로 빠진다. 나중에 경쟁사를 등록한 고객에게 실제로
+ *       일어나는 일이고, 그 자리를 감추면 "쭉 재고 있었다"가 된다.
+ *   두 경우 모두 선분을 잇지 않고, 왜 끊겼는지를 캡션에 쓴다.
+ *
+ * 오차 밴드는 원래부터 점마다 따로 그린다(사각형) — 이어지는 띠가 없으므로
+ * 추이 차트처럼 밴드를 구간별로 자를 필요가 없다.
  */
 const W = 640
 const H = 150
 const PAD = { top: 10, right: 12, bottom: 24, left: 44 }
 const IW = W - PAD.left - PAD.right
 const IH = H - PAD.top - PAD.bottom
+
+/**
+ * 이을 수 있는 구간으로 자른다 — Task 9 `trend-chart.tsx`의 `segmentsOf`와
+ * 같은 규칙·같은 이유다. 반환은 **전역 인덱스**의 묶음이다: x 좌표는 계열
+ * 전체에서의 위치로 정해야 구간이 갈려도 점이 제자리에 남는다.
+ */
+function segmentsOf(series: SovPoint[]): number[][] {
+  const out: number[][] = []
+  series.forEach((p, i) => {
+    const breaks = !p.comparableWithPrev || p.runsSkippedBefore > 0
+    if (i === 0 || breaks) out.push([i])
+    else out[out.length - 1]!.push(i)
+  })
+  return out
+}
 
 export function SovTrend({ points }: { points: RunPoint[] }) {
   const sov = buildSovTrend(points)
@@ -4902,7 +5088,10 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
   const x = (i: number) => PAD.left + (n <= 1 ? IW / 2 : (i * IW) / (n - 1))
   const y = (v: number) => PAD.top + (1 - v) * IH
   const last = sov[n - 1]!
-  const hasBreak = sov.some((p) => !p.comparableWithPrev)
+  const segments = segmentsOf(sov)
+  // 왜 끊겼는지를 캡션에 쓴다 — 말없이 끊긴 선은 버그로 읽힌다.
+  const hasConditionBreak = sov.some((p, i) => i > 0 && !p.comparableWithPrev)
+  const hasGap = sov.some((p) => p.runsSkippedBefore > 0)
 
   return (
     <div>
@@ -4920,25 +5109,35 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
             </text>
           </g>
         ))}
-        {sov.map((p, i) => {
-          const prev = sov[i - 1]
-          // 비교 가능한 구간만 잇는다 — 끊긴 자리가 곧 "설정이 바뀐 자리"다.
-          return prev && p.comparableWithPrev ? (
-            <line key={`l-${p.runId}`} x1={x(i - 1)} y1={y(prev.interval.point)} x2={x(i)} y2={y(p.interval.point)} stroke="var(--primary)" strokeWidth={1.5} />
-          ) : null
-        })}
+        {/* ★ 계열 전체를 잇는 폴리라인 하나가 아니다. 조건이 바뀌었거나
+            (`comparableWithPrev === false`) 그 사이 회차가 빠진
+            (`runsSkippedBefore > 0`) 자리에서는 선분이 없다. */}
+        {segments.map((idx) =>
+          idx.length > 1 ? (
+            <path
+              key={`line-${idx[0]}`}
+              data-testid="sov-line"
+              d={`M ${idx.map((i) => `${x(i)},${y(sov[i]!.interval.point)}`).join(' L ')}`}
+              fill="none"
+              stroke="var(--primary)"
+              strokeWidth={1.5}
+            />
+          ) : null,
+        )}
         {sov.map((p, i) => (
           <g key={p.runId}>
             <rect x={x(i) - 4} y={y(p.interval.upper)} width={8} height={Math.max(y(p.interval.lower) - y(p.interval.upper), 1)} fill="var(--primary)" opacity={0.2} />
-            <circle cx={x(i)} cy={y(p.interval.point)} r={4} fill="var(--primary)" />
+            <circle data-testid="sov-point" cx={x(i)} cy={y(p.interval.point)} r={4} fill="var(--primary)" />
             <title>{`${p.measuredAt.slice(5, 7)}.${p.measuredAt.slice(8, 10)} · ${formatPercent(p.interval.point)} (${formatInterval(p.interval)})`}</title>
           </g>
         ))}
       </svg>
       <p className="mt-2 text-xs text-muted-foreground">
         분모: 등록 경쟁사({latest.competitors.join(', ') || '없음'}) 대비 언급 비중입니다.
-        {hasBreak &&
-          ' 경쟁사 설정이 바뀐 구간은 이전과 비교하지 않습니다 — 분모가 달라지면 점유율은 설정 변경만으로도 움직입니다.'}
+        {hasConditionBreak &&
+          ' 측정 조건(경쟁사 집합·엔진 구성·질의 집합·판정기 버전)이 바뀐 구간은 이전과 비교하지 않습니다 — 분모가 달라지면 점유율은 설정 변경만으로도 움직입니다.'}
+        {hasGap &&
+          ' 점유율을 잴 수 없던 회차가 있는 구간도 잇지 않습니다 — 경쟁사를 등록하기 전 회차와 스냅샷이 없는 회차가 그렇습니다. 점 사이 간격이 실제로 지난 기간과 다릅니다.'}
       </p>
     </div>
   )
