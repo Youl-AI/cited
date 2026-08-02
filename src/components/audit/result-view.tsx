@@ -8,8 +8,9 @@ import type { AuditResult } from '@/lib/audit/result'
 import { isPaidTier } from '@/lib/audit/tiers'
 import type { AuditTier } from '@/lib/audit/tiers'
 import { engineLabel } from '@/lib/plans'
+import { changeSentence } from '@/lib/stats/change-copy'
 import { formatInterval, formatPercent, judgeChange } from '@/lib/stats/wilson'
-import type { ChangeVerdict, Interval } from '@/lib/stats/wilson'
+import type { Interval } from '@/lib/stats/wilson'
 
 /**
  * 진단 리포트 화면. 서버 컴포넌트다 — 상태가 없다.
@@ -472,19 +473,6 @@ function CompareSection({
       </p>
     </section>
   )
-}
-
-function changeSentence(verdict: ChangeVerdict): string {
-  switch (verdict) {
-    case 'unchanged':
-      return '두 측정의 신뢰구간이 겹칩니다 — 차이가 측정 오차 범위 안에 있어, 실제 변화라고 판정할 수 없습니다.'
-    case 'up':
-      return '신뢰구간이 겹치지 않습니다 — 통계적으로 유의미한 상승입니다.'
-    case 'down':
-      return '신뢰구간이 겹치지 않습니다 — 통계적으로 유의미한 하락입니다.'
-    case 'incomparable':
-      return '두 측정의 조건(엔진 구성)이 달라 변화를 비교할 수 없습니다.'
-  }
 }
 
 /**
