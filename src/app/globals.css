@@ -287,4 +287,16 @@
   table {
     font-variant-numeric: tabular-nums;
   }
+
+  /* 모션 전역 스위치 — docs/design-language.md §5. 움직임을 줄여 달라는
+     사용자에게는 전부 끈다. 개별 컴포넌트가 각자 기억할 일이 아니다. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
 }
