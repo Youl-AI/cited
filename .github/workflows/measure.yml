@@ -1,0 +1,210 @@
+name: 정기 측정
+
+# 스케줄러의 출처는 여기 하나다 — vercel.json의 `crons`에는 절대 추가하지 않는다
+# (스펙 ③: Vercel Cron은 Pro 요금이 필요하고, 출처가 둘이면 회차가 두 배가 된다).
+#
+# 월·수·금 KST 03:00~05:50 창을 10분 간격으로 두드린다. UTC로는 일·화·목
+# 18:00~20:50다 — KST = UTC+9라 요일이 하루 밀린다. 이 요일 집합은 서버의
+# `MEASURE_WEEKDAYS_KST`(= 월·수·금)와 **같은 값이어야 한다.** 어긋나면 아래
+# 스크립트가 off_schedule 응답을 잡아 빨간불로 만든다.
+#
+# 핸들러는 호출당 브랜드를 1개만 측정한다 (실측 1브랜드 233초, 함수 한도 300초).
+# 응답의 `remaining`이 남은 due 브랜드 수를 알려주므로, 한 번 발화하면 그 안에서
+# `remaining`이 0이 될 때까지 이어서 호출해 큐를 비운다. 10분 간격 발화(창당 18번)는
+# 그 소진 루프의 **재시도·안전망**이다 — 러너가 죽거나 상한에 걸려도, 또는 아래처럼
+# 실패로 루프가 멈춰도 다음 발화가 이어받는다. Actions 분은 무료라 발화를 늘려도
+# API 지출은 늘지 않는다(지출은 오직 서버의 due 판정이 결정한다).
+#
+# ★ 회차당 약 2,400원의 실지출이 발생한다. 그래서 **한 브랜드라도 측정에 실패하면
+#   이 발화는 그 자리에서 끝낸다**(exit 0). 실패한 브랜드는 서버 기준으로 여전히
+#   due이고 id 순 소진이라 루프를 계속 돌면 **같은 브랜드를 몇 초 뒤에 다시 재게
+#   된다** — 대개 원인이 같은 외부 장애라 두 번째 시도도 실패하고, 그 순간 하루
+#   상한(2회)을 다 써서 그날 회차를 통째로 잃는다(그 사이 수집 비용은 실제로 나간다).
+#   재시도와 남은 브랜드는 10분 뒤 다음 발화가 이어받는다.
+#   중복 방지 자체는 서버가 collection_runs 상태로 한다(성공/부분성공 회차가 있으면
+#   제외, 진행 중이면 잠금, 실패는 하루 2회 상한). GitHub Actions cron이 지연되거나
+#   드물게 두 번 발화해도 due 판정이 KST 하루 단위라 추가 지출로 이어지지 않는다.
+on:
+  schedule:
+    - cron: '*/10 18-20 * * 0,2,4'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: '비측정일에도 강제로 측정한다(?force=1). 실지출이 발생하므로 놓친 회차를 보충할 때만 켤 것. 한 번 실행에 브랜드 1개만 잰다'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# 창 안의 18번 발화가 겹쳐 돌지 않게 한다. 아래 소진 루프는 한 번에 수십 분을
+# 쓸 수 있는데, 그동안 다음 발화가 같이 돌면 어느 실행이 무엇을 쟀는지 로그로
+# 되짚기 어려워진다(서버 잠금 덕에 이중 측정은 안 되지만, 관측 가능성이 나빠진다).
+# 진행 중인 실행은 취소하지 않는다 — 취소하면 그 순간 돌던 유료 측정이 버려진다.
+# 그룹 이름에 워크플로 이름을 붙인다 — `measure`라는 맨 이름은 나중에 다른
+# 워크플로가 같은 리터럴을 써서 이 유료 실행과 서로를 막는 사고를 부를 수 있다.
+concurrency:
+  group: ${{ github.workflow }}-measure
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    # 브랜드 10개 소진에 약 40분(브랜드당 233초 + 왕복). 아래 MAX_SECONDS(45분)에
+    # 걸린 뒤 진행 중이던 호출 1건(최대 320초)이 끝날 여유까지 더한 값이다.
+    # 창을 18:00~20:50 UTC로 넓혀도 이 값들은 그대로 유효하다 — 마지막 발화가
+    # 예산을 다 쓰고 진행 중이던 호출(최대 320초)까지 기다려도 21:40 UTC
+    # (KST 06:40)에 끝나 KST 같은 요일 안이다.
+    timeout-minutes: 55
+    steps:
+      # 저장소 Settings > Secrets and variables > Actions 에 CRON_SECRET을
+      # 등록해야 한다 — Vercel 환경변수의 CRON_SECRET과 **같은 값**
+      # (ANTHROPIC_API_KEY·DATABASE_URL과 같은 방식).
+      - name: due 브랜드 소진 (POST /api/cron/measure)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # schedule 발화에서는 빈 문자열이 된다 — 즉 기본은 항상 비강제다.
+          FORCE: ${{ inputs.force }}
+          # ★ 형제 워크플로 post-deploy-health.yml과 달리 `vars.PRODUCTION_URL`을
+          #   쓰지 않고 오리진을 박아 둔다. 그 변수가 비었거나 잘못 설정되면 유료
+          #   측정이 엉뚱한 오리진으로 나가거나(다른 환경의 DB에 회차를 쓴다) 빈
+          #   URL로 조용히 실패한다. 도메인이 바뀌면 이 파일을 고친다.
+          ENDPOINT: https://cited.co.kr/api/cron/measure
+          # 한 번의 발화가 낼 수 있는 호출 상한. 근시일 브랜드 수(10 미만)에
+          # 여유를 둔 값이다. 상한에 걸리면 남은 몫은 다음 10분 발화가 이어받는다.
+          MAX_CALLS: '12'
+          # 새 호출을 시작하지 않는 시각(초). timeout-minutes와 짝이다.
+          MAX_SECONDS: '2700'
+        run: |
+          # ★ set -x 금지. CRON_SECRET이 명령줄에 그대로 찍힌다.
+          set -euo pipefail
+
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::저장소 시크릿 CRON_SECRET이 비어 있다. Settings > Secrets and variables > Actions 에 Vercel 환경변수와 같은 값으로 등록할 것."
+            exit 1
+          fi
+
+          # jq는 GitHub 호스티드 ubuntu-latest 이미지에 기본 포함이다. 그래도
+          # 먼저 확인한다 — 유료 호출을 보낸 **뒤에** 응답을 못 읽어 죽으면 돈만
+          # 쓰고 결과를 모르며, 러너 이미지 변경이 원인이라는 것도 로그에 안 남는다.
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "::error::러너에 jq가 없다. 응답을 해석할 수 없어 호출을 시작하지 않는다 — 러너 이미지가 바뀌었는지 확인하고 설치 스텝을 추가할 것."
+            exit 1
+          fi
+
+          # ★ 시크릿은 Authorization 헤더로만 보낸다. URL에 실으면 Actions 로그·
+          #   서버 액세스 로그에 그대로 남는다.
+          url="$ENDPOINT"
+          if [ "${FORCE:-}" = "true" ]; then
+            url="$ENDPOINT?force=1"
+            # ★ 강제 실행은 호출 1회로 묶는다. 이 체크박스는 요일 게이트만 넘고
+            #   due 브랜드를 통째로 소진하므로, 상한이 없으면 클릭 한 번이 함대
+            #   전체(브랜드 수 × 약 2,400원)를 쓴다. 보충은 브랜드 1개씩 의식적으로.
+            MAX_CALLS=1
+            echo "::warning::강제 실행(force=1) — 서버의 월·수·금 게이트를 넘어 실제 측정이 일어난다. 이번 실행은 브랜드 1개를 재고 약 2,400원이 실제로 나간다. 이 지출은 다음 정규 회차를 **대체하지 않는다** — due 판정이 KST 하루 단위라 오늘 강제로 잰 브랜드도 다음 측정일(월·수·금) 회차에서 다시 측정된다. 즉 순수하게 더해지는 비용이다."
+          fi
+          echo "대상: $url (event=$GITHUB_EVENT_NAME)"
+
+          deadline=$(( SECONDS + MAX_SECONDS ))
+          calls=0
+
+          while :; do
+            calls=$(( calls + 1 ))
+
+            # ★ curl 재시도(--retry)를 쓰지 않는다. 이건 POST이고, 이미 서버에
+            #   도달한 요청을 다시 보내면 유료 측정이 한 번 더 일어난다.
+            #   --max-time 320은 함수 한도 300초 + 왕복 여유다.
+            set +e
+            code=$(curl -sS -o body.json -w '%{http_code}' -X POST \
+              --max-time 320 \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              "$url")
+            rc=$?
+            set -e
+
+            if [ "$rc" -ne 0 ]; then
+              echo "::error::측정 엔드포인트 호출 자체가 실패했다 (curl exit $rc). DNS·TLS·타임아웃 등 인프라 문제다 — 측정 실패는 이 경로로 오지 않는다."
+              exit 1
+            fi
+
+            # 핸들러는 측정이 실패해도 200 + ok:false로 돌려준다. 그러므로
+            # 200이 아니라는 건 인증(401)·경로(404)·플랫폼 오류 — 진짜 인프라
+            # 문제다. 이건 빨간불로 만들어야 한다. 운영자 메일이 오지 않는다.
+            # ★ 본문은 이 검사를 **통과한 뒤에만** 찍는다. 200이 아닌 응답의
+            #   본문은 우리 핸들러가 만든 것이 아니라 플랫폼·프록시가 만든 것이라
+            #   무엇이 담길지 이 파일이 보장할 수 없다(요청 헤더 반사 등).
+            if [ "$code" != "200" ]; then
+              echo "::error::HTTP $code — 인프라 문제다. 401이면 CRON_SECRET이 Vercel 쪽과 다르고, 404면 배포가 이 라우트를 갖고 있지 않다. (본문은 무엇이 담길지 보장할 수 없어 찍지 않는다.)"
+              exit 1
+            fi
+
+            echo "[$calls] HTTP $code $(cat body.json)"
+
+            # ★ 아래 jq 읽기 전에 본문이 JSON인지 먼저 본다. 빈 본문이나 HTML
+            #   오류 페이지가 200으로 오면 jq가 파싱 오류만 뱉고 죽어서, 유일하게
+            #   `::error::` 설명이 없는 실패 모드가 된다.
+            if ! jq -e . body.json >/dev/null 2>&1; then
+              echo "::error::200 응답인데 본문이 JSON이 아니다(비었거나 HTML일 수 있다). 라우트가 아니라 프록시·엣지가 응답했을 가능성이 크다 — Vercel 배포와 라우트 경로를 확인할 것."
+              exit 1
+            fi
+
+            ok=$(jq -r '.ok' body.json)
+            skipped=$(jq -r '.skipped // ""' body.json)
+            measured=$(jq -r '.measured // ""' body.json)
+            remaining=$(jq -r '.remaining // 0' body.json)
+
+            # ★ off_schedule("오늘은 측정일이 아니다")을 "다 쟀다"와 절대 섞지
+            #   않는다. 섞으면 회차가 통째로 빠진 것을 아무도 모른다.
+            if [ "$skipped" = "off_schedule" ]; then
+              if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+                echo "::error::cron 발화인데 서버가 off_schedule로 응답했다. 이 파일의 cron 요일(UTC 0,2,4)과 서버의 MEASURE_WEEKDAYS_KST(월·수·금)가 어긋났다는 뜻이다 — 고치지 않으면 회차가 조용히 계속 빠진다."
+                exit 1
+              fi
+              echo "::warning::오늘은 측정일(월·수·금 KST)이 아니어서 서버가 건너뛰었다. 놓친 회차를 보충하려면 force 입력을 켜고 다시 실행할 것 — 브랜드 1개당 약 2,400원이 실제로 나간다."
+              exit 0
+            fi
+
+            if [ "$ok" != "true" ]; then
+              # 측정 실패는 이미 핸들러가 운영자 메일로 알린다. 여기서 job을
+              # 빨갛게 만들면 같은 사건에 경보가 두 번 울리고, 정작 진짜 인프라
+              # 실패(위의 exit 1)와 구별되지 않는다. 그래서 초록으로 끝낸다.
+              # ★ 다만 루프는 **여기서 멈춘다.** 계속 돌면 다음 호출이 방금 실패한
+              #   그 브랜드를 다시 고른다 — 서버는 실패 1회짜리 브랜드를 여전히
+              #   due로 보고(하루 상한 2회), 소진 순서는 id 순이라 그 브랜드가 다시
+              #   맨 앞이다. 응답의 `remaining`은 이 브랜드를 뺀 수라 막아 주지
+              #   못한다(개수만 줄 뿐 선택에 관여하지 않는다). 같은 장애 안에서
+              #   몇 초 뒤 재시도하면 대개 또 실패하고, 그걸로 하루 상한을 다 써
+              #   그날 회차를 잃는다 — 두 시도 모두 수집 비용은 실제로 나간 뒤다.
+              #   재시도도 남은 브랜드도 10분 뒤 다음 발화가 이어받는다.
+              echo "::warning::브랜드 $measured 측정 실패. 운영자 메일이 이미 나갔다. 같은 장애 안에서 즉시 재시도하지 않으려고 이번 발화는 여기서 끝낸다 — 재시도와 남은 브랜드는 다음 10분 발화가 이어받는다(서버가 브랜드당 하루 2회로 상한)."
+              exit 0
+            fi
+
+            if [ -z "$measured" ]; then
+              echo "::notice::due 브랜드가 없다 — 오늘 몫은 모두 끝났다."
+              exit 0
+            fi
+
+            echo "브랜드 $measured 측정 완료 (남은 due: $remaining)"
+
+            # 여기까지 왔다는 건 방금 호출이 성공했다는 뜻이다. 그 경우에만
+            # `remaining`이 정확하다 — 서버는 방금 잰 브랜드를 뺀 나머지 중
+            # due인 것을 센다(오늘 앞서 한 번 실패한 브랜드는 여전히 세어진다).
+            if [ "$remaining" -le 0 ]; then
+              echo "이번 발화에서 더 잴 due 브랜드가 없다 — 호출 $calls회."
+              exit 0
+            fi
+            if [ "$calls" -ge "$MAX_CALLS" ]; then
+              if [ "${FORCE:-}" = "true" ]; then
+                echo "::notice::강제 실행은 한 번에 브랜드 1개만 잰다. 남은 ${remaining}개도 지금 재려면 그만큼 다시 실행할 것 — 실행마다 약 2,400원이 더 나간다."
+              else
+                echo "::notice::이번 발화의 호출 상한($MAX_CALLS)에 걸렸다. 남은 ${remaining}개는 다음 10분 발화가 이어받는다."
+              fi
+              exit 0
+            fi
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "::notice::이번 발화의 시간 예산을 다 썼다. 남은 ${remaining}개는 다음 10분 발화가 이어받는다."
+              exit 0
+            fi
+          done

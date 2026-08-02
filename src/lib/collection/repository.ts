@@ -207,6 +207,17 @@ export async function finishRun(args: {
     .where(eq(schema.collectionRuns.id, args.runId))
 }
 
+/**
+ * 회차 결과 스냅샷 저장 (스펙 ④). 추이·히트맵·점유율이 이 스냅샷에서 계산되고,
+ * 회차 상세는 ResultView가 그대로 그린다 — 재집계하지 않는다.
+ */
+export async function saveRunResult(runId: string, result: unknown): Promise<void> {
+  await db
+    .update(schema.collectionRuns)
+    .set({ result })
+    .where(eq(schema.collectionRuns.id, runId))
+}
+
 export async function loadRunAnswers(runId: string) {
   return db
     .select({

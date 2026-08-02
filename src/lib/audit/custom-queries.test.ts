@@ -127,6 +127,40 @@ describe('createCustomQueryGenerator', () => {
     expect(captured).toContain('기구 필라테스 전문')
   })
 
+  // ★ 페이로드가 무상태면 같은 브랜드의 [재생성]은 매번 **바이트까지 같은 요청**이라
+  //   같은 후보가 돌아오기 쉽다. 중복이 돌아온 시점에는 크레딧 5회 중 1회가 이미
+  //   나갔다 — 클라이언트에서 걸러 봐야 슬롯만 조용히 빈다. 겹치지 말라고 미리 말한다.
+  it('기존 질의를 페이로드에 넣는다 — 중복 후보로 크레딧을 태우지 않으려고', async () => {
+    let captured = ''
+    const generate = createCustomQueryGenerator({
+      parse: async (prompt) => {
+        captured = prompt
+        return { queries: custom7 }
+      },
+    })
+    await generate({ ...args, existing: [...template3, custom7[0]!] })
+    for (const q of [...template3, custom7[0]!]) expect(captured).toContain(q)
+  })
+
+  it('기존 질의를 넘겨도 프롬프트에 브랜드명·경쟁사명은 들어가지 않는다', async () => {
+    let captured = ''
+    const generate = createCustomQueryGenerator({
+      parse: async (prompt) => {
+        captured = prompt
+        return { queries: custom7 }
+      },
+    })
+    // 고객이 편집 중인 줄에는 브랜드명이 섞여 있을 수 있다 (확정에서 거부될 줄이라도
+    // 편집 중에는 존재한다). 그 줄이 그대로 프롬프트에 실리면 중립성 규칙이 뚫린다.
+    await generate({
+      ...args,
+      existing: ['바디텍필라테스 후기 어때?', '코어무브랑 비교하면?', custom7[0]!],
+    })
+    expect(captured).not.toContain('바디텍필라테스')
+    expect(captured).not.toContain('코어무브')
+    expect(captured).toContain(custom7[0]!)
+  })
+
   it('생성 실패는 그대로 던진다 — 조용히 빈 배열을 주면 검수 없이 부족한 채 동결된다', async () => {
     const generate = createCustomQueryGenerator({
       parse: async () => {

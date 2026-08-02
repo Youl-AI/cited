@@ -3,13 +3,14 @@ import Markdown from 'react-markdown'
 import { AnswerSpecimen } from '@/components/audit/answer-specimen'
 import type { SpecimenMark } from '@/components/audit/answer-specimen'
 import { ReportCover } from '@/components/audit/report-cover'
+import { IntervalBar } from '@/components/interval-bar'
 import { Button } from '@/components/ui/button'
 import type { AuditResult } from '@/lib/audit/result'
 import { isPaidTier } from '@/lib/audit/tiers'
 import type { AuditTier } from '@/lib/audit/tiers'
 import { engineLabel } from '@/lib/plans'
+import { changeSentence } from '@/lib/stats/change-copy'
 import { formatInterval, formatPercent, judgeChange } from '@/lib/stats/wilson'
-import type { ChangeVerdict, Interval } from '@/lib/stats/wilson'
 
 /**
  * 진단 리포트 화면. 서버 컴포넌트다 — 상태가 없다.
@@ -57,36 +58,12 @@ function SectionNote({ children }: { children: React.ReactNode }) {
   )
 }
 
-/** 신뢰구간 띠. 점추정 하나만 보여주지 않겠다는 약속을 그림으로 만든다. */
-function IntervalBar({ interval }: { interval: Interval }) {
-  const left = interval.lower * 100
-  const width = Math.max((interval.upper - interval.lower) * 100, 0.75)
-  const point = interval.point * 100
-  return (
-    <div
-      // `print:h-2` — 화면의 1.5(6px)는 종이에서 4.5pt 남짓으로 얇아져
-      // 띠 안의 점추정 눈금이 뭉개진다. 실측으로 한 단만 올린다.
-      className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted print:h-2"
-      role="img"
-      aria-label={`신뢰구간 ${formatInterval(interval)}`}
-    >
-      <div
-        className="absolute inset-y-0 rounded-full bg-ci-band"
-        style={{ left: `${left}%`, width: `${width}%` }}
-      />
-      <div
-        className="absolute inset-y-0 w-[2px] rounded-full bg-primary"
-        style={{ left: `calc(${point}% - 1px)` }}
-      />
-    </div>
-  )
-}
-
 export function ResultView({
   result,
   tier = 'free',
   guide,
   compare,
+  variant = 'audit',
 }: {
   result: AuditResult
   tier?: AuditTier
@@ -94,7 +71,10 @@ export function ResultView({
   guide?: string
   /** PREMIUM 재측정의 원본. 있으면 전후 비교를 그린다. */
   compare?: { before: AuditResult; beforeDate: string }
+  /** 'run' = 정기 측정 회차 상세 — 표제가 바뀌고 요금제 업셀이 빠진다 */
+  variant?: 'audit' | 'run'
 }) {
+  const isRun = variant === 'run'
   const rate = formatPercent(result.citedRate.point)
   const measuredOn = result.measuredAt.slice(0, 10)
 
@@ -110,8 +90,9 @@ export function ResultView({
       {/* ── 표제 ─────────────────────────────────────────────── */}
       <header className="mb-10">
         <p className="font-mono text-xs tracking-[0.14em] text-muted-foreground uppercase">
-          {/* ★ 유료 리포트에 "무료 진단"이 찍히면 산 것과 받은 것이 다르다. */}
-          {isPaidTier(tier) ? '정밀 진단 리포트' : '무료 진단 리포트'}
+          {/* ★ 유료 리포트에 "무료 진단"이 찍히면 산 것과 받은 것이 다르다.
+              회차 상세도 같은 규칙이다 — 구독 고객이 받은 것은 정기 측정이다. */}
+          {isRun ? '정기 측정 리포트' : isPaidTier(tier) ? '정밀 진단 리포트' : '무료 진단 리포트'}
         </p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
           {result.brandName}
@@ -156,7 +137,8 @@ export function ResultView({
 
       {/* ── 이 숫자를 어떻게 읽어야 하는가 ───────────────────── */}
       <section className="mb-10 border-l-2 border-border pl-5 print:break-inside-avoid">
-        {tier === 'free' ? (
+        {/* 회차 상세는 유료 문구 쪽 — 질의 수·답변 수 기반이라 그대로 맞는 말이다. */}
+        {!isRun && tier === 'free' ? (
           <p className="text-sm leading-relaxed text-muted-foreground">
             무료 진단은 질의 <Metric>3</Metric>개를 <Metric>1</Metric>회 측정합니다. 그래서
             구간이 <Metric>{formatInterval(result.citedRate)}</Metric>로 넓습니다 — 실제 값은 이
@@ -377,7 +359,10 @@ export function ResultView({
       {/* ── 유료 전환 ──────────────────────────────────────────
           ★ 인쇄(PDF)에서는 숨긴다. PDF는 크몽 납품물이고, 납품 문서에 실린
             자사 요금제 유도는 크몽 직거래 유도 정책 위반 소지가 있다 —
-            계정 제재 리스크. 화면(웹)에서는 유지한다. */}
+            계정 제재 리스크. 화면(웹)에서는 유지한다.
+          ★ 회차 상세(variant='run')에서는 아예 없다 — 이미 구독 중인 고객에게
+            "요금제 보기" 업셀은 틀린 말이다. */}
+      {!isRun && (
       <section className="rounded-lg border border-border bg-card p-6 sm:p-7 print:hidden">
         <h2 className="text-lg font-semibold tracking-tight">
           이 리포트는 <Metric>1</Metric>회 측정입니다
@@ -398,6 +383,7 @@ export function ResultView({
           <Link href="/pricing">요금제 보기</Link>
         </Button>
       </section>
+      )}
     </div>
   )
 }
@@ -472,19 +458,6 @@ function CompareSection({
       </p>
     </section>
   )
-}
-
-function changeSentence(verdict: ChangeVerdict): string {
-  switch (verdict) {
-    case 'unchanged':
-      return '두 측정의 신뢰구간이 겹칩니다 — 차이가 측정 오차 범위 안에 있어, 실제 변화라고 판정할 수 없습니다.'
-    case 'up':
-      return '신뢰구간이 겹치지 않습니다 — 통계적으로 유의미한 상승입니다.'
-    case 'down':
-      return '신뢰구간이 겹치지 않습니다 — 통계적으로 유의미한 하락입니다.'
-    case 'incomparable':
-      return '두 측정의 조건(엔진 구성)이 달라 변화를 비교할 수 없습니다.'
-  }
 }
 
 /**

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { auditRequestedNotice, auditVerificationEmail } from '@/lib/email/templates'
+import {
+  auditRequestedNotice,
+  auditVerificationEmail,
+  measureFailureNotice,
+} from '@/lib/email/templates'
 
 describe('auditVerificationEmail', () => {
   it('인증 링크와 브랜드명을 담는다', () => {
@@ -125,5 +129,70 @@ describe('auditRequestedNotice', () => {
     const mail = auditRequestedNotice({ audit: { ...audit, id: 'aud_<x>' } })
     expect(mail.html).not.toContain('aud_<x>')
     expect(mail.html).toContain('aud_&lt;x&gt;')
+  })
+})
+
+describe('measureFailureNotice', () => {
+  const base = {
+    brandName: '무신사',
+    brandId: 'brd_1',
+    reason: '수집이 전부 실패했습니다 (12회 시도)',
+    attempt: 1,
+  }
+
+  it('브랜드·id·시도·사유를 담는다', () => {
+    // 운영자가 이 메일 하나로 "어느 브랜드가 왜 몇 번째로 실패했나"를 알아야
+    // 한다 — 정기 측정 실패의 유일한 신호다.
+    const mail = measureFailureNotice(base)
+    for (const s of ['무신사', 'brd_1', '1 / 2', '수집이 전부 실패했습니다 (12회 시도)']) {
+      expect(mail.html).toContain(s)
+    }
+  })
+
+  it('1번째 시도면 자동 재시도를, 2번째면 회차 건너뜀을 알린다', () => {
+    // 두 문구가 같으면 운영자가 지금 개입해야 하는지 판단할 수 없다.
+    expect(measureFailureNotice(base).html).toContain('자동 재시도')
+    expect(measureFailureNotice({ ...base, attempt: 2 }).html).toContain('건너뜁니다')
+    expect(measureFailureNotice({ ...base, attempt: 2 }).html).not.toContain('자동 재시도')
+  })
+
+  it('제목에 브랜드명과 시도 회차가 있다', () => {
+    // 15분 간격으로 여러 통이 쌓이므로 제목만 보고 구분해야 한다.
+    const mail = measureFailureNotice(base)
+    expect(mail.subject).toContain('무신사')
+    expect(mail.subject).toContain('1번째')
+  })
+
+  it('본문의 HTML을 이스케이프한다', () => {
+    // ★ reason에는 엔진 오류 원문이, brandName에는 **고객이 입력한 문자열**이
+    //   그대로 실린다. 운영자 메일함에서 실행되면 피해는 우리 계정에서 난다.
+    const mail = measureFailureNotice({
+      ...base,
+      brandName: '<script>x</script>',
+      reason: '<img src=x onerror=y> HTTP 500',
+    })
+    expect(mail.html).not.toContain('<script>')
+    expect(mail.html).not.toContain('<img')
+    expect(mail.html).toContain('&lt;script&gt;')
+  })
+
+  it('사유의 따옴표가 속성을 탈출하지 못한다', () => {
+    // 오류 메시지에는 따옴표가 흔하다(`Invalid "model"` 등).
+    const mail = measureFailureNotice({ ...base, reason: '" onmouseover="alert(1)' })
+    expect(mail.html).not.toContain('onmouseover="alert(1)"')
+    expect(mail.html).toContain('&quot;')
+  })
+
+  it('제목은 이스케이프하지 않는다 — 평문 헤더다', () => {
+    // 위 두 템플릿의 같은 이름 테스트와 이유가 같다(MIME 헤더는 평문이다).
+    expect(measureFailureNotice({ ...base, brandName: 'H&M' }).subject).toContain('H&M')
+  })
+
+  it('긴 사유는 500자로 자른다', () => {
+    // 엔진이 응답 본문을 통째로 실어 던지는 경우가 있다. 메일이 수십 KB가
+    // 되면 클라이언트가 본문을 잘라 정작 필요한 앞부분까지 가려진다.
+    const mail = measureFailureNotice({ ...base, reason: 'x'.repeat(900) })
+    expect(mail.html).toContain('x'.repeat(500))
+    expect(mail.html).not.toContain('x'.repeat(501))
   })
 })

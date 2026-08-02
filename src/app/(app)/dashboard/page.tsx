@@ -1,40 +1,153 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { BrandPicker } from '@/components/dashboard/brand-picker'
+import { HeadlineCard } from '@/components/dashboard/headline-card'
+import { QueryHeatmap } from '@/components/dashboard/query-heatmap'
+import { RunListSection } from '@/components/dashboard/run-list'
+import { SourceChanges } from '@/components/dashboard/source-changes'
+import { SovTrend } from '@/components/dashboard/sov-trend'
+import { TrendChart } from '@/components/dashboard/trend-chart'
 import { Button } from '@/components/ui/button'
-import { requireUser } from '@/lib/session'
+import { loadDashboard } from '@/lib/dashboard/load'
+import { queriesStepPath } from '@/lib/onboarding/editor'
+import { loadOnboardingGate } from '@/lib/onboarding/gate'
+import { resolveDashboardEntry } from '@/lib/onboarding/state'
 
 export const metadata = { title: '대시보드' }
 
-// 5단계에서 통째로 교체된다. 지금 있는 이유는 하나 — 인증 가드가 실제로
-// 동작하는지 확인할 대상이 필요해서다.
-//
-// ★ 원래는 "아직 등록된 브랜드가 없습니다" 한 줄이었다. 그게 **막다른 골목**을
-//   만들었다 — 브랜드를 등록할 방법이 없고, 설정·결제는 "준비 중"이고,
-//   로고를 눌러도 제자리였다(로고 href가 /dashboard였다). 가입한 사람이
-//   여기 도착해서 아무것도 못 하고 나가지도 못했다.
-//
-//   빈 화면은 방향을 주는 자리다. 지금 실제로 받을 수 있는 것이 무료 진단이므로
-//   거기로 보낸다. 정기 측정이 열리면 이 파일이 통째로 바뀐다.
-export default async function DashboardPage() {
-  const user = await requireUser()
-  return (
-    <div className="max-w-2xl space-y-4">
-      <h1 className="text-2xl font-semibold tracking-tight">대시보드</h1>
-      <p className="text-muted-foreground">
-        {user.name}님, 정기 측정은 아직 준비 중입니다. 결제가 열리면 브랜드를 등록하고 주{' '}
-        <span className="font-mono tabular-nums">3</span>회 측정한 추이를 여기서 보게 됩니다.
-      </p>
-      <p className="text-sm leading-relaxed text-muted-foreground">
-        지금 바로 받을 수 있는 것은 무료 진단입니다. 계정과는 별개로 동작하며, 결과는 메일로
-        갑니다.
-      </p>
-      <div className="flex flex-wrap gap-2 pt-1">
-        <Button asChild>
-          <Link href="/audit/new">무료 진단 받기</Link>
-        </Button>
-        <Button variant="outline" asChild>
-          <Link href="/pricing">요금제 보기</Link>
-        </Button>
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ brand?: string }>
+}) {
+  // requireUser는 loadOnboardingGate 안에서 호출된다 ((app) 규칙).
+  const gate = await loadOnboardingGate()
+  // ★ 강제 리다이렉트 판정은 순수 함수가 한다 (Task 4). 튕기는 것은 "측정 중인
+  //   것이 하나도 없을 때"뿐이다 — 미동결 브랜드가 있어도 동결된 브랜드가 있으면
+  //   대시보드를 그리고 배너로 안내한다 (state.ts `resolveDashboardEntry` 주석).
+  const entry = resolveDashboardEntry({
+    state: gate.state,
+    pendingBrandId: gate.pendingBrandId,
+    frozenBrandCount: gate.frozenBrandCount,
+  })
+  if (entry.kind === 'redirect') redirect(entry.to)
+
+  if (gate.state === 'no-plan' && gate.frozenBrandCount === 0) {
+    // 기존 빈 대시보드 유지 (스펙 ② — 플랜 없는 계정은 무료 진단 안내).
+    // ★ `no-plan`만으로 가르지 않는다. 해지(status='canceled')도 `no-plan`으로
+    //   판정되는데, 해지한 고객은 돈 내고 받은 측정 이력을 그대로 본다는 것이
+    //   데이터 계층의 못 박힌 정책이다 (`load.ts` — status 필터 없음,
+    //   `load.test.ts`가 지킨다). 동결 브랜드가 하나라도 있으면 보여 줄 이력이
+    //   있다는 뜻이므로 아래 대시보드로 내려간다 — 이 분기는 "보여 줄 것이
+    //   아무것도 없는" 계정 전용이다.
+    return (
+      <div className="max-w-2xl space-y-4">
+        <h1 className="text-2xl font-semibold tracking-tight">대시보드</h1>
+        <p className="text-muted-foreground">
+          {gate.user.name}님, 정기 측정은 구독 고객에게 열려 있습니다. 지금 바로 받을 수 있는
+          것은 무료 진단입니다 — 계정과는 별개로 동작하며, 결과는 메일로 갑니다.
+        </p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button asChild>
+            <Link href="/audit/new">무료 진단 받기</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/pricing">요금제 보기</Link>
+          </Button>
+        </div>
       </div>
+    )
+  }
+
+  const { brand } = await searchParams
+  const data = await loadDashboard(gate.user.id, brand)
+  if (!data.selected) redirect('/onboarding')
+  const canAdd = gate.limits !== null && data.brands.length < gate.limits.maxBrands
+
+  return (
+    <div className="space-y-10">
+      {gate.state === 'no-plan' && (
+        // 해지 계정 안내 — 새 측정이 왜 안 도는지 정직하게 말한다. 이력을
+        // 감추지 않는 것과 짝이다 (`load.ts` 해지 정책 주석). 경고 색이 아니라
+        // 중립 톤을 쓴다 — 잘못된 상태가 아니라 계약이 끝난 상태다.
+        <p className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+          구독이 해지되어 새 측정은 돌지 않지만, 결제하신 기간의 측정 이력은 그대로 볼 수
+          있습니다.
+        </p>
+      )}
+      {entry.pendingBrandId && (
+        // 튕기지 않고 알린다 (Task 4). 이미 측정 중인 브랜드가 있으므로 대시보드를
+        // 막을 이유가 없고, 그렇다고 미동결 브랜드를 잊게 두면 그 브랜드는 영영
+        // 측정되지 않는다 — 이어서 갈 링크를 항상 눈에 보이는 자리에 둔다.
+        // ★ 색은 토큰으로 쓴다 — 미확정 브랜드 경고는 온보딩 에디터의 경고 상자
+        //   (`queries/page.tsx`)와 같은 `incomplete` 짝이다. 원색 팔레트(amber-500)를
+        //   직접 쓰면 같은 뜻이 화면마다 다른 색이 된다 (§2).
+        <p className="rounded-lg border border-incomplete/40 bg-incomplete/5 px-4 py-3 text-sm leading-relaxed text-incomplete-fg">
+          아직 질의를 확정하지 않은 브랜드가 있습니다. 확정 전까지 그 브랜드는 측정되지
+          않습니다.{' '}
+          <Link href={queriesStepPath(entry.pendingBrandId)} className="font-medium underline">
+            이어서 확정하기
+          </Link>
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="font-mono text-xs tracking-[0.14em] text-muted-foreground uppercase">
+            정기 측정
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight">{data.selected.name}</h1>
+        </div>
+        <BrandPicker brands={data.brands} selectedId={data.selected.id} canAdd={canAdd} />
+      </div>
+
+      <HeadlineCard points={data.points} />
+
+      <section>
+        <h2 className="mb-1 text-lg font-semibold tracking-tight sm:text-xl">언급률 추이</h2>
+        <p className="mb-5 text-sm text-muted-foreground">
+          회차별 언급률과 95% 신뢰구간입니다. 엔진을 골라 따로 볼 수 있습니다.
+        </p>
+        <TrendChart points={data.points} />
+      </section>
+
+      {data.points.length > 0 && (
+        <section>
+          <h2 className="mb-1 text-lg font-semibold tracking-tight sm:text-xl">질문별 히트맵</h2>
+          <p className="mb-5 text-sm text-muted-foreground">
+            어느 질문에서 비는가 — 여기가 가장 실행 가능한 정보입니다. 셀의 숫자는 언급된
+            답변 수 / 전체 답변 수입니다.
+          </p>
+          <QueryHeatmap points={data.points} />
+        </section>
+      )}
+      {data.points.length > 0 && (
+        <section>
+          <h2 className="mb-1 text-lg font-semibold tracking-tight sm:text-xl">언급 점유율 추이</h2>
+          <p className="mb-5 text-sm text-muted-foreground">
+            등록한 경쟁사 대비 언급 비중입니다. 경쟁사를 더 등록하면 이 값은 달라집니다.
+          </p>
+          <SovTrend points={data.points} />
+        </section>
+      )}
+
+      {data.points.length > 0 && (
+        <section>
+          <h2 className="mb-1 text-lg font-semibold tracking-tight sm:text-xl">AI가 읽는 출처</h2>
+          <p className="mb-5 text-sm text-muted-foreground">
+            최신 회차에서 인용된 도메인과 직전 회차 대비 변화입니다 — 여기가 콘텐츠를 실을 곳입니다.
+          </p>
+          <SourceChanges points={data.points} />
+        </section>
+      )}
+
+      <section>
+        <h2 className="mb-1 text-lg font-semibold tracking-tight sm:text-xl">측정 회차</h2>
+        <p className="mb-5 text-sm text-muted-foreground">
+          회차를 누르면 진단 리포트와 같은 화면 문법의 상세를 봅니다.
+        </p>
+        <RunListSection items={data.runList} />
+      </section>
     </div>
   )
 }

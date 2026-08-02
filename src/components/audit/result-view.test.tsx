@@ -434,6 +434,24 @@ describe('유료 확장', () => {
   })
 })
 
+describe('ResultView variant="run" (정기 측정 회차 상세)', () => {
+  it('표제가 정기 측정 리포트다 — 산 것과 받은 것이 같아야 한다', () => {
+    render(<ResultView result={base} variant="run" />)
+    expect(screen.getByText('정기 측정 리포트')).toBeInTheDocument()
+    expect(screen.queryByText(/무료 진단 리포트/)).toBeNull()
+  })
+
+  it('요금제 업셀 섹션이 없다 — 이미 구독 중인 고객이다', () => {
+    render(<ResultView result={base} variant="run" />)
+    expect(screen.queryByRole('link', { name: '요금제 보기' })).toBeNull()
+  })
+
+  it('기본값은 audit — 기존 화면 무변경', () => {
+    render(<ResultView result={base} />)
+    expect(screen.getByText('무료 진단 리포트')).toBeInTheDocument()
+  })
+})
+
 describe('우리 브랜드와 경쟁사를 구분해서 표시한다', () => {
   it('두 표시가 서로 다르게 보인다', () => {
     // ★ 표시가 같아 보이면 이 화면의 요점이 사라진다 — 밑줄이 내 브랜드인지

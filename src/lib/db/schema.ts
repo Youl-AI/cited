@@ -183,6 +183,15 @@ export const subscriptions = pgTable(
     billingKey: text('billing_key'),
     /** 토스 customerKey — 우리가 발급한 불변 식별자 */
     customerKey: text('customer_key'),
+    /**
+     * 크몽 진단 행 연결 (`pnpm plan:grant --from-audit aud_xxx`).
+     *
+     * ★ 크몽 건은 운영자 이메일로 등록돼 있어 가입 이메일 자동 매칭이 불가능하다
+     *   — 이 명시 연결이 유일한 길이다. 온보딩 프리필(브랜드 정보 + 동결 질의
+     *   10개)이 이 id로 `free_audits`를 읽는다. FK를 걸지 않는다: 진단 행은
+     *   구독과 수명이 다르고, 연결이 끊겨도 온보딩은 프리필 없이 성립한다.
+     */
+    fromAuditId: text('from_audit_id'),
     currentPeriodStart: timestamp('current_period_start', { withTimezone: true }),
     currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
     /** 결제 실패 후 유예 만료 시각. status=past_due일 때만 채워진다 */
@@ -222,6 +231,24 @@ export const brands = pgTable(
       .default(sql`'[]'::jsonb`),
     /** Business에서 브랜드들이 총 질의 한도를 나눠 쓰기 위한 필드 */
     queryQuota: integer('query_quota').notNull().default(0),
+    /** 지역형 업종의 지역 (예: '강남'). 전국형은 null. 템플릿 질의 생성·검증에 쓴다 */
+    region: text('region'),
+    /**
+     * 고객 사이트 호스트명(`parseHostname` 정규화 값). 인용 출처 소유 판정에 쓴다.
+     * ★ 비어 있으면 소유 판정을 하지 않는다 — `free_audits.selfDomains`와 같은 원칙.
+     */
+    selfDomains: jsonb('self_domains').$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    /**
+     * 질의 에디터의 AI 생성 누적 횟수. 한도는 `QUERY_GENERATION_LIMIT`(5회, 스펙 ②).
+     * ★ 서버가 원자적 UPDATE(where < 한도)로 강제한다 — 클라이언트 카운터는
+     *   표시용일 뿐이다.
+     */
+    queryGenerations: smallint('query_generations').notNull().default(0),
+    /**
+     * 질의 동결 시각. [확정]이 채운다. null = 온보딩 미완료 — cron이 측정하지 않는다.
+     * ★ 동결 후 질의 수정은 운영자 CLI로만 (전후 비교 불변식, 스펙 ②).
+     */
+    queriesFrozenAt: timestamp('queries_frozen_at', { withTimezone: true }),
     /** 0=일 … 6=토. 가입 요일 기준. 수집 부하를 요일별로 분산한다 */
     collectionWeekday: smallint('collection_weekday').notNull(),
     isActive: boolean('is_active').notNull().default(true),
@@ -323,6 +350,13 @@ export const collectionRuns = pgTable(
     planSnapshot: jsonb('plan_snapshot').$type<PlanSnapshot>().notNull(),
     completeness: jsonb('completeness').$type<Completeness>().notNull().default(sql`'{}'::jsonb`),
     metrics: jsonb('metrics').$type<RunMetrics | null>(),
+    /**
+     * 회차 결과 스냅샷 — `AuditResult` 형태 (`buildAuditResult` 재사용, 스펙 ④).
+     * 추이·히트맵·점유율은 이 스냅샷들에서 계산하고, 회차 상세는 `ResultView`가
+     * 그대로 그린다. `free_audits.result`와 같은 이유로 `unknown`이다 — 과거
+     * 스냅샷에 지금 없는 필드가 있을 수 있고, 읽는 쪽(`parseRunResult`)이 걸러낸다.
+     */
+    result: jsonb('result').$type<unknown>(),
     status: text('status').$type<RunStatus>().notNull().default('running'),
     trigger: text('trigger').$type<RunTrigger>().notNull(),
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
