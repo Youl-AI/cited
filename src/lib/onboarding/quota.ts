@@ -21,10 +21,12 @@ export interface EditorQuota {
  * 질의 한도는 **계정 전체**다 (plans.ts `PlanLimits.maxQueries` 주석 — Business는
  * 브랜드에 나눠 쓴다).
  *
- * ★ 지금 이 한도를 실제로 강제하는 곳은 **여기(동결 시) 하나뿐이다.**
- *   `validateRunStart`도 같은 규칙을 갖고 있지만 프로덕션 호출자가 아직 없다
- *   (정의와 테스트뿐 — Task 6 수집 파이프라인이 붙일 예정). 그 전까지
- *   "이중 방어"라고 부르면 안 된다. 여기가 뚫리면 그대로 뚫린다.
+ * ★ 이 한도를 강제하는 곳은 두 군데다. 여기(동결 시)와 `validateRunStart`
+ *   (측정 시작 시). 4단계 Task 6의 `measureBrand`가 매 회차마다 **이 함수의
+ *   `queriesOnOtherBrands`를 그대로 받아** `validateRunStart`에 넘긴다 —
+ *   같은 규칙을 두 번 구현하지 않기 위해서다. 즉 이 함수의 계산이 틀리면
+ *   동결과 측정이 **함께** 틀린다. 두 번째 방어선이 아니라 같은 방어선의
+ *   두 번째 관문이라고 읽어야 한다.
  *
  * ★ 남아 있는 창: 미동결 브랜드 두 개를 **동시에** 확정하면 둘 다
  *   `queriesOnOtherBrands = 0`을 읽어 각자 한도만큼 가져갈 수 있다.

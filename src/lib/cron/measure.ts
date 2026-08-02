@@ -1,7 +1,7 @@
 import 'server-only'
 
 import type { RunStatus } from '@/lib/db/schema'
-import { kstDayStart } from '@/lib/kst'
+import { MEASURE_WEEKDAYS_KST, kstDayStart, kstWeekday } from '@/lib/kst'
 import { logger } from '@/lib/logger'
 import { isAuthorizedCronRequest } from './auth'
 
@@ -12,6 +12,8 @@ import { isAuthorizedCronRequest } from './auth'
  *   브랜드가 여러 개면 15분 뒤 다음 호출이 이어받는다 — 큐 없는 소진 방식.
  * ★ due 판정과 중복 실행 잠금은 collection_runs 상태로만 한다. 별도 잠금
  *   테이블을 만들지 않는다 — 상태의 출처가 둘이면 갈라진다.
+ * ★ 월·수·금 불변식도 여기서 지킨다. 워크플로 cron 표현식 하나에만 두면
+ *   `workflow_dispatch`·cron 수정·중복 발화가 그대로 유료 측정이 된다.
  */
 
 /** running이 이보다 오래됐으면 죽은 실행으로 본다 (함수 한도 300초 + 여유) */
@@ -74,7 +76,12 @@ export function selectDueBrand(
 export interface MeasureDeps {
   /** `env.CRON_SECRET`. 없으면 fail-closed */
   secret: string | undefined
-  loadDueContext: () => Promise<DueContext>
+  /**
+   * ★ `now`를 인자로 받는다. 어댑터가 스스로 `new Date()`를 잡으면 주입한
+   *   시계가 SQL의 KST 하루 경계를 통제하지 못해, 자정 근처에서 `selectDueBrand`가
+   *   보는 "오늘"과 쿼리가 읽어 온 "오늘"이 갈라진다.
+   */
+  loadDueContext: (now: Date) => Promise<DueContext>
   measureBrand: (brandId: string) => Promise<MeasureOutcome>
   /** 실패 통지 — 운영자 메일. 통지 실패는 측정 실패를 덮지 않는다 */
   notifyFailure: (args: {
@@ -92,7 +99,22 @@ export async function handleMeasure(request: Request, deps: MeasureDeps): Promis
     return new Response(null, { status: 401 })
   }
   const now = (deps.now ?? (() => new Date()))()
-  const ctx = await deps.loadDueContext()
+
+  // ★ 월·수·금 게이트. due 판정은 KST 하루 단위라 화요일에 한 번 돌아도
+  //   수요일 회차를 억제하지 못한다 — 순수하게 더해지는 비용이다. 그래서
+  //   컨텍스트를 읽기 **전에** 막는다.
+  //   운영자 우회는 `?force=1`. 이 라우트는 이미 CRON_SECRET으로 잠겨 있고,
+  //   부를 수 있는 사람은 어차피 측정을 일으킬 수 있으므로 공격면이 늘지 않는다.
+  const forced = new URL(request.url).searchParams.get('force') === '1'
+  const weekday = kstWeekday(now)
+  if (!forced && !(MEASURE_WEEKDAYS_KST as readonly number[]).includes(weekday)) {
+    logger.info('cron.measure.off_schedule', { weekday })
+    // due 브랜드가 없는 idle과 구분되어야 한다 — 워크플로가 "오늘은 측정일이
+    // 아니다"와 "다 쟀다"를 같은 응답으로 받으면 회차 누락을 못 알아챈다.
+    return Response.json({ ok: true, measured: null, remaining: 0, skipped: 'off_schedule' })
+  }
+
+  const ctx = await deps.loadDueContext(now)
   const due = selectDueBrand(ctx.brands, ctx.todaysRuns, now)
   const remainingAfter = (excluded: string) =>
     ctx.brands.filter(
@@ -128,6 +150,12 @@ export async function handleMeasure(request: Request, deps: MeasureDeps): Promis
     }
     // ★ 200으로 돌려준다. 15분 간격 반복 호출이 곧 재시도 메커니즘이라
     //   워크플로를 빨간불로 만들면 소음만 는다 — 실패 신호는 운영자 메일이다.
-    return Response.json({ ok: false, measured: due.brandId })
+    // ★ 실패에도 `remaining`을 싣는다. 이게 없으면 Task 7 워크플로가 한 브랜드가
+    //   실패했을 때 남은 브랜드를 계속 소진해야 하는지 판단할 수 없다.
+    return Response.json({
+      ok: false,
+      measured: due.brandId,
+      remaining: remainingAfter(due.brandId),
+    })
   }
 }

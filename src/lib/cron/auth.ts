@@ -1,3 +1,8 @@
+// ★ 크론 인증의 공유 진입점이다. 클라이언트 번들에 섞이면 시크릿 비교 로직이
+//   브라우저로 나가므로 여기서 직접 막는다 — 소비자(cleanup-sessions·measure)가
+//   각자 `server-only`를 들고 있다는 사실에 기대지 않는다.
+import 'server-only'
+
 import { createHash, timingSafeEqual } from 'node:crypto'
 
 const BEARER_PREFIX = 'Bearer '
