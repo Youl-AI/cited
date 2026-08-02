@@ -68,6 +68,41 @@ describe('SovTrend', () => {
   })
 
   /**
+   * ★ 분모 캡션은 **마지막으로 그린 점**의 회차 경쟁사를 쓴다. 최신 회차가
+   *   n=0이라 차트에서 빠졌는데 캡션이 그 회차의 경쟁사를 읽으면, 화면에 있는
+   *   점 어느 것도 쓰지 않은 분모를 설명하게 된다 — 차트와 캡션이 다른 말을 한다.
+   */
+  test('최신 회차가 n=0이면 분모 캡션은 그 회차가 아니라 마지막으로 그린 점의 경쟁사를 쓴다', () => {
+    render(
+      <SovTrend points={[point('r1', 8, 20), point('r2', 0, 0, { competitors: ['지그재그'] })]} />,
+    )
+    expect(screen.getByText(/29CM/)).toBeInTheDocument()
+    expect(screen.queryByText(/지그재그/)).toBeNull()
+  })
+
+  /**
+   * ★ 끊김의 원인 판별은 **직전에 그려진 점의 원본 회차**와 비교해야 한다
+   *   (`buildSovTrend`의 prev = 마지막으로 찍힌 점). n=0으로 빠진 회차가 앞에
+   *   있으면 `points[i-1]` 같은 인덱스 되짚기는 엉뚱한 회차와 비교해 경쟁사
+   *   변경 끊김을 일반 조건 변경으로 뒤바꾼다 — §4.3 고정 문구가 사라진다.
+   */
+  test('n=0으로 빠진 회차가 있어도 경쟁사 변경 끊김은 §4.3 고정 문구로 잡는다', () => {
+    render(
+      <SovTrend
+        points={[
+          point('r1', 0, 0), // 29CM, n=0 — 계열에서 빠진다
+          point('r2', 8, 20, { competitors: ['지그재그'] }),
+          point('r3', 12, 20), // 29CM — 직전에 그려진 점(r2)과 경쟁사 집합이 다르다
+        ]}
+      />,
+    )
+    expect(
+      screen.getByText(/경쟁사 설정이 바뀐 구간은 이전과 비교하지 않습니다/),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/엔진 구성·질의 집합·판정기 버전\)이 바뀐 구간/)).toBeNull()
+  })
+
+  /**
    * ★ 경쟁사를 등록하기 전 회차는 SoV가 정의되지 않아(n=0) 계열에서 통째로
    *   빠진다. 조건은 그대로라 `comparableWithPrev`는 true다 — 이 구간을 끊는
    *   근거는 `runsSkippedBefore`뿐이다. 없으면 서수 축이 두 점을 옆칸에 붙여

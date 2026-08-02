@@ -68,6 +68,39 @@ describe('SourceChanges', () => {
   })
 
   /**
+   * ★ "새로 등장"도 직전 회차 비교다 — "직전 회차에는 없었다"는 주장이니까.
+   *   운영자가 질의를 갈아끼운 다음 회차는 상위 도메인이 전부 물갈이될 수 있는데,
+   *   그 경계에서 "새로 등장"을 쓰면 설정 변경이 만든 물갈이가 브랜드의 성과처럼
+   *   나간다 — "2 → 5" 화살표와 같은 부류의 거짓말이다. 비교 불가 경계에서는
+   *   어떤 행도 직전 회차를 입에 올리지 않고(개수만), 이유 캡션은 항상 나온다.
+   */
+  test('조건이 바뀐 경계에서는 새로 등장도 쓰지 않는다 — 그것도 직전 회차 비교다', () => {
+    render(
+      <SourceChanges
+        points={[
+          point('r1', [src('a.com', 2)]),
+          point('r2', [src('new.com', 3)], { queryIds: ['q1', 'q9'] }),
+        ]}
+      />,
+    )
+    expect(screen.queryByText(/새로 등장/)).toBeNull()
+    expect(screen.getByText('3개')).toBeInTheDocument()
+    expect(screen.getByText(/증감을 표시하지 않습니다/)).toBeInTheDocument()
+  })
+
+  /**
+   * ★ 첫 회차(직전 회차 자체가 없음)는 비교 서사를 아예 쓰지 않는다 — "새로
+   *   등장"도, "직전 회차와 조건이 달라"라는 캡션도 없는 회차를 두고 하는
+   *   말이라 거짓이다. 개수만 쓴다.
+   */
+  test('첫 회차는 개수만 쓴다 — 없는 직전 회차를 두고 어떤 말도 하지 않는다', () => {
+    render(<SourceChanges points={[point('r1', [src('a.com', 2)])]} />)
+    expect(screen.queryByText(/새로 등장/)).toBeNull()
+    expect(screen.getByText('2개')).toBeInTheDocument()
+    expect(screen.queryByText(/증감을 표시하지 않습니다/)).toBeNull()
+  })
+
+  /**
    * ★ `selfDomainsKnown === false`인 회차의 'third-party'는 "남의 사이트"가
    *   아니라 "자사 도메인을 몰라 못 갈랐다"이다. 그 회차에는 소유 배지를 달지
    *   않고, "우리 사이트 인용 없음" 같은 단정 대신 도메인을 안 받았다는 사실을

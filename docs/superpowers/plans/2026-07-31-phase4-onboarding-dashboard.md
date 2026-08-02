@@ -4770,7 +4770,29 @@ git commit -m "feat(dashboard): 헤드라인·추이 차트(점+오차 밴드·�
   그 앞 회차가 통째로 사라지는데, 서수 축은 남은 점들을 옆칸에 붙여 그린다.
 
 두 경우 모두 **선분을 잇지 않고**, 왜 끊겼는지를 캡션에 쓴다 (Task 9와 같은
-`segmentsOf` 헬퍼). 말없이 끊긴 선은 버그로 읽힌다.
+`segmentsOf` 헬퍼). 말없이 끊긴 선은 버그로 읽힌다. 끊김 캡션은 **원인별로
+가른다**: 경쟁사 집합이 바뀐 끊김은 디자인 언어 §4.3의 고정 문구 자구 그대로
+("경쟁사 설정이 바뀐 구간은 이전과 비교하지 않습니다 — 분모가 달라지면 점유율은
+설정 변경만으로도 움직입니다."), 그 외 조건 변경(엔진·질의·판정기)은 추이 차트와
+같은 일반 문구다. 원인 판별은 `points[i-1]` 같은 인덱스 되짚기가 아니라 **직전에
+그려진 SoV 점의 `runId`로 원본 회차를 찾아** 경쟁사 집합을 비교한다 —
+`buildSovTrend`의 prev가 "마지막으로 찍힌 점"이라서다. 분모 캡션(등록 경쟁사
+목록)도 같은 이유로 **마지막으로 그린 점의 원본 회차**를 읽는다 — 최신 회차가
+n=0이라 차트에서 빠졌으면 `latest.competitors`는 화면의 어느 점도 쓰지 않은
+분모다.
+
+★ **출처 표는 비교 불가 경계에서 직전 회차에 대한 어떤 주장도 하지 않는다 —
+화살표만이 아니라 "새로 등장"도.** "새로 등장"은 "직전 회차에는 없었다"는 직전
+회차 비교라서, 질의가 갈린 경계에서 상위 도메인이 물갈이되면 설정 변경이
+브랜드의 성과처럼 나간다. 비교 불가 경계의 모든 행은 개수만 쓰고, 이유 캡션은
+직전 회차가 실제로 있을 때 항상 나온다(첫 회차에는 어느 쪽도 쓰지 않는다 —
+없는 회차를 두고 하는 말이라서). 그리고 `selfDomainsKnown === false`면 소유
+배지 대신 자사 도메인을 받지 못해 못 갈랐다는 안내 한 줄을 쓴다.
+
+★ **회차 목록은 `succeeded`인데 스냅샷이 없는 회차를 "완료 · 스냅샷 없음"으로
+쓴다** — 0%로 그리거나 감추지 않는다 (`RunListItem.hasResult` 주석의 계약).
+빈 목록은 §3대로 방향을 준다: 동결 직후 첫 cron 전의 브랜드에게 첫 측정이
+끝나면 여기에 쌓인다는 것과 측정 요일(월·수·금 새벽)을 쓴다.
 
 **Files:**
 - Modify: `src/components/audit/result-view.tsx` (`variant?: 'audit' | 'run'` prop)
@@ -4781,7 +4803,8 @@ git commit -m "feat(dashboard): 헤드라인·추이 차트(점+오차 밴드·�
 - Modify: `src/app/(app)/dashboard/page.tsx` (섹션 3개 추가)
 - Test: `src/components/audit/result-view.test.tsx` (variant 케이스 추가),
   `src/components/dashboard/source-changes.test.tsx`,
-  `src/components/dashboard/sov-trend.test.tsx`
+  `src/components/dashboard/sov-trend.test.tsx`,
+  `src/components/dashboard/run-list.test.tsx`
 
 **Interfaces:**
 - Consumes: Task 8의 `buildSovTrend`·`buildSourceChanges`·`RunListItem`·
@@ -4868,9 +4891,9 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, test } from 'vitest'
 import { AUDIT_RESULT_VERSION, type AuditResult } from '@/lib/audit/result'
+import type { RunPoint } from '@/lib/dashboard/data'
 import type { SourceOwner } from '@/lib/stats/sources'
 import { wilsonInterval } from '@/lib/stats/wilson'
-import type { RunPoint } from '@/lib/dashboard/data'
 import { SourceChanges } from './source-changes'
 
 afterEach(cleanup)
@@ -4929,6 +4952,61 @@ describe('SourceChanges', () => {
     expect(screen.getByText('5개')).toBeInTheDocument()
     expect(screen.getByText(/증감을 표시하지 않습니다/)).toBeInTheDocument()
   })
+
+  /**
+   * ★ "새로 등장"도 직전 회차 비교다 — "직전 회차에는 없었다"는 주장이니까.
+   *   운영자가 질의를 갈아끼운 다음 회차는 상위 도메인이 전부 물갈이될 수 있는데,
+   *   그 경계에서 "새로 등장"을 쓰면 설정 변경이 만든 물갈이가 브랜드의 성과처럼
+   *   나간다 — "2 → 5" 화살표와 같은 부류의 거짓말이다. 비교 불가 경계에서는
+   *   어떤 행도 직전 회차를 입에 올리지 않고(개수만), 이유 캡션은 항상 나온다.
+   */
+  test('조건이 바뀐 경계에서는 새로 등장도 쓰지 않는다 — 그것도 직전 회차 비교다', () => {
+    render(
+      <SourceChanges
+        points={[
+          point('r1', [src('a.com', 2)]),
+          point('r2', [src('new.com', 3)], { queryIds: ['q1', 'q9'] }),
+        ]}
+      />,
+    )
+    expect(screen.queryByText(/새로 등장/)).toBeNull()
+    expect(screen.getByText('3개')).toBeInTheDocument()
+    expect(screen.getByText(/증감을 표시하지 않습니다/)).toBeInTheDocument()
+  })
+
+  /**
+   * ★ 첫 회차(직전 회차 자체가 없음)는 비교 서사를 아예 쓰지 않는다 — "새로
+   *   등장"도, "직전 회차와 조건이 달라"라는 캡션도 없는 회차를 두고 하는
+   *   말이라 거짓이다. 개수만 쓴다.
+   */
+  test('첫 회차는 개수만 쓴다 — 없는 직전 회차를 두고 어떤 말도 하지 않는다', () => {
+    render(<SourceChanges points={[point('r1', [src('a.com', 2)])]} />)
+    expect(screen.queryByText(/새로 등장/)).toBeNull()
+    expect(screen.getByText('2개')).toBeInTheDocument()
+    expect(screen.queryByText(/증감을 표시하지 않습니다/)).toBeNull()
+  })
+
+  /**
+   * ★ `selfDomainsKnown === false`인 회차의 'third-party'는 "남의 사이트"가
+   *   아니라 "자사 도메인을 몰라 못 갈랐다"이다. 그 회차에는 소유 배지를 달지
+   *   않고, "우리 사이트 인용 없음" 같은 단정 대신 도메인을 안 받았다는 사실을
+   *   쓴다 — `SelfCitationLine`과 같은 규칙이다.
+   */
+  test('자사 도메인을 모르면 "인용 없음"을 단정하지 않고 못 가렸다고 쓴다', () => {
+    render(<SourceChanges points={[point('r1', [src('a.com', 2, 'third-party')])]} />)
+    expect(screen.queryByText(/인용되지 않|인용 없음/)).toBeNull()
+    expect(screen.queryByText('우리')).toBeNull()
+    expect(screen.getByText(/자사 도메인을 알려주시면/)).toBeInTheDocument()
+  })
+
+  test('자사 도메인을 알면 소유 배지를 단다', () => {
+    const p = point('r1', [src('us.com', 2, 'self'), src('rival.com', 1, 'competitor')])
+    p.result.hasSelfDomains = true
+    render(<SourceChanges points={[p]} />)
+    expect(screen.getByText('우리')).toBeInTheDocument()
+    expect(screen.getByText('경쟁사')).toBeInTheDocument()
+    expect(screen.queryByText(/자사 도메인을 알려주시면/)).toBeNull()
+  })
 })
 ```
 
@@ -4943,8 +5021,8 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, test } from 'vitest'
 import { AUDIT_RESULT_VERSION, type AuditResult } from '@/lib/audit/result'
-import { wilsonInterval } from '@/lib/stats/wilson'
 import type { RunPoint } from '@/lib/dashboard/data'
+import { wilsonInterval } from '@/lib/stats/wilson'
 import { SovTrend } from './sov-trend'
 
 afterEach(cleanup)
@@ -4984,6 +5062,63 @@ describe('SovTrend', () => {
   })
 
   /**
+   * ★ 경쟁사 집합이 바뀐 구간의 고정 문구는 디자인 언어 §4.3이 자구까지
+   *   정한다 — 분모의 정의가 바뀌었다는 사실을 항상 같은 문장으로 말한다.
+   */
+  test('경쟁사 집합 변경의 캡션은 §4.3 고정 문구 그대로다', () => {
+    render(
+      <SovTrend
+        points={[point('r1', 8, 20), point('r2', 12, 20, { competitors: ['29CM', '지그재그'] })]}
+      />,
+    )
+    expect(
+      screen.getByText(
+        /경쟁사 설정이 바뀐 구간은 이전과 비교하지 않습니다 — 분모가 달라지면 점유율은 설정 변경만으로도 움직입니다\./,
+      ),
+    ).toBeInTheDocument()
+  })
+
+  test('분모(등록 경쟁사 목록)가 차트 옆에 항상 보인다', () => {
+    render(<SovTrend points={[point('r1', 8, 20), point('r2', 12, 20)]} />)
+    expect(screen.getByText(/29CM/)).toBeInTheDocument()
+  })
+
+  /**
+   * ★ 분모 캡션은 **마지막으로 그린 점**의 회차 경쟁사를 쓴다. 최신 회차가
+   *   n=0이라 차트에서 빠졌는데 캡션이 그 회차의 경쟁사를 읽으면, 화면에 있는
+   *   점 어느 것도 쓰지 않은 분모를 설명하게 된다 — 차트와 캡션이 다른 말을 한다.
+   */
+  test('최신 회차가 n=0이면 분모 캡션은 그 회차가 아니라 마지막으로 그린 점의 경쟁사를 쓴다', () => {
+    render(
+      <SovTrend points={[point('r1', 8, 20), point('r2', 0, 0, { competitors: ['지그재그'] })]} />,
+    )
+    expect(screen.getByText(/29CM/)).toBeInTheDocument()
+    expect(screen.queryByText(/지그재그/)).toBeNull()
+  })
+
+  /**
+   * ★ 끊김의 원인 판별은 **직전에 그려진 점의 원본 회차**와 비교해야 한다
+   *   (`buildSovTrend`의 prev = 마지막으로 찍힌 점). n=0으로 빠진 회차가 앞에
+   *   있으면 `points[i-1]` 같은 인덱스 되짚기는 엉뚱한 회차와 비교해 경쟁사
+   *   변경 끊김을 일반 조건 변경으로 뒤바꾼다 — §4.3 고정 문구가 사라진다.
+   */
+  test('n=0으로 빠진 회차가 있어도 경쟁사 변경 끊김은 §4.3 고정 문구로 잡는다', () => {
+    render(
+      <SovTrend
+        points={[
+          point('r1', 0, 0), // 29CM, n=0 — 계열에서 빠진다
+          point('r2', 8, 20, { competitors: ['지그재그'] }),
+          point('r3', 12, 20), // 29CM — 직전에 그려진 점(r2)과 경쟁사 집합이 다르다
+        ]}
+      />,
+    )
+    expect(
+      screen.getByText(/경쟁사 설정이 바뀐 구간은 이전과 비교하지 않습니다/),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/엔진 구성·질의 집합·판정기 버전\)이 바뀐 구간/)).toBeNull()
+  })
+
+  /**
    * ★ 경쟁사를 등록하기 전 회차는 SoV가 정의되지 않아(n=0) 계열에서 통째로
    *   빠진다. 조건은 그대로라 `comparableWithPrev`는 true다 — 이 구간을 끊는
    *   근거는 `runsSkippedBefore`뿐이다. 없으면 서수 축이 두 점을 옆칸에 붙여
@@ -5010,23 +5145,32 @@ import { buildSourceChanges, type RunPoint } from '@/lib/dashboard/data'
 /**
  * 출처 상위 변화 — 도메인별 인용 답변 수, 직전 회차 대비 (스펙 ⑤).
  *
- * ★ **`comparableWithPrev`가 false면 `prev → curr` 화살표를 그리지 않는다.**
- *   추이 차트가 선을 끊는 것과 같은 이유다: 질의를 셋 더 넣은 다음 회차는
- *   인용 수가 당연히 늘고, 판정기가 바뀌면 무엇을 인용으로 셌는지가 바뀐다.
- *   "2 → 5"는 브랜드가 한 일이 아니라 설정 변경이다. 추이만 끊고 이 표가
- *   화살표를 그리면 같은 거짓말이 표 모양으로 나갈 뿐이다.
- *   (도메인이 사라진 건 아니므로 "새로 등장"으로 떨어뜨려서도 안 된다 —
- *    `prevAnswers`는 그대로 두고 화살표만 뺀다.)
+ * ★ **`comparableWithPrev`가 false면 어떤 행도 직전 회차를 입에 올리지 않는다 —
+ *   화살표도, "새로 등장"도.** 추이 차트가 선을 끊는 것과 같은 이유다: 질의를
+ *   셋 더 넣은 다음 회차는 인용 수가 당연히 늘고, 판정기가 바뀌면 무엇을
+ *   인용으로 셌는지가 바뀐다. "2 → 5"는 브랜드가 한 일이 아니라 설정 변경이다.
+ *   그리고 "새로 등장"도 같은 부류다 — "직전 회차에는 없었다"는 직전 회차
+ *   비교라서, 질의가 갈린 경계에서 상위 도메인이 물갈이되면 설정 변경이 만든
+ *   물갈이가 브랜드의 성과처럼 나간다. 비교 불가 경계의 모든 행은 개수만 쓰고,
+ *   왜 증감이 없는지는 캡션이 항상 말한다. 첫 회차(직전 회차 자체가 없음)도
+ *   개수만 쓰되, 없는 회차와 조건이 달랐다는 캡션까지 쓰면 그게 또 거짓이라
+ *   캡션은 직전 회차가 실제로 있을 때만 나온다.
  *
  * ★ `owner`는 `'self' | 'competitor' | 'third-party'`이고 **null이 아니다.**
  *   그리고 `selfDomainsKnown === false`인 회차의 `'third-party'`는 "남의
  *   사이트"가 아니라 "자사 도메인을 몰라 못 갈랐다"이다 — 그 회차에는
- *   소유 배지를 달지 않는다.
+ *   소유 배지를 달지 않고, 왜 못 갈랐는지를 쓴다. "우리 사이트 인용 없음"을
+ *   단정하지 않는 것은 `SelfCitationLine`과 같은 규칙이다.
  */
 export function SourceChanges({ points }: { points: RunPoint[] }) {
   const rows = buildSourceChanges(points, 8)
   if (rows.length === 0) return null
-  const incomparable = rows.some((r) => !r.comparableWithPrev && r.prevAnswers !== null)
+  // `buildSourceChanges`의 prev와 같은 판정 — 직전 회차(스냅샷 있는 회차)가
+  // 실제로 있는가. 캡션은 이때만 나온다: 첫 회차에 "직전 회차와 조건이 달라"를
+  // 쓰면 없는 회차를 두고 말하는 것이다.
+  const hasPrevRun = points.length >= 2
+  const incomparable = hasPrevRun && rows.some((r) => !r.comparableWithPrev)
+  const selfDomainsKnown = rows.every((r) => r.selfDomainsKnown)
   return (
     <>
       <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
@@ -5042,9 +5186,13 @@ export function SourceChanges({ points }: { points: RunPoint[] }) {
               )}
             </span>
             <span className="shrink-0 font-mono text-sm tabular-nums text-muted-foreground">
-              {row.prevAnswers === null ? (
+              {/* ★ 비교 불가면 "새로 등장"부터 걸러야 한다 — 그것도 직전 회차
+                  비교라서, 순서를 바꾸면 물갈이 경계에서 성과처럼 나간다. */}
+              {!row.comparableWithPrev ? (
+                <>{row.answers}개</>
+              ) : row.prevAnswers === null ? (
                 <>새로 등장 · {row.answers}개</>
-              ) : !row.comparableWithPrev || row.prevAnswers === row.answers ? (
+              ) : row.prevAnswers === row.answers ? (
                 <>{row.answers}개</>
               ) : (
                 <>{row.prevAnswers} → {row.answers}</>
@@ -5057,6 +5205,12 @@ export function SourceChanges({ points }: { points: RunPoint[] }) {
         <p className="mt-2 text-xs text-muted-foreground">
           직전 회차와 측정 조건(엔진 구성·질의 집합·판정기 버전)이 달라 증감을 표시하지
           않습니다 — 인용 수의 차이가 브랜드의 변화인지 설정의 변화인지 가를 수 없습니다.
+        </p>
+      )}
+      {!selfDomainsKnown && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          자사 도메인을 알려주시면 어느 도메인이 우리 사이트인지 갈라서 보여드립니다 —
+          지금은 도메인 정보가 없어 우리 사이트 인용 여부를 가리지 못합니다.
         </p>
       )}
     </>
@@ -5084,6 +5238,11 @@ import { formatInterval, formatPercent } from '@/lib/stats/wilson'
  *       일어나는 일이고, 그 자리를 감추면 "쭉 재고 있었다"가 된다.
  *   두 경우 모두 선분을 잇지 않고, 왜 끊겼는지를 캡션에 쓴다.
  *
+ * ★ 경쟁사 집합이 바뀐 구간의 캡션은 §4.3의 **고정 문구 그대로**다 —
+ *   "경쟁사 설정이 바뀐 구간은 이전과 비교하지 않습니다 — 분모가 달라지면
+ *   점유율은 설정 변경만으로도 움직입니다." 다른 조건(엔진·질의·판정기)만 바뀐
+ *   구간은 추이 차트와 같은 일반 문구를 쓴다.
+ *
  * 오차 밴드는 원래부터 점마다 따로 그린다(사각형) — 이어지는 띠가 없으므로
  * 추이 차트처럼 밴드를 구간별로 자를 필요가 없다.
  */
@@ -5094,7 +5253,7 @@ const IW = W - PAD.left - PAD.right
 const IH = H - PAD.top - PAD.bottom
 
 /**
- * 이을 수 있는 구간으로 자른다 — Task 9 `trend-chart.tsx`의 `segmentsOf`와
+ * 이을 수 있는 구간으로 자른다 — Task 9 `trend-chart.tsx`의 `splitSegments`와
  * 같은 규칙·같은 이유다. 반환은 **전역 인덱스**의 묶음이다: x 좌표는 계열
  * 전체에서의 위치로 정해야 구간이 갈려도 점이 제자리에 남는다.
  */
@@ -5108,6 +5267,14 @@ function segmentsOf(series: SovPoint[]): number[][] {
   return out
 }
 
+/** 순서 무관 집합 비교 — 스냅샷이 정렬을 보장하지 않는 필드가 있다. */
+function sameSet(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false
+  const x = [...a].sort()
+  const y = [...b].sort()
+  return x.every((v, i) => v === y[i])
+}
+
 export function SovTrend({ points }: { points: RunPoint[] }) {
   const sov = buildSovTrend(points)
   const latest = points[points.length - 1]
@@ -5117,9 +5284,29 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
   const y = (v: number) => PAD.top + (1 - v) * IH
   const last = sov[n - 1]!
   const segments = segmentsOf(sov)
-  // 왜 끊겼는지를 캡션에 쓴다 — 말없이 끊긴 선은 버그로 읽힌다.
-  const hasConditionBreak = sov.some((p, i) => i > 0 && !p.comparableWithPrev)
+  // 왜 끊겼는지를 캡션에 쓴다 — 말없이 끊긴 선은 버그로 읽힌다. 경쟁사 집합이
+  // 바뀐 끊김은 §4.3 고정 문구, 나머지 조건 변경은 일반 문구로 가른다.
+  // (`SovPoint`는 무엇이 바뀌었는지 들고 오지 않으므로 원본 회차로 되짚는다.)
+  const byRun = new Map(points.map((p) => [p.runId, p]))
+  let hasCompetitorBreak = false
+  let hasOtherConditionBreak = false
+  sov.forEach((p, i) => {
+    if (i === 0 || p.comparableWithPrev) return
+    const prevRun = byRun.get(sov[i - 1]!.runId)
+    const currRun = byRun.get(p.runId)
+    if (prevRun && currRun && !sameSet(prevRun.competitors, currRun.competitors)) {
+      hasCompetitorBreak = true
+    } else {
+      hasOtherConditionBreak = true
+    }
+  })
   const hasGap = sov.some((p) => p.runsSkippedBefore > 0)
+  // ★ 분모 캡션은 **마지막으로 그린 점**의 회차 경쟁사를 쓴다. 최신 회차가
+  //   n=0이라 차트에서 빠졌으면(`buildSovTrend`가 거른다) `latest.competitors`는
+  //   화면의 어느 점도 쓰지 않은 분모다 — 차트와 캡션이 다른 말을 하게 된다.
+  //   (그릴 점이 하나도 없으면 위에서 이미 null을 반환했다 — `?? latest`는
+  //   Map 조회의 타입 좁히기일 뿐, 실제로는 항상 원본 회차가 잡힌다.)
+  const denomRun = byRun.get(last.runId) ?? latest
 
   return (
     <div>
@@ -5161,9 +5348,11 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
         ))}
       </svg>
       <p className="mt-2 text-xs text-muted-foreground">
-        분모: 등록 경쟁사({latest.competitors.join(', ') || '없음'}) 대비 언급 비중입니다.
-        {hasConditionBreak &&
-          ' 측정 조건(경쟁사 집합·엔진 구성·질의 집합·판정기 버전)이 바뀐 구간은 이전과 비교하지 않습니다 — 분모가 달라지면 점유율은 설정 변경만으로도 움직입니다.'}
+        분모: 등록 경쟁사({denomRun.competitors.join(', ') || '없음'}) 대비 언급 비중입니다.
+        {hasCompetitorBreak &&
+          ' 경쟁사 설정이 바뀐 구간은 이전과 비교하지 않습니다 — 분모가 달라지면 점유율은 설정 변경만으로도 움직입니다.'}
+        {hasOtherConditionBreak &&
+          ' 측정 조건(엔진 구성·질의 집합·판정기 버전)이 바뀐 구간은 이전과 비교하지 않습니다 — 분모나 분자의 정의가 달라지면 점유율은 설정 변경만으로도 움직입니다.'}
         {hasGap &&
           ' 점유율을 잴 수 없던 회차가 있는 구간도 잇지 않습니다 — 경쟁사를 등록하기 전 회차와 스냅샷이 없는 회차가 그렇습니다. 점 사이 간격이 실제로 지난 기간과 다릅니다.'}
       </p>
@@ -5186,9 +5375,29 @@ const STATUS_LABEL: Record<RunStatus, string> = {
   failed: '실패',
 }
 
-/** 회차 목록 — 실패 회차도 감추지 않는다. 스냅샷 있는 회차만 상세로 간다. */
+/**
+ * 회차 목록 — 실패 회차도 감추지 않는다. 스냅샷 있는 회차만 상세로 간다.
+ *
+ * ★ `succeeded`인데 `hasResult === false`인 회차가 실제로 존재한다 — 측정은
+ *   끝났는데 스냅샷 저장만 실패한 경우다 (`parseRunResult` 주석). 이 회차는
+ *   "스냅샷 없음"으로 쓴다. 0%로 그리거나 목록에서 감추면 돈 낸 고객에게
+ *   없는 측정을 보여주게 된다 (`RunListItem.hasResult` 주석이 못 박는 계약).
+ */
+function statusLabel(item: RunListItem): string {
+  if (item.status === 'succeeded' && !item.hasResult) return '완료 · 스냅샷 없음'
+  return STATUS_LABEL[item.status]
+}
+
 export function RunListSection({ items }: { items: RunListItem[] }) {
-  if (items.length === 0) return null
+  // ★ §3 — 빈 상태는 방향을 준다. 동결 직후 첫 cron이 돌기 전의 브랜드가
+  //   실제로 이 상태다. 제목 아래를 그냥 비워 두면 고장으로 읽힌다 — 무엇을
+  //   기다리는지·언제 오는지를 쓴다 (온보딩 완료 화면의 약속과 같은 말).
+  if (items.length === 0)
+    return (
+      <p className="rounded-lg border border-dashed border-border px-5 py-6 text-sm leading-relaxed text-muted-foreground">
+        첫 측정이 끝나면 여기에 회차가 쌓입니다 — 측정은 월·수·금 새벽에 돕니다.
+      </p>
+    )
   return (
     <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
       {items.map((item) => {
@@ -5205,7 +5414,7 @@ export function RunListSection({ items }: { items: RunListItem[] }) {
                     : 'text-muted-foreground'
               }`}
             >
-              {STATUS_LABEL[item.status]}
+              {statusLabel(item)}
             </span>
           </span>
         )

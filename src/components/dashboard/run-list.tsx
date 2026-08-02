@@ -23,7 +23,15 @@ function statusLabel(item: RunListItem): string {
 }
 
 export function RunListSection({ items }: { items: RunListItem[] }) {
-  if (items.length === 0) return null
+  // ★ §3 — 빈 상태는 방향을 준다. 동결 직후 첫 cron이 돌기 전의 브랜드가
+  //   실제로 이 상태다. 제목 아래를 그냥 비워 두면 고장으로 읽힌다 — 무엇을
+  //   기다리는지·언제 오는지를 쓴다 (온보딩 완료 화면의 약속과 같은 말).
+  if (items.length === 0)
+    return (
+      <p className="rounded-lg border border-dashed border-border px-5 py-6 text-sm leading-relaxed text-muted-foreground">
+        첫 측정이 끝나면 여기에 회차가 쌓입니다 — 측정은 월·수·금 새벽에 돕니다.
+      </p>
+    )
   return (
     <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
       {items.map((item) => {

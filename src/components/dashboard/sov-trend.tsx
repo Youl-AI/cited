@@ -78,6 +78,12 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
     }
   })
   const hasGap = sov.some((p) => p.runsSkippedBefore > 0)
+  // ★ 분모 캡션은 **마지막으로 그린 점**의 회차 경쟁사를 쓴다. 최신 회차가
+  //   n=0이라 차트에서 빠졌으면(`buildSovTrend`가 거른다) `latest.competitors`는
+  //   화면의 어느 점도 쓰지 않은 분모다 — 차트와 캡션이 다른 말을 하게 된다.
+  //   (그릴 점이 하나도 없으면 위에서 이미 null을 반환했다 — `?? latest`는
+  //   Map 조회의 타입 좁히기일 뿐, 실제로는 항상 원본 회차가 잡힌다.)
+  const denomRun = byRun.get(last.runId) ?? latest
 
   return (
     <div>
@@ -119,7 +125,7 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
         ))}
       </svg>
       <p className="mt-2 text-xs text-muted-foreground">
-        분모: 등록 경쟁사({latest.competitors.join(', ') || '없음'}) 대비 언급 비중입니다.
+        분모: 등록 경쟁사({denomRun.competitors.join(', ') || '없음'}) 대비 언급 비중입니다.
         {hasCompetitorBreak &&
           ' 경쟁사 설정이 바뀐 구간은 이전과 비교하지 않습니다 — 분모가 달라지면 점유율은 설정 변경만으로도 움직입니다.'}
         {hasOtherConditionBreak &&

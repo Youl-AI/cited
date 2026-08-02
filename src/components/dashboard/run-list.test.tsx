@@ -49,8 +49,14 @@ describe('RunListSection', () => {
     expect(screen.getByText('실패')).toBeInTheDocument()
   })
 
-  test('빈 목록이면 아무것도 그리지 않는다', () => {
-    const { container } = render(<RunListSection items={[]} />)
-    expect(container.firstChild).toBeNull()
+  /**
+   * ★ §3 — 빈 상태는 방향을 준다. 동결 직후 첫 cron이 돌기 전의 브랜드가
+   *   실제로 이 상태다. 제목 아래가 그냥 비어 있으면 고장으로 읽힌다 —
+   *   무엇을 기다리는지·언제 오는지를 쓴다.
+   */
+  test('빈 목록이면 비워두지 않고 다음 측정이 언제인지 말한다', () => {
+    render(<RunListSection items={[]} />)
+    expect(screen.getByText(/첫 측정이 끝나면 여기에 회차가 쌓입니다/)).toBeInTheDocument()
+    expect(screen.getByText(/월·수·금 새벽/)).toBeInTheDocument()
   })
 })

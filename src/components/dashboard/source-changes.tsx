@@ -3,13 +3,16 @@ import { buildSourceChanges, type RunPoint } from '@/lib/dashboard/data'
 /**
  * 출처 상위 변화 — 도메인별 인용 답변 수, 직전 회차 대비 (스펙 ⑤).
  *
- * ★ **`comparableWithPrev`가 false면 `prev → curr` 화살표를 그리지 않는다.**
- *   추이 차트가 선을 끊는 것과 같은 이유다: 질의를 셋 더 넣은 다음 회차는
- *   인용 수가 당연히 늘고, 판정기가 바뀌면 무엇을 인용으로 셌는지가 바뀐다.
- *   "2 → 5"는 브랜드가 한 일이 아니라 설정 변경이다. 추이만 끊고 이 표가
- *   화살표를 그리면 같은 거짓말이 표 모양으로 나갈 뿐이다.
- *   (도메인이 사라진 건 아니므로 "새로 등장"으로 떨어뜨려서도 안 된다 —
- *    `prevAnswers`는 그대로 두고 화살표만 뺀다.)
+ * ★ **`comparableWithPrev`가 false면 어떤 행도 직전 회차를 입에 올리지 않는다 —
+ *   화살표도, "새로 등장"도.** 추이 차트가 선을 끊는 것과 같은 이유다: 질의를
+ *   셋 더 넣은 다음 회차는 인용 수가 당연히 늘고, 판정기가 바뀌면 무엇을
+ *   인용으로 셌는지가 바뀐다. "2 → 5"는 브랜드가 한 일이 아니라 설정 변경이다.
+ *   그리고 "새로 등장"도 같은 부류다 — "직전 회차에는 없었다"는 직전 회차
+ *   비교라서, 질의가 갈린 경계에서 상위 도메인이 물갈이되면 설정 변경이 만든
+ *   물갈이가 브랜드의 성과처럼 나간다. 비교 불가 경계의 모든 행은 개수만 쓰고,
+ *   왜 증감이 없는지는 캡션이 항상 말한다. 첫 회차(직전 회차 자체가 없음)도
+ *   개수만 쓰되, 없는 회차와 조건이 달랐다는 캡션까지 쓰면 그게 또 거짓이라
+ *   캡션은 직전 회차가 실제로 있을 때만 나온다.
  *
  * ★ `owner`는 `'self' | 'competitor' | 'third-party'`이고 **null이 아니다.**
  *   그리고 `selfDomainsKnown === false`인 회차의 `'third-party'`는 "남의
@@ -20,7 +23,11 @@ import { buildSourceChanges, type RunPoint } from '@/lib/dashboard/data'
 export function SourceChanges({ points }: { points: RunPoint[] }) {
   const rows = buildSourceChanges(points, 8)
   if (rows.length === 0) return null
-  const incomparable = rows.some((r) => !r.comparableWithPrev && r.prevAnswers !== null)
+  // `buildSourceChanges`의 prev와 같은 판정 — 직전 회차(스냅샷 있는 회차)가
+  // 실제로 있는가. 캡션은 이때만 나온다: 첫 회차에 "직전 회차와 조건이 달라"를
+  // 쓰면 없는 회차를 두고 말하는 것이다.
+  const hasPrevRun = points.length >= 2
+  const incomparable = hasPrevRun && rows.some((r) => !r.comparableWithPrev)
   const selfDomainsKnown = rows.every((r) => r.selfDomainsKnown)
   return (
     <>
@@ -37,9 +44,13 @@ export function SourceChanges({ points }: { points: RunPoint[] }) {
               )}
             </span>
             <span className="shrink-0 font-mono text-sm tabular-nums text-muted-foreground">
-              {row.prevAnswers === null ? (
+              {/* ★ 비교 불가면 "새로 등장"부터 걸러야 한다 — 그것도 직전 회차
+                  비교라서, 순서를 바꾸면 물갈이 경계에서 성과처럼 나간다. */}
+              {!row.comparableWithPrev ? (
+                <>{row.answers}개</>
+              ) : row.prevAnswers === null ? (
                 <>새로 등장 · {row.answers}개</>
-              ) : !row.comparableWithPrev || row.prevAnswers === row.answers ? (
+              ) : row.prevAnswers === row.answers ? (
                 <>{row.answers}개</>
               ) : (
                 <>{row.prevAnswers} → {row.answers}</>
