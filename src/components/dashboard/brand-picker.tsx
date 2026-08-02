@@ -17,7 +17,7 @@ export function BrandPicker({
           key={b.id}
           href={`/dashboard?brand=${b.id}`}
           aria-current={b.id === selectedId ? 'page' : undefined}
-          className={`rounded-md border px-3 py-1.5 text-sm transition-colors duration-[120ms] ${
+          className={`rounded-md border px-3 py-1.5 text-sm transition-colors duration-[120ms] ease-[cubic-bezier(0.2,0,0,1)] ${
             b.id === selectedId
               ? 'border-primary bg-primary text-primary-foreground'
               : 'border-border bg-card text-muted-foreground hover:text-foreground'

@@ -61,6 +61,9 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
   const y = (v: number) => PAD.top + (1 - v) * IH
   const last = sov[n - 1]!
   const segments = segmentsOf(sov)
+  // 밴드 불투명도는 TrendChart와 같은 값이다 (§4.1): 이어지는 세그먼트 안의
+  // 점은 0.14, 혼자 남은 점은 0.25 — "구간이 넓다"가 정직한 첫인상이어야 한다.
+  const isolated = new Set(segments.filter((s) => s.length === 1).flat())
   // 왜 끊겼는지를 캡션에 쓴다 — 말없이 끊긴 선은 버그로 읽힌다. 경쟁사 집합이
   // 바뀐 끊김은 §4.3 고정 문구, 나머지 조건 변경은 일반 문구로 가른다.
   // (`SovPoint`는 무엇이 바뀌었는지 들고 오지 않으므로 원본 회차로 되짚는다.)
@@ -118,10 +121,16 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
         )}
         {sov.map((p, i) => (
           <g key={p.runId}>
-            <rect x={x(i) - 4} y={y(p.interval.upper)} width={8} height={Math.max(y(p.interval.lower) - y(p.interval.upper), 1)} fill="var(--primary)" opacity={0.2} />
+            <rect x={x(i) - 4} y={y(p.interval.upper)} width={8} height={Math.max(y(p.interval.lower) - y(p.interval.upper), 1)} fill="var(--primary)" opacity={isolated.has(i) ? 0.25 : 0.14} />
             <circle data-testid="sov-point" cx={x(i)} cy={y(p.interval.point)} r={4} fill="var(--primary)" />
-            <title>{`${p.measuredAt.slice(5, 7)}.${p.measuredAt.slice(8, 10)} · ${formatPercent(p.interval.point)} (${formatInterval(p.interval)})`}</title>
+            <title>{`${p.measuredAt.slice(5, 7)}.${p.measuredAt.slice(8, 10)} · ${formatPercent(p.interval.point)} (${formatInterval(p.interval)}) · ${p.interval.k}/${p.interval.n}`}</title>
           </g>
+        ))}
+        {/* X축 라벨 — 추이 차트와 같은 문법 (§4.1: 회차 날짜 MM.DD, mono). */}
+        {sov.map((p, i) => (
+          <text key={`x-${p.runId}`} x={x(i)} y={H - 6} textAnchor="middle" className="fill-muted-foreground font-mono" fontSize={11}>
+            {`${p.measuredAt.slice(5, 7)}.${p.measuredAt.slice(8, 10)}`}
+          </text>
         ))}
       </svg>
       <p className="mt-2 text-xs text-muted-foreground">

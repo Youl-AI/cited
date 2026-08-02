@@ -55,7 +55,7 @@ export function RunListSection({ items }: { items: RunListItem[] }) {
         return (
           <li key={item.runId} data-testid="run-row">
             {item.hasResult ? (
-              <Link href={`/dashboard/runs/${item.runId}`} className="block transition-colors duration-[120ms] hover:bg-muted/40">
+              <Link href={`/dashboard/runs/${item.runId}`} className="block transition-colors duration-[120ms] ease-[cubic-bezier(0.2,0,0,1)] hover:bg-muted/40">
                 {inner}
               </Link>
             ) : (

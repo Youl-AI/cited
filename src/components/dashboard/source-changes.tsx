@@ -39,8 +39,11 @@ export function SourceChanges({ points }: { points: RunPoint[] }) {
               {row.selfDomainsKnown && row.owner === 'self' && (
                 <span className="text-[0.625rem] tracking-[0.08em] text-primary uppercase">우리</span>
               )}
+              {/* ★ 경쟁사는 무채색이다 (§2: 상태색의 뜻은 하나 — incomplete는
+                  "부분 완료"지 정체성이 아니다). 자기 브랜드=브랜드색, 경쟁사=무채색은
+                  `answer-specimen.tsx`가 정한 구분이다. */}
               {row.owner === 'competitor' && (
-                <span className="text-[0.625rem] tracking-[0.08em] text-incomplete-fg uppercase">경쟁사</span>
+                <span className="text-[0.625rem] tracking-[0.08em] text-muted-foreground uppercase">경쟁사</span>
               )}
             </span>
             <span className="shrink-0 font-mono text-sm tabular-nums text-muted-foreground">

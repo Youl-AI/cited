@@ -64,7 +64,10 @@ export default async function DashboardPage({
         // 튕기지 않고 알린다 (Task 4). 이미 측정 중인 브랜드가 있으므로 대시보드를
         // 막을 이유가 없고, 그렇다고 미동결 브랜드를 잊게 두면 그 브랜드는 영영
         // 측정되지 않는다 — 이어서 갈 링크를 항상 눈에 보이는 자리에 둔다.
-        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed">
+        // ★ 색은 토큰으로 쓴다 — 미확정 브랜드 경고는 온보딩 에디터의 경고 상자
+        //   (`queries/page.tsx`)와 같은 `incomplete` 짝이다. 원색 팔레트(amber-500)를
+        //   직접 쓰면 같은 뜻이 화면마다 다른 색이 된다 (§2).
+        <p className="rounded-lg border border-incomplete/40 bg-incomplete/5 px-4 py-3 text-sm leading-relaxed text-incomplete-fg">
           아직 질의를 확정하지 않은 브랜드가 있습니다. 확정 전까지 그 브랜드는 측정되지
           않습니다.{' '}
           <Link href={queriesStepPath(entry.pendingBrandId)} className="font-medium underline">

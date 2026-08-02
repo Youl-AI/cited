@@ -121,4 +121,18 @@ describe('SourceChanges', () => {
     expect(screen.getByText('경쟁사')).toBeInTheDocument()
     expect(screen.queryByText(/자사 도메인을 알려주시면/)).toBeNull()
   })
+
+  /**
+   * ★ Task 11에서 고친 위반 — 경쟁사 배지가 `text-incomplete-fg`(상태색)를
+   *   쓰고 있었다. §2: 상태색의 뜻은 하나("부분 완료")이고 정체성에 재사용하지
+   *   않는다. 경쟁사=무채색은 `answer-specimen.tsx`가 정한 구분이다.
+   */
+  test('경쟁사 배지는 상태색이 아니라 무채색이다 (§2)', () => {
+    const p = point('r1', [src('rival.com', 1, 'competitor')])
+    p.result.hasSelfDomains = true
+    render(<SourceChanges points={[p]} />)
+    const badge = screen.getByText('경쟁사')
+    expect(badge).toHaveClass('text-muted-foreground')
+    expect(badge.className).not.toContain('incomplete')
+  })
 })

@@ -94,7 +94,7 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
             key={id}
             type="button"
             onClick={() => setEngine(id)}
-            className={`rounded-md border px-2.5 py-1 text-xs transition-colors duration-[120ms] ${
+            className={`rounded-md border px-2.5 py-1 text-xs transition-colors duration-[120ms] ease-[cubic-bezier(0.2,0,0,1)] ${
               engine === id
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-card text-muted-foreground hover:text-foreground'
@@ -114,7 +114,7 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
 
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="w-full transition-opacity duration-[240ms]"
+        className="w-full transition-opacity duration-[240ms] ease-[cubic-bezier(0.2,0,0,1)]"
         role="img"
         aria-label={
           latest

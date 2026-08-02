@@ -116,4 +116,39 @@ describe('SovTrend', () => {
     expect(container.querySelectorAll('[data-testid="sov-line"]')).toHaveLength(0)
     expect(screen.getByText(/잴 수 없던 회차/)).toBeInTheDocument()
   })
+
+  /**
+   * ★ Task 11에서 고친 위반 둘 — §4.3은 "추이 차트와 같은 점+밴드 문법"이므로
+   *   §4.1의 문법이 그대로 적용된다: X축 회차 날짜(MM.DD, mono)와 점별
+   *   `<title>`의 `날짜 · 점추정 (구간) · k/n`. 둘 다 빠져 있었다.
+   */
+  test('X축에 MM.DD 라벨을 달고 점 <title>에 k/n까지 쓴다 (§4.1 문법)', () => {
+    const { container } = render(<SovTrend points={[point('r1', 8, 20), point('r2', 12, 20)]} />)
+    const axisLabels = [...container.querySelectorAll('text')]
+      .map((t) => t.textContent)
+      .filter((t) => t === '08.03')
+    expect(axisLabels).toHaveLength(2)
+    const titles = [...container.querySelectorAll('title')].map((t) => t.textContent ?? '')
+    expect(titles.some((t) => t.includes('· 8/20'))).toBe(true)
+    expect(titles.some((t) => t.includes('· 12/20'))).toBe(true)
+  })
+
+  /**
+   * ★ Task 11에서 고친 위반 — 밴드 불투명도가 TrendChart와 갈라져 있었다(0.2).
+   *   §4.1: 이어지는 밴드는 0.14, 혼자 남은 점의 세로 띠는 0.25 (TrendChart와
+   *   같은 값). 같은 문법의 두 차트가 다른 진하기를 쓰면 진하기가 뜻으로 읽힌다.
+   */
+  test('밴드 불투명도는 추이 차트와 같다 — 세그먼트 안 0.14, 혼자 남은 점 0.25', () => {
+    const { container } = render(
+      <SovTrend
+        points={[
+          point('r1', 8, 20),
+          point('r2', 12, 20),
+          point('r3', 10, 20, { competitors: ['지그재그'] }),
+        ]}
+      />,
+    )
+    const opacities = [...container.querySelectorAll('rect')].map((r) => r.getAttribute('opacity'))
+    expect(opacities).toEqual(['0.14', '0.14', '0.25'])
+  })
 })
