@@ -187,7 +187,14 @@ describe('QueryEditor — 템플릿과 같은 글자가 두 번 들어온 줄', 
     renderEditor(templates, { quota: 4 })
     fireEvent.click(screen.getByRole('button', { name: 'AI 후보 1개 만들기' }))
 
-    await waitFor(() => expect(screen.getAllByRole('textbox')).toHaveLength(4))
+    // ★ 줄 수로 기다리면 안 된다. 생성은 `startTransition` 안에서 돌고,
+    //   `useTransition`의 `pending`은 그 상태 업데이트보다 **한 커밋 뒤에** 풀린다 —
+    //   줄이 4개가 된 순간에도 `pending`이 아직 참일 수 있고, 그때 버튼들은
+    //   (의도대로) 잠겨 있다. `waitFor`의 첫 성공 폴링이 그 창에 떨어지면 아래
+    //   [삭제] 클릭과 활성 단언이 제품 버그가 아닌 이유로 깨진다.
+    //   그래서 **잠금이 풀린 신호**를 기다린다(줄 수는 그 신호에 포함된다).
+    await waitFor(() => expect(screen.getByRole('button', { name: '질의 4 삭제' })).toBeEnabled())
+    expect(screen.getAllByRole('textbox')).toHaveLength(4)
     expect(screen.getAllByRole('textbox')[3]).not.toHaveAttribute('readonly')
     expect(screen.getByRole('button', { name: '질의 4 삭제' })).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent(/중복 질의/)
@@ -227,7 +234,10 @@ describe('QueryEditor — AI 생성', () => {
         existing: templates,
       }),
     )
-    await waitFor(() => expect(screen.getAllByRole('textbox')).toHaveLength(4))
+    // 위와 같은 이유로 잠금이 풀린 뒤에 센다 — 전이가 끝나기 전에 테스트가
+    // 끝나면 정리 후 상태 갱신이 남는다.
+    await waitFor(() => expect(screen.getByRole('button', { name: '질의 4 삭제' })).toBeEnabled())
+    expect(screen.getAllByRole('textbox')).toHaveLength(4)
   })
 
   // ★ 카운터는 표시용이다. 한도는 서버가 강제하고, 거절 문구도 서버 것을 그대로 쓴다.

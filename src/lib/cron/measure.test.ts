@@ -1,4 +1,5 @@
-import { describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
+import { logger } from '@/lib/logger'
 import {
   MAX_ATTEMPTS_PER_WINDOW,
   RUNNING_STALE_MS,
@@ -201,6 +202,38 @@ describe('handleMeasure', () => {
         deps({ now: () => TUESDAY }),
       )
       expect(await res.json()).toMatchObject({ ok: true, measured: 'a' })
+    })
+
+    describe('강제 실행은 로그에 흔적을 남긴다', () => {
+      afterEach(() => {
+        vi.restoreAllMocks()
+      })
+
+      test('비측정일을 force로 넘으면 forced: true로 남는다', async () => {
+        // ★ 이 로그가 없으면 화요일의 수동 실행이 월·수·금 정규 회차와 로그상
+        //   똑같이 보인다. 그 회차는 회당 약 2,400원의 실지출이라, "왜 이 요일에
+        //   회차가 있나"를 되짚을 수 있어야 한다.
+        const info = vi.spyOn(logger, 'info').mockImplementation(() => {})
+        await handleMeasure(req('Bearer s3cret', '?force=1'), deps({ now: () => TUESDAY }))
+        expect(info).toHaveBeenCalledWith('cron.measure.off_schedule', {
+          weekday: 2,
+          forced: true,
+        })
+      })
+
+      test('측정일의 force는 off_schedule을 남기지 않는다 — 게이트를 넘은 적이 없다', async () => {
+        // 월요일(NOW)은 정규 측정일이다. 여기서도 남기면 "게이트를 넘었다"는
+        // 신호가 의미를 잃는다.
+        const info = vi.spyOn(logger, 'info').mockImplementation(() => {})
+        await handleMeasure(req('Bearer s3cret', '?force=1'), deps({}))
+        expect(info).not.toHaveBeenCalledWith('cron.measure.off_schedule', expect.anything())
+      })
+
+      test('막힌 비측정일은 forced 필드 없이 남는다', async () => {
+        const info = vi.spyOn(logger, 'info').mockImplementation(() => {})
+        await handleMeasure(req('Bearer s3cret'), deps({ now: () => TUESDAY }))
+        expect(info).toHaveBeenCalledWith('cron.measure.off_schedule', { weekday: 2 })
+      })
     })
 
     test('force=1이어도 인증이 먼저다', async () => {

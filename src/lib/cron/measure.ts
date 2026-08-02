@@ -107,11 +107,17 @@ export async function handleMeasure(request: Request, deps: MeasureDeps): Promis
   //   부를 수 있는 사람은 어차피 측정을 일으킬 수 있으므로 공격면이 늘지 않는다.
   const forced = new URL(request.url).searchParams.get('force') === '1'
   const weekday = kstWeekday(now)
-  if (!forced && !(MEASURE_WEEKDAYS_KST as readonly number[]).includes(weekday)) {
-    logger.info('cron.measure.off_schedule', { weekday })
-    // due 브랜드가 없는 idle과 구분되어야 한다 — 워크플로가 "오늘은 측정일이
-    // 아니다"와 "다 쟀다"를 같은 응답으로 받으면 회차 누락을 못 알아챈다.
-    return Response.json({ ok: true, measured: null, remaining: 0, skipped: 'off_schedule' })
+  if (!(MEASURE_WEEKDAYS_KST as readonly number[]).includes(weekday)) {
+    if (!forced) {
+      logger.info('cron.measure.off_schedule', { weekday })
+      // due 브랜드가 없는 idle과 구분되어야 한다 — 워크플로가 "오늘은 측정일이
+      // 아니다"와 "다 쟀다"를 같은 응답으로 받으면 회차 누락을 못 알아챈다.
+      return Response.json({ ok: true, measured: null, remaining: 0, skipped: 'off_schedule' })
+    }
+    // ★ 게이트를 **넘은** 실행도 남긴다. 이 줄이 없으면 비측정일의 수동 실행이
+    //   정규 회차와 로그상 구별되지 않는다 — 그 회차는 회당 약 2,400원의 실지출인데
+    //   "화요일에 왜 회차가 있나"를 나중에 로그로 되짚을 방법이 사라진다.
+    logger.info('cron.measure.off_schedule', { weekday, forced: true })
   }
 
   const ctx = await deps.loadDueContext(now)
