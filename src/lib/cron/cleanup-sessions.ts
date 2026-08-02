@@ -10,13 +10,15 @@
 // 이 라우트를 지우거나 크론을 떼면 방침이 거짓이 된다.
 import 'server-only'
 
-import { createHash, timingSafeEqual } from 'node:crypto'
 import { lt } from 'drizzle-orm'
+import { isAuthorizedCronRequest } from '@/lib/cron/auth'
 import type { Db } from '@/lib/db'
 import { session } from '@/lib/db/schema'
 import { logger } from '@/lib/logger'
 
-const BEARER_PREFIX = 'Bearer '
+// 크론 인증은 auth.ts로 이동했다 (4단계 — /api/cron/measure와 공유).
+// 기존 호출자·테스트를 위해 그대로 re-export한다.
+export { isAuthorizedCronRequest } from '@/lib/cron/auth'
 
 /** 만료 세션 삭제기. 기준 시각을 받아 삭제된 행 수를 돌려준다. */
 export type ExpiredSessionDeleter = (now: Date) => Promise<number>
@@ -27,35 +29,6 @@ export interface CleanupSessionsDeps {
   deleteExpiredSessions: ExpiredSessionDeleter
   /** 테스트에서 기준 시각을 고정하기 위한 주입점 */
   now?: () => Date
-}
-
-/**
- * 타이밍 안전 비교.
- *
- * `timingSafeEqual`은 길이가 다른 버퍼를 받으면 **던진다**. 그대로 두면
- * "틀린 시크릿"이 500이 되어 오류와 섞이고, 길이 비교를 앞에 두면 조기
- * 반환이 생긴다. 두 값을 SHA-256으로 먼저 고정 길이(32바이트)로 만들면
- * 길이 분기 없이 항상 같은 길이를 비교하게 된다.
- */
-function secretsMatch(provided: string, expected: string): boolean {
-  const digest = (value: string) => createHash('sha256').update(value, 'utf8').digest()
-  return timingSafeEqual(digest(provided), digest(expected))
-}
-
-/**
- * Vercel Cron은 `CRON_SECRET`이 설정돼 있으면 호출에
- * `Authorization: Bearer $CRON_SECRET` 헤더를 붙인다. 이 라우트는 공개
- * URL이므로 이 검증이 유일한 방어선이다.
- */
-export function isAuthorizedCronRequest(
-  authorizationHeader: string | null,
-  secret: string | undefined,
-): boolean {
-  // 시크릿이 설정돼 있지 않으면 통과시키지 않는다. 여기서 빈 문자열을
-  // 허용하면 `Authorization: Bearer `만 보내도 세션 테이블이 비워진다.
-  if (!secret) return false
-  if (!authorizationHeader?.startsWith(BEARER_PREFIX)) return false
-  return secretsMatch(authorizationHeader.slice(BEARER_PREFIX.length), secret)
 }
 
 /** 만료 조건: `expires_at < now`. 유효한 세션은 건드리지 않는다. */

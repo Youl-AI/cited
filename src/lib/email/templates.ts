@@ -115,6 +115,37 @@ ${row('신청자', maskEmail(audit.email))}
 }
 
 /**
+ * 정기 측정 실패 — 운영자 알림 (스펙 ⑤).
+ * attempt=1이면 다음 호출이 자동 재시도하고, 2면 이번 회차를 건너뛴다.
+ */
+export function measureFailureNotice(params: {
+  brandName: string
+  brandId: string
+  reason: string
+  attempt: number
+}): EmailContent {
+  const row = (label: string, value: string) =>
+    `<tr><td style="padding:4px 12px 4px 0;color:#8a8580;white-space:nowrap">${label}</td><td style="padding:4px 0">${escapeHtml(value)}</td></tr>`
+  const nextStep =
+    params.attempt === 1
+      ? '15분 뒤 호출에서 1회 자동 재시도합니다. 재실패하면 다시 알려드립니다.'
+      : '이번 회차는 건너뜁니다 — 공백 1회가 잘못된 데이터보다 낫습니다. 다음 스케줄(월·수·금 새벽)에 정상 측정합니다.'
+  return {
+    subject: `[Cited 운영] 정기 측정 실패 — ${params.brandName} (${params.attempt}번째 시도)`,
+    html: layout(
+      `<h1 style="margin:0 0 16px;font-size:20px;letter-spacing:-0.02em">정기 측정이 실패했습니다</h1>
+<table style="border-collapse:collapse;margin:0 0 20px;font-size:14px">
+${row('브랜드', params.brandName)}
+${row('브랜드 id', params.brandId)}
+${row('시도', `${params.attempt} / 2`)}
+${row('사유', params.reason.slice(0, 500))}
+</table>
+<p style="margin:0;color:#8a8580;font-size:13px">${nextStep}</p>`,
+    ),
+  }
+}
+
+/**
  * 진단 리포트 메일. `tier`를 생략하면 무료 진단으로 취급한다.
  *
  * ★ 리포트의 실질을 **메일 본문에 담는다.** 링크만 보내면 대부분은 안 누른다.
