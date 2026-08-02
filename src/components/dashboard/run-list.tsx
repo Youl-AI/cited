@@ -1,0 +1,61 @@
+import Link from 'next/link'
+import type { RunListItem } from '@/lib/dashboard/data'
+import type { RunStatus } from '@/lib/db/schema'
+
+const STATUS_LABEL: Record<RunStatus, string> = {
+  running: '진행 중',
+  succeeded: '완료',
+  partial: '부분 완료 · 수집 90% 미만',
+  failed: '실패',
+}
+
+/**
+ * 회차 목록 — 실패 회차도 감추지 않는다. 스냅샷 있는 회차만 상세로 간다.
+ *
+ * ★ `succeeded`인데 `hasResult === false`인 회차가 실제로 존재한다 — 측정은
+ *   끝났는데 스냅샷 저장만 실패한 경우다 (`parseRunResult` 주석). 이 회차는
+ *   "스냅샷 없음"으로 쓴다. 0%로 그리거나 목록에서 감추면 돈 낸 고객에게
+ *   없는 측정을 보여주게 된다 (`RunListItem.hasResult` 주석이 못 박는 계약).
+ */
+function statusLabel(item: RunListItem): string {
+  if (item.status === 'succeeded' && !item.hasResult) return '완료 · 스냅샷 없음'
+  return STATUS_LABEL[item.status]
+}
+
+export function RunListSection({ items }: { items: RunListItem[] }) {
+  if (items.length === 0) return null
+  return (
+    <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+      {items.map((item) => {
+        const date = item.startedAt.slice(0, 10)
+        const inner = (
+          <span className="flex items-baseline justify-between gap-4 px-5 py-3">
+            <span className="font-mono text-sm tabular-nums">{date}</span>
+            <span
+              className={`text-sm ${
+                item.status === 'failed'
+                  ? 'text-metric-down-fg'
+                  : item.status === 'partial'
+                    ? 'text-incomplete-fg'
+                    : 'text-muted-foreground'
+              }`}
+            >
+              {statusLabel(item)}
+            </span>
+          </span>
+        )
+        return (
+          <li key={item.runId} data-testid="run-row">
+            {item.hasResult ? (
+              <Link href={`/dashboard/runs/${item.runId}`} className="block transition-colors duration-[120ms] hover:bg-muted/40">
+                {inner}
+              </Link>
+            ) : (
+              inner
+            )}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}

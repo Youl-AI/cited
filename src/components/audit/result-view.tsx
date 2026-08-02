@@ -63,6 +63,7 @@ export function ResultView({
   tier = 'free',
   guide,
   compare,
+  variant = 'audit',
 }: {
   result: AuditResult
   tier?: AuditTier
@@ -70,7 +71,10 @@ export function ResultView({
   guide?: string
   /** PREMIUM 재측정의 원본. 있으면 전후 비교를 그린다. */
   compare?: { before: AuditResult; beforeDate: string }
+  /** 'run' = 정기 측정 회차 상세 — 표제가 바뀌고 요금제 업셀이 빠진다 */
+  variant?: 'audit' | 'run'
 }) {
+  const isRun = variant === 'run'
   const rate = formatPercent(result.citedRate.point)
   const measuredOn = result.measuredAt.slice(0, 10)
 
@@ -86,8 +90,9 @@ export function ResultView({
       {/* ── 표제 ─────────────────────────────────────────────── */}
       <header className="mb-10">
         <p className="font-mono text-xs tracking-[0.14em] text-muted-foreground uppercase">
-          {/* ★ 유료 리포트에 "무료 진단"이 찍히면 산 것과 받은 것이 다르다. */}
-          {isPaidTier(tier) ? '정밀 진단 리포트' : '무료 진단 리포트'}
+          {/* ★ 유료 리포트에 "무료 진단"이 찍히면 산 것과 받은 것이 다르다.
+              회차 상세도 같은 규칙이다 — 구독 고객이 받은 것은 정기 측정이다. */}
+          {isRun ? '정기 측정 리포트' : isPaidTier(tier) ? '정밀 진단 리포트' : '무료 진단 리포트'}
         </p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
           {result.brandName}
@@ -132,7 +137,8 @@ export function ResultView({
 
       {/* ── 이 숫자를 어떻게 읽어야 하는가 ───────────────────── */}
       <section className="mb-10 border-l-2 border-border pl-5 print:break-inside-avoid">
-        {tier === 'free' ? (
+        {/* 회차 상세는 유료 문구 쪽 — 질의 수·답변 수 기반이라 그대로 맞는 말이다. */}
+        {!isRun && tier === 'free' ? (
           <p className="text-sm leading-relaxed text-muted-foreground">
             무료 진단은 질의 <Metric>3</Metric>개를 <Metric>1</Metric>회 측정합니다. 그래서
             구간이 <Metric>{formatInterval(result.citedRate)}</Metric>로 넓습니다 — 실제 값은 이
@@ -353,7 +359,10 @@ export function ResultView({
       {/* ── 유료 전환 ──────────────────────────────────────────
           ★ 인쇄(PDF)에서는 숨긴다. PDF는 크몽 납품물이고, 납품 문서에 실린
             자사 요금제 유도는 크몽 직거래 유도 정책 위반 소지가 있다 —
-            계정 제재 리스크. 화면(웹)에서는 유지한다. */}
+            계정 제재 리스크. 화면(웹)에서는 유지한다.
+          ★ 회차 상세(variant='run')에서는 아예 없다 — 이미 구독 중인 고객에게
+            "요금제 보기" 업셀은 틀린 말이다. */}
+      {!isRun && (
       <section className="rounded-lg border border-border bg-card p-6 sm:p-7 print:hidden">
         <h2 className="text-lg font-semibold tracking-tight">
           이 리포트는 <Metric>1</Metric>회 측정입니다
@@ -374,6 +383,7 @@ export function ResultView({
           <Link href="/pricing">요금제 보기</Link>
         </Button>
       </section>
+      )}
     </div>
   )
 }

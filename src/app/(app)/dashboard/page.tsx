@@ -3,6 +3,9 @@ import { redirect } from 'next/navigation'
 import { BrandPicker } from '@/components/dashboard/brand-picker'
 import { HeadlineCard } from '@/components/dashboard/headline-card'
 import { QueryHeatmap } from '@/components/dashboard/query-heatmap'
+import { RunListSection } from '@/components/dashboard/run-list'
+import { SourceChanges } from '@/components/dashboard/source-changes'
+import { SovTrend } from '@/components/dashboard/sov-trend'
 import { TrendChart } from '@/components/dashboard/trend-chart'
 import { Button } from '@/components/ui/button'
 import { loadDashboard } from '@/lib/dashboard/load'
@@ -100,7 +103,33 @@ export default async function DashboardPage({
           <QueryHeatmap points={data.points} />
         </section>
       )}
-      {/* 점유율·출처·회차 목록은 Task 10이 이 아래에 붙인다 */}
+      {data.points.length > 0 && (
+        <section>
+          <h2 className="mb-1 text-lg font-semibold tracking-tight sm:text-xl">언급 점유율 추이</h2>
+          <p className="mb-5 text-sm text-muted-foreground">
+            등록한 경쟁사 대비 언급 비중입니다. 경쟁사를 더 등록하면 이 값은 달라집니다.
+          </p>
+          <SovTrend points={data.points} />
+        </section>
+      )}
+
+      {data.points.length > 0 && (
+        <section>
+          <h2 className="mb-1 text-lg font-semibold tracking-tight sm:text-xl">AI가 읽는 출처</h2>
+          <p className="mb-5 text-sm text-muted-foreground">
+            최신 회차에서 인용된 도메인과 직전 회차 대비 변화입니다 — 여기가 콘텐츠를 실을 곳입니다.
+          </p>
+          <SourceChanges points={data.points} />
+        </section>
+      )}
+
+      <section>
+        <h2 className="mb-1 text-lg font-semibold tracking-tight sm:text-xl">측정 회차</h2>
+        <p className="mb-5 text-sm text-muted-foreground">
+          회차를 누르면 진단 리포트와 같은 화면 문법의 상세를 봅니다.
+        </p>
+        <RunListSection items={data.runList} />
+      </section>
     </div>
   )
 }
