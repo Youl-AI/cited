@@ -32,8 +32,14 @@ export default async function DashboardPage({
   })
   if (entry.kind === 'redirect') redirect(entry.to)
 
-  if (gate.state === 'no-plan') {
+  if (gate.state === 'no-plan' && gate.frozenBrandCount === 0) {
     // 기존 빈 대시보드 유지 (스펙 ② — 플랜 없는 계정은 무료 진단 안내).
+    // ★ `no-plan`만으로 가르지 않는다. 해지(status='canceled')도 `no-plan`으로
+    //   판정되는데, 해지한 고객은 돈 내고 받은 측정 이력을 그대로 본다는 것이
+    //   데이터 계층의 못 박힌 정책이다 (`load.ts` — status 필터 없음,
+    //   `load.test.ts`가 지킨다). 동결 브랜드가 하나라도 있으면 보여 줄 이력이
+    //   있다는 뜻이므로 아래 대시보드로 내려간다 — 이 분기는 "보여 줄 것이
+    //   아무것도 없는" 계정 전용이다.
     return (
       <div className="max-w-2xl space-y-4">
         <h1 className="text-2xl font-semibold tracking-tight">대시보드</h1>
@@ -60,6 +66,15 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-10">
+      {gate.state === 'no-plan' && (
+        // 해지 계정 안내 — 새 측정이 왜 안 도는지 정직하게 말한다. 이력을
+        // 감추지 않는 것과 짝이다 (`load.ts` 해지 정책 주석). 경고 색이 아니라
+        // 중립 톤을 쓴다 — 잘못된 상태가 아니라 계약이 끝난 상태다.
+        <p className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+          구독이 해지되어 새 측정은 돌지 않지만, 결제하신 기간의 측정 이력은 그대로 볼 수
+          있습니다.
+        </p>
+      )}
       {entry.pendingBrandId && (
         // 튕기지 않고 알린다 (Task 4). 이미 측정 중인 브랜드가 있으므로 대시보드를
         // 막을 이유가 없고, 그렇다고 미동결 브랜드를 잊게 두면 그 브랜드는 영영

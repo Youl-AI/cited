@@ -128,7 +128,7 @@ export function measureFailureNotice(params: {
     `<tr><td style="padding:4px 12px 4px 0;color:#8a8580;white-space:nowrap">${label}</td><td style="padding:4px 0">${escapeHtml(value)}</td></tr>`
   const nextStep =
     params.attempt === 1
-      ? '15분 뒤 호출에서 1회 자동 재시도합니다. 재실패하면 다시 알려드립니다.'
+      ? '10분 뒤 호출에서 1회 자동 재시도합니다. 재실패하면 다시 알려드립니다.'
       : '이번 회차는 건너뜁니다 — 공백 1회가 잘못된 데이터보다 낫습니다. 다음 스케줄(월·수·금 새벽)에 정상 측정합니다.'
   return {
     subject: `[Cited 운영] 정기 측정 실패 — ${params.brandName} (${params.attempt}번째 시도)`,

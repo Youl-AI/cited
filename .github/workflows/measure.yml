@@ -54,7 +54,8 @@ jobs:
     # 브랜드 10개 소진에 약 40분(브랜드당 233초 + 왕복). 아래 MAX_SECONDS(45분)에
     # 걸린 뒤 진행 중이던 호출 1건(최대 320초)이 끝날 여유까지 더한 값이다.
     # 창을 18:00~20:50 UTC로 넓혀도 이 값들은 그대로 유효하다 — 마지막 발화가
-    # 예산을 다 써도 21:35 UTC(KST 06:35)에 끝나 KST 같은 요일 안이다.
+    # 예산을 다 쓰고 진행 중이던 호출(최대 320초)까지 기다려도 21:40 UTC
+    # (KST 06:40)에 끝나 KST 같은 요일 안이다.
     timeout-minutes: 55
     steps:
       # 저장소 Settings > Secrets and variables > Actions 에 CRON_SECRET을

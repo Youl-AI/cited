@@ -9,7 +9,7 @@ import { isAuthorizedCronRequest } from './auth'
  * 정기 측정 핸들러 코어 — 순수 판정 + DI (스펙 ③).
  *
  * ★ 호출당 브랜드 1개만 처리한다. 실측 1브랜드 233초로 함수 한도(300초) 안.
- *   브랜드가 여러 개면 15분 뒤 다음 호출이 이어받는다 — 큐 없는 소진 방식.
+ *   브랜드가 여러 개면 10분 뒤 다음 호출이 이어받는다 — 큐 없는 소진 방식.
  * ★ due 판정과 중복 실행 잠금은 collection_runs 상태로만 한다. 별도 잠금
  *   테이블을 만들지 않는다 — 상태의 출처가 둘이면 갈라진다.
  * ★ 월·수·금 불변식도 여기서 지킨다. 워크플로 cron 표현식 하나에만 두면
@@ -154,7 +154,7 @@ export async function handleMeasure(request: Request, deps: MeasureDeps): Promis
     } catch {
       logger.error('cron.measure.notify_failed', { brandId: due.brandId })
     }
-    // ★ 200으로 돌려준다. 15분 간격 반복 호출이 곧 재시도 메커니즘이라
+    // ★ 200으로 돌려준다. 10분 간격 반복 호출이 곧 재시도 메커니즘이라
     //   워크플로를 빨간불로 만들면 소음만 는다 — 실패 신호는 운영자 메일이다.
     // ★ 실패에도 `remaining`을 싣는다. 이게 없으면 Task 7 워크플로가 한 브랜드가
     //   실패했을 때 남은 브랜드를 계속 소진해야 하는지 판단할 수 없다.
