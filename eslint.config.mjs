@@ -17,6 +17,20 @@ const eslintConfig = defineConfig([
   //
   // src/lib/detection/ 과 src/lib/stats/ 는 "저장된 원본 → 판정 결과"만 하는
   // 순수 함수여야 한다. 이 두 디렉터리가 순수해야 하는 이유는 두 가지다.
+  //
+  // ★ src/lib/dashboard/data.ts 도 같은 경계 안이다 — 디렉터리가 아니라
+  //   **파일 하나**만 넣는다. 이유가 셋 다르다.
+  //     1. 이 파일은 클라이언트 컴포넌트에서 import된다(4단계 대시보드 화면).
+  //        db·drizzle이 값으로 한 줄이라도 섞이면 번들에 서버 코드가 끌려간다.
+  //     2. 같은 디렉터리의 `load.ts`가 정확히 `import { db } from '@/lib/db'`로
+  //        시작한다 — **복사해 붙이기 좋은 템플릿이 옆에 있다.**
+  //        (실측: 규칙 없이 data.ts에 db import를 넣었더니 lint·typecheck가
+  //        둘 다 통과했다. "순수하다"는 주석만으로는 아무것도 못 막는다.)
+  //     3. 디렉터리 전체를 넣으면 `load.ts`(DB 로더가 본업)와
+  //        `data.test.ts`(`@/lib/audit/result`에서 값을 import한다)가 같이
+  //        걸린다. 순수해야 하는 것은 data.ts 하나다.
+  //   dashboard/ 에 순수 모듈을 더 만들면 이 목록에 파일명을 **명시적으로**
+  //   추가해라. 글롭으로 넓히지 마라 — 넓히는 순간 load.ts가 들어온다.
   //   1. 2단계의 골든 라벨 회귀 테스트(재현율 95%·정밀도 90% CI 게이트)가
   //      API 키·DB·네트워크 없이 돌아야 한다.
   //   2. 판정 로직이 바뀌면 저장해 둔 원본으로 전량 재판정할 수 있어야 한다.
@@ -48,6 +62,7 @@ const eslintConfig = defineConfig([
     files: [
       "src/lib/detection/**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}",
       "src/lib/stats/**/*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}",
+      "src/lib/dashboard/data.ts",
     ],
     rules: {
       "no-restricted-imports": [
@@ -60,7 +75,17 @@ const eslintConfig = defineConfig([
                 "^(?!(?:\\./|@/lib/detection(?:/|$)|@/lib/stats(?:/|$)|vitest(?:/|$))).*",
               allowTypeImports: true,
               message:
-                "detection/ 과 stats/ 는 순수 함수여야 합니다. 허용: './…', '@/lib/detection…', '@/lib/stats…', 'vitest', 그리고 `import type`. 외부 I/O는 import하지 말고 인자로 주입받으세요. (설계 ① 핵심 원칙)",
+                "detection/ · stats/ · dashboard/data.ts 는 순수 함수여야 합니다. 허용: './…', '@/lib/detection…', '@/lib/stats…', 'vitest', 그리고 `import type`. 외부 I/O는 import하지 말고 인자로 주입받으세요. (설계 ① 핵심 원칙)",
+            },
+            {
+              // ★ dashboard/data.ts 전용 구멍. 위 allow-list의 `./…`가 같은
+              //   디렉터리의 **DB 로더**(`./load`)를 그대로 통과시킨다 —
+              //   경계에 파일 하나만 넣었기 때문에 생기는 틈이다.
+              //   detection/ · stats/ 에는 load 모듈이 없어 방해되지 않는다.
+              regex: "^\\./load(?:\\.[cm]?[jt]s)?$",
+              allowTypeImports: true,
+              message:
+                "dashboard/data.ts는 순수해야 합니다 — 같은 디렉터리의 DB 로더('./load')를 값으로 import하면 클라이언트 번들에 db가 끌려옵니다. 타입만 필요하면 `import type`을 쓰세요.",
             },
             {
               // `../`로 경계 밖으로 나가는 상대경로. 위 regex는 `./`로 시작하는
@@ -68,7 +93,7 @@ const eslintConfig = defineConfig([
               regex: "\\.\\.",
               allowTypeImports: true,
               message:
-                "detection/ · stats/ 에서 상위 디렉터리 상대경로 금지 — 경계 밖의 모듈입니다. 인자로 주입받으세요.",
+                "detection/ · stats/ · dashboard/data.ts 에서 상위 디렉터리 상대경로 금지 — 경계 밖의 모듈입니다. 인자로 주입받으세요.",
             },
           ],
         },

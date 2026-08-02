@@ -37,9 +37,22 @@ export async function loadDashboard(
   })
   // 이력 창 = 플랜의 historyMonths (null이면 무제한). 달력 월이 아니라 30일
   // 근사다 — 경계에서 하루 이틀 차이는 제품 약속("3개월")을 해치지 않는다.
+  //
+  // ★ 구독 조회에 status 필터가 **없다.** 의도된 정책이다 — 해지한 고객도
+  //   자기가 돈 내고 받은 측정 이력을 그대로 본다. 정직한 측정을 소급해서
+  //   감추지 않는다 (`revokePlan`은 행을 지우지 않고 status만 'canceled'로
+  //   바꾼다). 이 정책은 `load.test.ts`가 못 박는다.
+  //
+  // ★ 구독 행이 없는 분기는 **도달하지 않는다.** `subscriptions.userId`는
+  //   `onDelete: 'restrict'`라 행이 사라지지 않고, 구독이 없는 사용자는
+  //   `createBrandAction`이 'no-plan'으로 막아 브랜드를 못 만들며, 브랜드가
+  //   없으면 위 `if (!selected)`에서 이미 돌아간다. 그래도 남겨 두는 값은
+  //   `null`(무제한)이다 — 이 자리에 0을 두면 "지금 이후"만 남기는
+  //   `gte(startedAt, now)`가 되어, 실제로 저장된 회차를 화면에서 통째로
+  //   감춘다. 도달 불가능한 분기의 기본값은 **덜 숨기는 쪽**이어야 한다.
   const months = subscription
     ? resolveLimits(subscription.plan, subscription.queryPacks).historyMonths
-    : 0
+    : null
   const conditions = [eq(schema.collectionRuns.brandId, selected.id)]
   if (months !== null) {
     conditions.push(

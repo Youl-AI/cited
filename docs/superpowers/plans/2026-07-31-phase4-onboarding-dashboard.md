@@ -3196,30 +3196,45 @@ git commit -m "feat(cron): GitHub Actions 스케줄 — 월·수·금 KST 새벽
 **Interfaces:**
 - Consumes: `AuditResult`·`AUDIT_RESULT_VERSION`(`@/lib/audit/result`),
   `Interval`·`judgeChange`·`ChangeVerdict`(`@/lib/stats/wilson`),
-  `SourceStat`(`@/lib/stats/sources`), `CollectionRun`·`RunStatus`·`PlanSnapshot`,
+  `SourceStat`·`SourceOwner`(`@/lib/stats/sources`), `CollectionRun`·`RunStatus`·`PlanSnapshot`,
   `resolveLimits`, Task 1의 `collectionRuns.result`
-- Produces:
+- Produces (★ 아래는 **실제로 출하된 시그니처**다 — Task 9~11은 이것을 보고 코딩한다):
   - `change-copy.ts`: `changeSentence(verdict: ChangeVerdict): string` (문장은
     기존 result-view의 것과 문자 그대로 동일)
   - `data.ts`:
     - `parseRunResult(value: unknown): AuditResult | null`
-    - `interface RunPoint { runId: string; measuredAt: string; engines: string[]; competitors: string[]; result: AuditResult }`
+      (검사하는 필드: `version`·`citedRate`·`byQuery`·`sources`·`byEngine`·`shareOfVoice`.
+      그 외는 보지 않는다 — 과거 스냅샷 호환)
+    - `interface RunPoint { runId: string; measuredAt: string; engines: string[]; competitors: string[]; queryIds: string[]; detectorVersion: number; result: AuditResult }`
+      (`queryIds`·`detectorVersion`은 **비교 가능성 필드**다. 질의 집합이 바뀌면
+      `citedRate`의 분모가, 판정기 버전이 바뀌면 분자의 정의가 바뀐다 — `engines`와 같은 취급)
     - `toRunPoint(run: Pick<CollectionRun, 'id' | 'startedAt' | 'planSnapshot' | 'result'>): RunPoint | null`
-    - `interface TrendPoint { runId: string; measuredAt: string; interval: Interval }`
+    - `interface TrendPoint { runId: string; measuredAt: string; interval: Interval; comparableWithPrev: boolean }`
+      (★ `comparableWithPrev: false`면 화면은 **선을 끊는다.** 두 점은 참이지만
+      그 사이 선분이 거짓이다. 첫 점은 이을 대상이 없으므로 true)
     - `buildTrend(points: readonly RunPoint[], engineId: string | 'all'): TrendPoint[]`
     - `engineIdsIn(points: readonly RunPoint[]): string[]`
     - `interface HeatmapView { runs: { runId: string; measuredAt: string }[]; rows: { queryText: string; cells: (Interval | null)[] }[] }`
     - `buildHeatmap(points: readonly RunPoint[], maxRuns?: number): HeatmapView`
     - `interface SovPoint { runId: string; measuredAt: string; interval: Interval; comparableWithPrev: boolean }`
+      (SoV는 위 셋에 **경쟁사 집합까지** 같아야 comparable)
     - `buildSovTrend(points: readonly RunPoint[]): SovPoint[]`
-    - `interface SourceChangeRow { domain: string; owner: 'self' | 'competitor' | null; answers: number; prevAnswers: number | null }`
+    - `interface SourceChangeRow { domain: string; owner: SourceOwner; selfDomainsKnown: boolean; answers: number; prevAnswers: number | null }`
+      (★ `SourceOwner`는 `'self' | 'competitor' | 'third-party'` — **null이 아니다.**
+      `owner === null` 분기는 영원히 거짓이다. 그리고 `selfDomainsKnown: false`면
+      `'third-party'`는 "남의 사이트"가 아니라 "자사 도메인을 몰라서 못 갈랐다"이다 —
+      `AuditResult.hasSelfDomains`의 주석대로 화면이 이 둘을 반드시 갈라야 한다)
     - `buildSourceChanges(points: readonly RunPoint[], topN?: number): SourceChangeRow[]`
     - `interface Headline { latest: RunPoint | null; prev: RunPoint | null; verdict: ChangeVerdict }`
+      (`verdict`는 `judgeChange`(엔진) **위에** 질의 집합·판정기 버전까지 걸러 낸 값이다)
     - `buildHeadline(points: readonly RunPoint[]): Headline`
     - `interface RunListItem { runId: string; startedAt: string; status: RunStatus; hasResult: boolean }`
   - `load.ts`:
     - `interface DashboardData { brands: { id: string; name: string }[]; selected: Brand | null; points: RunPoint[]; runList: RunListItem[] }`
     - `loadDashboard(userId: string, brandId: string | undefined): Promise<DashboardData>`
+      (이력 창 = 플랜의 `historyMonths` (null=무제한). ★ 구독 조회에 status 필터가
+      **없다** — 해지한 고객도 자기가 돈 내고 받은 이력을 그대로 본다. 의도된 정책이고
+      `load.test.ts`가 못 박는다)
     - `loadRunDetail(userId: string, runId: string): Promise<{ brandName: string; startedAt: string; result: AuditResult } | null>`
 
 - [ ] **Step 1: 실패하는 테스트 — 변화 문장 추출**
