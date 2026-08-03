@@ -8,8 +8,13 @@ import './globals.css'
 // 그러면 같은 화면이 맥·윈도우에서 다른 리듬으로 읽힌다. SUIT는 가변 서체
 // 하나로 100–900을 덮으므로 웨이트별 파일을 따로 싣지 않아도 되고, woff2
 // 압축 후 610KB라 한글 웹폰트치고 가볍다(웨이트 3개짜리 정적 한글 서체보다
-// 작다). --font-sans 체인 맨 앞이므로 라틴·한글 모두 여기서 잡힌다 —
-// 순서와 폴백은 globals.css의 --font-sans 주석 참고.
+// 작다). --font-sans 체인 맨 앞이므로 라틴·한글 모두 여기서 잡힌다.
+// 출처·무결성 해시·라이선스(OFL 1.1)는 ./fonts/README.md 참고.
+//
+// next/font는 variable 값에 폴백을 하나 더 붙인다 — 실제로 발행되는 값은
+// `"suit", "suit Fallback"`이고, "suit Fallback"은 local(Arial)에 SUIT의
+// 메트릭(ascent/descent/size-adjust)을 덮어씌운 것이다. 그래서 display:swap
+// 구간의 라틴은 이 조정된 Arial이 받는다(레이아웃 시프트를 줄이려는 것).
 const suit = localFont({
   src: './fonts/SUIT-Variable.woff2',
   variable: '--font-suit',
@@ -17,8 +22,10 @@ const suit = localFont({
   display: 'swap',
 })
 
-// SUIT 뒤의 라틴 폴백. SUIT가 뜨기 전(swap 구간)이나 실패했을 때 라틴·숫자를
-// 받는다.
+// 라틴 전용. SUIT 도입 후로는 --font-sans 체인에서 사실상 도달하지 않는다
+// (앞의 "suit Fallback" = Arial이 라틴을 이미 받으므로). 지금 남겨 두는 것은
+// Task 1에서 본문 라틴을 SUIT로 완전히 넘길지 결정할 때까지의 유예다 —
+// 그때 이 로딩을 지울지 --font-sans 앞쪽으로 되돌릴지 정한다.
 const plexSans = IBM_Plex_Sans({
   variable: '--font-plex-sans',
   subsets: ['latin'],
