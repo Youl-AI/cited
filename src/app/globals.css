@@ -282,6 +282,20 @@
      다층이어야 높이가 읽힌다: 1px 윤곽 + 근거리 + (2단부터) 원거리.
      빛의 방향은 위에서 하나뿐이다(모든 y 오프셋이 양수).
      쓰는 곳: 1 = 떠 있는 카드·버튼, 2 = 호버 확장·툴팁, 3 = 모달급. */
+  /* ---- 파인 것 (recess) --------------------------------------------------
+     elevation이 표면 **위로** 띄운다면 이것은 표면 **안으로** 판다. 입력·셀렉트
+     트리거처럼 "값을 담는 칸"에 쓴다 — 버튼과 같은 깊이에 있으면 "누르는 것"과
+     "쓰는 것"이 구별되지 않는다.
+     빛의 방향은 elevation과 같이 위 하나뿐이고(위쪽 안쪽 그림자), 색도 같은
+     색조(258)로 틴트했다. 순수 검정 금지는 여기에도 적용된다.
+     ★ 이름만 있고 실값이 :root / .surface-dark에 있는 이유는 --elev-N과 같다.
+     ★ 다크 짝이 `none`이 **아니라** `0 0 #0000`인 것은 실수가 아니다.
+       Tailwind는 box-shadow를 `var(--tw-inset-shadow), …, var(--tw-shadow)`
+       한 줄로 합성한다. 그 목록에 `none`이 끼면 **선언 전체가 무효**가 되어
+       같은 요소의 `focus-visible:ring-3`까지 함께 사라진다(마케팅 신청 폼의
+       초점 링이 통째로 죽는다). 투명 그림자는 유효한 값이고 아무것도 그리지
+       않는다 — Tailwind의 `shadow-none`이 쓰는 값과 같다. */
+  --recess-1: inset 0 1px 2px oklch(0.2 0.015 258 / 0.05);
   --elev-1: 0 0 0 1px oklch(0.2 0.015 258 / 0.03), 0 1px 2px oklch(0.2 0.015 258 / 0.05);
   --elev-2: 0 0 0 1px oklch(0.2 0.015 258 / 0.03), 0 2px 4px -1px oklch(0.2 0.015 258 / 0.05), 0 8px 16px -4px oklch(0.2 0.015 258 / 0.06);
   --elev-3: 0 0 0 1px oklch(0.2 0.015 258 / 0.04), 0 4px 8px -2px oklch(0.2 0.015 258 / 0.06), 0 16px 32px -8px oklch(0.2 0.015 258 / 0.09);
@@ -433,6 +447,11 @@
      그림자다. 색은 라이트와 같은 색조(258)의 더 어두운 쪽이다.
      ★ 이름이 --elev-N인 이유는 @theme inline 쪽 주석 참고 — 그림자 실값을
        @theme에 두면 유틸리티가 값을 인라인해 버려서 이 재선언이 무시된다. */
+  /* 다크 표면의 입력은 안쪽 그림자로 파지 않는다 — 이미 배경보다 밝은 채움
+     (--input, 흰색 36%의 30%)이 칸을 만들고 있어서, 그 위에 어두운 안쪽
+     그림자를 더하면 채움이 도로 지워진다. 그리지 않되 **유효한 그림자 값**을
+     둔다(`none`이면 안 되는 이유는 :root 쪽 주석 참고). */
+  --recess-1: 0 0 #0000;
   --elev-1: inset 0 1px 0 oklch(1 0 0 / 0.06), 0 1px 2px oklch(0.05 0.01 258 / 0.5);
   --elev-2: inset 0 1px 0 oklch(1 0 0 / 0.07), 0 2px 6px -1px oklch(0.05 0.01 258 / 0.55), 0 10px 24px -6px oklch(0.05 0.01 258 / 0.6);
   --elev-3: inset 0 1px 0 oklch(1 0 0 / 0.09), 0 6px 12px -3px oklch(0.05 0.01 258 / 0.6), 0 24px 48px -12px oklch(0.05 0.01 258 / 0.7);
@@ -548,6 +567,32 @@
     }
   }
 
+  /* 눌리는 것들의 물리 — 버튼·탭 트리거가 공유한다.
+     한 줄에 모은 이유는 **속성별로 이징이 달라야 하기 때문**이다. 색·그림자는
+     감속(instrument)이어야 차분하고, 눌림만 스프링(살짝 오버슈트)이어야 손끝
+     반응으로 읽힌다. 유틸리티 클래스로는 이 분리를 표현할 수 없다 —
+     `ease-*`는 하나의 값만 낸다. CSS는 transition-property 순서에 맞춘
+     **쉼표 목록**을 받으므로 여기서 짝을 맞춘다(여섯 속성 : 여섯 이징).
+
+     ★ `transform`이 아니라 `scale`이다. Tailwind v4는 `scale-[0.98]`을
+       `transform: scale(...)`이 아니라 **독립 `scale` 속성**으로 낸다
+       (빌드 산출물 실측: `.active\:scale-\[0\.98\]:active{scale:.98}`).
+       그래서 transition-property에 `transform`만 적으면 눌림이 **전이 없이
+       뚝 끊긴다** — 스프링 이징을 걸어 두고도 아무 일도 일어나지 않는다.
+       실제로 그 상태였고, 여기서 고친다.
+     ★ `opacity`가 목록에 있는 이유: `disabled:opacity-50`이 켜지고 꺼질 때
+       버튼이 깜박이지 않고 잦아든다(제출 중 상태가 부드러워진다).
+     ★ components 레이어라 호출부의 `duration-*`·`ease-*`·`transition-none`
+       유틸리티가 언제든 이긴다. */
+  .motion-press {
+    transition-property: color, background-color, border-color, box-shadow,
+      opacity, scale;
+    transition-duration: var(--motion-micro);
+    transition-timing-function: var(--ease-instrument), var(--ease-instrument),
+      var(--ease-instrument), var(--ease-instrument), var(--ease-instrument),
+      var(--ease-spring);
+  }
+
   /* 스켈레톤 셔머 — `animate-pulse` 대체.
      ★ 왜 대체했나: `animate-pulse`는 **불투명도만** 깜박인다. 그건 "무언가
        로딩 중"이라는 신호이지 "여기에 무엇이 올 것인가"라는 신호가 아니고,
@@ -604,7 +649,9 @@
   /* 유리 표면(soft-skill §3.A "Ethereal Glass").
      ★ **고정·스티키 요소에만 붙인다.** 스크롤하는 컨테이너에 backdrop-filter를
        걸면 매 프레임 배경을 다시 합성해서 모바일 FPS가 무너진다
-       (soft-skill §6 · tasteskill §6.E). 지금 쓰는 곳은 마케팅 머리글 하나다.
+       (soft-skill §6 · tasteskill §6.E). 지금 소비자는 둘이다 —
+       마케팅 머리글(`fixed`)과 앱 머리글(`SiteHeader`, `sticky`). 둘 다
+       자격이 있다. 셋째를 붙이기 전에 그 요소가 fixed·sticky인지 먼저 본다.
      배경색·테두리는 유틸리티로 붙인다 — 여기는 필터만 정의해서, 표면마다
      다른 틴트를 줄 수 있게 남긴다. */
   /* ★ 접두사를 손으로 적지 않는다. Lightning CSS(Tailwind v4의 변환기)가

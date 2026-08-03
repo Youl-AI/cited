@@ -32,7 +32,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           ★ 위아래 여백이 비대칭인 것은 의도다(redesign-skill Layout —
             "symmetrical vertical padding"). 머리글은 스티키라 늘 화면에 붙어 있어서 위쪽은 이미
             닫혀 있는 반면, 아래쪽은 푸터까지가 열린 공간이다. 광학적으로
-            같아 보이려면 아래가 더 커야 한다 — 40/56px에서 시작한다. */}
+            같아 보이려면 아래가 더 커야 한다. 실값은 32/48px(sm 40/56,
+            lg 48/64)로, 어느 구간에서든 아래가 위의 1.5배다. */}
       <main
         id="main"
         tabIndex={-1}

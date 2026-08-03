@@ -19,15 +19,19 @@ import { cn } from "@/lib/utils"
  *   흔들린다.
  * ★ `link`에는 붙이지 않는다. 본문 사이에 있는 글자 링크가 줄었다 커지면
  *   버튼 흉내를 내는 것으로 보인다.
+ * ★ 이 전이의 이징은 `.motion-press`(globals.css)가 **속성별로** 나눠 준다 —
+ *   색·그림자는 감속, 눌림만 스프링. 유틸리티 하나로는 표현할 수 없다.
+ *   그리고 그쪽이 전이 목록에 `transform`이 아니라 `scale`을 적는 이유도
+ *   같이 적어 뒀다(Tailwind v4는 독립 `scale` 속성을 낸다 — `transform`만
+ *   적으면 눌림이 전이 없이 끊긴다).
  */
 const PRESS = "active:not-aria-[haspopup]:scale-[0.98]"
 
 const buttonVariants = cva(
-  // transition-all이 아니라 **명시 속성 목록**이다. all은 나중에 누가 붙이는
-  // width·padding 같은 레이아웃 속성까지 애니메이션해서 조용히 리플로를
-  // 매 프레임 돌린다(soft-skill §6). 이징·지속시간은 토큰에서 온다 —
-  // 컴포넌트마다 새 곡선을 고르면 한 제품 안에서 물리 법칙이 갈린다.
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap outline-none select-none transition-[color,background-color,border-color,box-shadow,transform] duration-[var(--motion-micro)] ease-spring focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  // `transition-all`이 아니다. all은 나중에 누가 붙이는 width·padding 같은
+  // 레이아웃 속성까지 애니메이션해서 조용히 리플로를 매 프레임 돌린다
+  // (soft-skill §6). 명시 목록·지속시간·속성별 이징은 `.motion-press`에 있다.
+  "group/button motion-press inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -42,7 +46,13 @@ const buttonVariants = cva(
         default: `${PRESS} bg-primary text-primary-foreground shadow-elevation-1 hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_12%)] hover:shadow-elevation-2 active:shadow-elevation-1`,
         // 테두리가 어포던스를 담당하므로 그림자를 얹지 않는다(테두리+그림자+흰
         // 배경 = redesign-skill이 지목하는 제네릭 카드 룩).
-        outline: `${PRESS} border-border bg-background hover:border-ring/25 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50`,
+        // ★ 다크 짝이 따로 있는 이유는 입력과 같다. 다크 기본 테두리는
+        //   `--input`(흰색 36%)인데 `hover:border-ring/25`가 그보다 **어두운**
+        //   값이라, 마케팅 신청 폼의 "경쟁사 추가" 버튼에 손을 올리면 테두리가
+        //   오히려 흐려졌다. 여기는 글자 라벨이 있어 1.4.11 대상은 아니지만
+        //   (globals.css의 --border 주석 참고) 어포던스 방향이 뒤집힌 것은
+        //   그것대로 결함이다. 라이트/다크 모두 "올리면 또렷해진다"로 맞춘다.
+        outline: `${PRESS} border-border bg-background hover:border-ring/25 hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:border-[oklch(1_0_0/50%)] dark:hover:bg-input/50`,
         // secondary(0.965)는 앱 배경(0.994)과 거의 같은 밝기다. 1단 elevation이
         // 없으면 버튼이 아니라 얼룩으로 보인다.
         secondary: `${PRESS} bg-secondary text-secondary-foreground shadow-elevation-1 hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] hover:shadow-elevation-2 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground`,

@@ -562,6 +562,52 @@ describe('마케팅 다크 스코프 — 같은 뜻, 다른 표면', () => {
   })
 })
 
+describe('폼 컨트롤의 깊이와 다크 호버 — 계약 지점만 잠근다', () => {
+  // ★ 여기서 클래스 문자열 스냅샷을 뜨지 않는다. 그건 디자인을 못 바꾸게
+  //   막을 뿐 사고를 잡지 못한다(이 파일 머리말의 v3 방침과 같은 이유).
+  //   잠그는 것은 **깨지면 화면이 조용히 틀리는 두 지점**뿐이다.
+
+  const uiSource = (name: string): string =>
+    readFileSync(
+      fileURLToPath(new URL(`../src/components/ui/${name}.tsx`, import.meta.url)),
+      'utf8',
+    )
+
+  it('--recess-1이 두 표면 모두에 있다 — 없으면 그림자 선언이 통째로 무효가 된다', () => {
+    // Tailwind는 box-shadow를 `var(--tw-inset-shadow), …, var(--tw-shadow)`
+    // 한 줄로 합성한다. 이 변수가 없으면 var()가 풀리지 않아 **선언 전체**가
+    // 무효가 되고, 같은 요소의 focus-visible:ring-3까지 함께 사라진다.
+    for (const scope of [rootBlock, darkBlock]) {
+      expect(readToken('recess-1', scope)).not.toBeNull()
+    }
+    // 다크 짝은 `none`이면 안 된다 — 위와 같은 이유로 목록 안의 `none`은
+    // 유효하지 않은 값이다. 투명 그림자여야 한다.
+    expect(readToken('recess-1', darkBlock)).not.toBe('none')
+  })
+
+  it.each(['input', 'select'])(
+    '%s.tsx가 다크 호버 테두리를 따로 잡는다 — 없으면 빈 칸이 호버에서 3:1 아래로 떨어진다',
+    (name) => {
+      const source = uiSource(name)
+      // 라이트 호버(`hover:border-ring/…`)를 쓰면서 다크 가드가 없으면,
+      // 다크 표면에서 그 값이 --input(흰색 36%)을 덮어써서 테두리가
+      // 오히려 흐려진다(실측 1.96:1 — WCAG 1.4.11 미달).
+      expect(source).toMatch(/dark:hover:border-\[oklch\(/)
+
+      // 그리고 그 값은 다크 기본 테두리보다 **밝아야** 한다. 어두우면 가드가
+      // 있어도 방향이 뒤집힌 것이라 의미가 없다. 둘 다 순백의 알파라
+      // 알파 비교만으로 충분하다(같은 색을 같은 바닥에 얹는다).
+      const guard = /dark:hover:border-\[(oklch\([^\]]+)\)\]/.exec(source)?.[1]
+      expect(guard).toBeDefined()
+      const guardAlpha = parseOklchAlpha(`${guard?.split('_').join(' ')})`)?.alpha
+      const baseAlpha = parseOklchAlpha(readToken('border-interactive', darkBlock))?.alpha
+      expect(guardAlpha).toBeDefined()
+      expect(baseAlpha).toBeDefined()
+      expect(guardAlpha ?? 0).toBeGreaterThan(baseAlpha ?? 1)
+    },
+  )
+})
+
 describe('모션 토큰 — 값이 컴포넌트에 흩어지면 안 된다', () => {
   it('지속시간·이징이 이름으로 존재한다', () => {
     for (const name of [
