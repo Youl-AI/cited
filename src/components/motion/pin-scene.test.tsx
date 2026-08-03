@@ -52,7 +52,7 @@ describe('PinScene — 진행률 스크럽 핀 섹션', () => {
     expect(screen.getByText('장면')).toBeTruthy()
   })
 
-  it('reduced-motion이면 핀 없이 완성 상태를 1회 알린다 (0이 아니라 1)', () => {
+  it('reduced-motion이면 핀 없이 완성 상태를 구독당 1회 알린다 (0이 아니라 1)', () => {
     motionState.reduce = true
     const onProgress = vi.fn()
     render(<PinScene onProgress={onProgress}>장면</PinScene>)
@@ -66,6 +66,29 @@ describe('PinScene — 진행률 스크럽 핀 섹션', () => {
     // 진행률은 스크롤이 정한다. 마운트 시점에 1을 흘리면 호출부가 스크롤도
     // 하기 전에 장면을 끝난 상태로 그린다.
     expect(onProgress).not.toHaveBeenCalledWith(1)
+  })
+
+  // ↓ 아래 둘은 **회귀 테스트**다. 스모크가 아니라 실제로 났던 사고를 잠근다.
+
+  it('모션이 켜진 채로 언마운트해도 던지지 않는다 (핀 대상이 루트면 터진다)', () => {
+    // ScrollTrigger는 핀 대상을 `pin-spacer`로 감싸며 원래 부모에서 빼낸다.
+    // 그 요소가 컴포넌트의 루트면 React가 기억하는 부모에 `removeChild`를 불러
+    // `NotFoundError: The node to be removed is not a child of this node`가 난다.
+    // (§5.B 골격 그대로 구현했을 때 실제로 이 형태로 실패했다.) 바깥 div 한 겹이
+    // 그걸 막는데, 그 한 겹을 누가 지우면 여기서 잡힌다.
+    const { unmount } = render(<PinScene>장면</PinScene>)
+    expect(() => unmount()).not.toThrow()
+  })
+
+  it('언마운트 뒤에는 onProgress를 부르지 않는다', () => {
+    // `ctx.revert()`는 트윈을 **되감으며** 진행한다 — 그 과정에서 트윈의
+    // onUpdate가 몇 번 더 발화한다. 호출부는 이미 사라진 상태라
+    // "언마운트된 컴포넌트에 setState" 부류의 사고가 된다.
+    const onProgress = vi.fn()
+    const { unmount } = render(<PinScene onProgress={onProgress}>장면</PinScene>)
+    onProgress.mockClear()
+    unmount()
+    expect(onProgress).not.toHaveBeenCalled()
   })
 
   it('기본 스크럽 길이가 1500px다', () => {

@@ -71,11 +71,25 @@ export function PinScene({
   useEffect(() => {
     const el = scene.current
     if (!el) return
-    const emit = (p: number) => onProgressRef.current?.(p)
 
-    // reduced-motion: 핀도 스크럽도 걸지 않고 **완성 상태 1회**를 알린다.
+    // `ctx.revert()`는 트윈을 **되감으며** 되돌린다 — 그 과정에서 트윈의
+    // onUpdate가 몇 번 더 발화한다(실측: 언마운트 후 `onProgress(0)` 3회).
+    // 호출부는 이미 사라진 뒤라 "언마운트된 컴포넌트에 setState" 부류의 사고가
+    // 된다. 되감기 값은 되돌리는 과정일 뿐 사용자가 스크롤한 결과가 아니므로
+    // 아예 내보내지 않는다.
+    let disposed = false
+    const emit = (p: number) => {
+      if (disposed) return
+      onProgressRef.current?.(p)
+    }
+
+    // reduced-motion: 핀도 스크럽도 걸지 않고 **완성 상태**를 알린다.
     // 0을 보내면 호출부가 "아직 시작 전" 화면(빈 답변·빈 숫자)에 멈춘다 —
     // 모션이 꺼진 환경에서 콘텐츠가 사라지는 것과 같다(design-language §6).
+    //
+    // ★ "마운트당 1회"가 아니라 **구독당 1회**다. 이 effect는 `[reduce, length]`로
+    //   다시 도므로 `length`가 바뀌면 다시 한 번 나간다. 값이 항상 1이라 멱등이지만,
+    //   호출부가 "1을 받았다"를 트리거로 쓰면(예: 1회성 로깅) 중복될 수 있다.
     if (reduce) {
       emit(1)
       return
@@ -101,7 +115,10 @@ export function PinScene({
         onUpdate: () => emit(scrubbed.progress),
       })
     }, wrap)
-    return () => ctx.revert()
+    return () => {
+      disposed = true // ★ revert()보다 먼저 — 되감기 발화를 막는 게 목적이다
+      ctx.revert()
+    }
   }, [reduce, length])
 
   return (

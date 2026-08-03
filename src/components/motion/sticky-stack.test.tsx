@@ -56,6 +56,14 @@ describe('StickyStack — 스티키 스택', () => {
     }
   })
 
+  it('모션이 켜진 채로 언마운트해도 던지지 않는다', () => {
+    // PinScene과 같은 계열의 위험(핀 → pin-spacer 재부모화 → React의
+    // removeChild 실패)이다. 여기서는 핀 대상이 `.stack-card`이고 이들이 이미
+    // ref div의 자식이라 안전하지만, 구조가 바뀌면 이 테스트가 잡는다.
+    const { unmount } = render(<StickyStack cards={cards} />)
+    expect(() => unmount()).not.toThrow()
+  })
+
   it('빈 배열이어도 던지지 않는다', () => {
     const { container } = render(<StickyStack cards={[]} />)
     expect(container.querySelectorAll('.stack-card')).toHaveLength(0)
