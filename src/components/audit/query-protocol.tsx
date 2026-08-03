@@ -57,8 +57,15 @@ export function QueryProtocol({
    * 사라지고 E2E가 실패한다 — 조용히 거짓이 되는 것을 막는 장치다.
    */
   specimenQuery,
+  /**
+   * 껍데기 조정. 랜딩은 이 카드를 유리 패널(`GlassPanel`) **안쪽 알맹이**로
+   * 쓰므로 자기 테두리·반경·그림자를 벗는다 — 같은 자리에 테두리가 두 겹이면
+   * 베젤이 셋이 된다. `audit/new`는 단독으로 쓰므로 기본값 그대로다.
+   */
+  className,
 }: {
   specimenQuery?: string
+  className?: string
 }) {
   const [category, setCategory] = useState<string>(DISPLAY_CATEGORIES[0] ?? '패션')
   const [copied, setCopied] = useState<string | null>(null)
@@ -85,7 +92,12 @@ export function QueryProtocol({
     // **다크 표면에서 그냥 안 보인다**(라이트 종이용 틴트 그림자였다).
     // `shadow-elevation-1`은 :root / .surface-dark의 --elev-1을 타므로
     // 표면마다 알맞은 깊이가 나온다.
-    <figure className="overflow-hidden rounded-lg border border-border bg-card shadow-elevation-1">
+    <figure
+      className={cn(
+        'overflow-hidden rounded-lg border border-border bg-card shadow-elevation-1',
+        className,
+      )}
+    >
       {/* 계측 조건 띠 — AnswerSpecimen과 같은 문법. mono는 기계가 보는 것,
           sans는 사람이 읽는 것. */}
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border bg-muted/50 px-4 py-2.5 font-mono text-xs text-muted-foreground sm:px-5">
@@ -108,8 +120,11 @@ export function QueryProtocol({
             type="button"
             aria-pressed={category === label}
             onClick={() => setCategory(label)}
+            // 알약이다. 마케팅 표면에서 **누르는 것은 전부 알약**이라는 모서리
+            // 규칙(Task 3 리포트 §2.8)을 이 탭만 앱 반경(8~12px)으로 깨고 있었다.
+            // `audit/new`도 마케팅 표면으로 넘어오므로 두 곳 모두 여기서 맞는다.
             className={cn(
-              'rounded-md border px-3 py-1 text-sm transition-colors',
+              'rounded-full border px-3.5 py-1 text-sm transition-colors',
               'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
               category === label
                 ? 'border-foreground/60 bg-foreground text-background'
@@ -143,7 +158,7 @@ export function QueryProtocol({
                 type="button"
                 onClick={() => void copy(query)}
                 className={cn(
-                  'shrink-0 rounded-md border border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors',
+                  'shrink-0 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors',
                   'hover:bg-accent hover:text-foreground',
                   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                 )}

@@ -51,3 +51,38 @@ export const MEASURED = {
     { engine: 'Gemini', interval: wilsonInterval(2, 3) },
   ],
 } as const
+
+/**
+ * 같은 실행의 **인용 출처 집계**. 언급률이 0%인 브랜드에게도 남는 유일한
+ * 집행 가능한 정보다 — "AI가 이 질문에 답할 때 어떤 페이지를 읽는가".
+ *
+ * 출처: `docs/superpowers/notes/2026-07-30-first-audit-actuals.md`
+ * ("인용 출처가 리포트의 실질이라는 근거" — 도메인 20개, tistory.com 3/6,
+ *  youtube.com 2/6).
+ *
+ * ★ 비율은 **답변 수 기준**이다(원시 인용 수가 아니다 — 한 답변이 같은 페이지를
+ *   다섯 번 인용해도 1로 센다). 분모가 언급률과 같은 6이므로 같은 화면에
+ *   나란히 둘 수 있다. 점추정만 적지 않는다 — 다른 모든 지표와 같은 규칙이다.
+ */
+export const SOURCES = {
+  /** 6개 답변에서 집계된 서로 다른 도메인 수 */
+  domains: 20,
+  top: [
+    { domain: 'tistory.com', share: wilsonInterval(3, 6) },
+    { domain: 'youtube.com', share: wilsonInterval(2, 6) },
+  ],
+} as const
+
+/**
+ * 같은 6개 답변에서 센 **브랜드별 언급 횟수**(실측의 "순위" 항목).
+ *
+ * ★ 비율이 아니라 **횟수**다. 분모를 만들어 "점유율 56%" 같은 숫자를 지어내지
+ *   않는다 — 우리는 등록된 브랜드만 셀 수 있고, 등록되지 않은 브랜드가 빠진
+ *   분모로 계산한 점유율은 실제보다 높게 나온다. 그 주의사항이 이 섹션의
+ *   본문이기도 하다.
+ */
+export const MENTION_COUNTS = [
+  { brand: '무신사', count: 5, isSelf: true },
+  { brand: '29CM', count: 2, isSelf: false },
+  { brand: '지그재그', count: 2, isSelf: false },
+] as const

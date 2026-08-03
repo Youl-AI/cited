@@ -87,6 +87,55 @@ export function splitByMarks(
   return out
 }
 
+/**
+ * 표시 규칙만 그린다 — 껍데기(테두리·조건 띠·캡션) 없이 **표식이 붙은 본문**.
+ *
+ * 랜딩의 "실측 재현" 스크롤텔링과 벤토가 같은 답변을 다른 껍데기에 담는데,
+ * 그때마다 `<mark>`·밑줄색·순서 번호를 다시 적으면 **표시 규칙이 화면마다
+ * 갈린다.** 규칙은 여기 한 곳에 있고, `AnswerSpecimen`도 이걸 쓴다.
+ */
+export function SpecimenMarks({
+  text,
+  marks = [],
+}: {
+  text: string
+  marks?: readonly SpecimenMark[]
+}) {
+  const parts = splitByMarks(text, marks)
+  return (
+    <>
+      {parts.map((part, index) =>
+        part.mark ? (
+          <mark
+            key={index}
+            className={cn(
+              'bg-transparent font-medium text-foreground',
+              'border-b-2 pb-[0.05em]',
+              part.mark.isSelf ? 'border-primary' : 'border-metric-flat',
+            )}
+          >
+            {part.text}
+            {part.mark.position !== undefined && (
+              <sup
+                className={cn(
+                  'ml-0.5 font-mono text-[0.625rem] font-normal',
+                  part.mark.isSelf ? 'text-primary' : 'text-muted-foreground',
+                )}
+                // 위치는 계측값이다. 스크린리더에는 뜻을 풀어 읽어준다.
+                aria-label={`${part.mark.position}번째로 언급`}
+              >
+                {part.mark.position}
+              </sup>
+            )}
+          </mark>
+        ) : (
+          <span key={index}>{part.text}</span>
+        ),
+      )}
+    </>
+  )
+}
+
 export function AnswerSpecimen({
   engineId,
   query,
@@ -95,8 +144,6 @@ export function AnswerSpecimen({
   footer,
   className,
 }: AnswerSpecimenProps) {
-  const parts = splitByMarks(text, marks)
-
   return (
     <figure
       className={cn(
@@ -120,34 +167,7 @@ export function AnswerSpecimen({
       </div>
 
       <blockquote className="px-4 py-4 text-[0.9375rem] leading-[1.8] whitespace-pre-wrap sm:px-5 sm:py-5">
-        {parts.map((part, index) =>
-          part.mark ? (
-            <mark
-              key={index}
-              className={cn(
-                'bg-transparent font-medium text-foreground',
-                'border-b-2 pb-[0.05em]',
-                part.mark.isSelf ? 'border-primary' : 'border-metric-flat',
-              )}
-            >
-              {part.text}
-              {part.mark.position !== undefined && (
-                <sup
-                  className={cn(
-                    'ml-0.5 font-mono text-[0.625rem] font-normal',
-                    part.mark.isSelf ? 'text-primary' : 'text-muted-foreground',
-                  )}
-                  // 위치는 계측값이다. 스크린리더에는 뜻을 풀어 읽어준다.
-                  aria-label={`${part.mark.position}번째로 언급`}
-                >
-                  {part.mark.position}
-                </sup>
-              )}
-            </mark>
-          ) : (
-            <span key={index}>{part.text}</span>
-          ),
-        )}
+        <SpecimenMarks text={text} marks={marks} />
       </blockquote>
 
       {/* ★ 여기는 mono가 아니다. 대부분 한국어 문장이라 mono를 걸면 글자마다
