@@ -41,8 +41,8 @@ export function SpecimenSheet({
         className="absolute inset-0 translate-x-2 translate-y-2 border border-border/60 bg-foreground/[0.02]"
       />
       {/* `overflow-hidden`을 걸지 않는다 — 각(radius 0)이라 클립할 모서리가
-          없고, 걸면 안쪽의 `position: sticky`(신청 섹션의 접수 안내 레일)가
-          뷰포트 대신 이 상자를 기준으로 잡혀 죽는다. */}
+          없다. 안쪽에서 클립이 필요한 요소(재현 장면의 타이핑 가리개)는 자기
+          컨테이너가 직접 클립한다. */}
       <div className="relative border border-border bg-card shadow-elevation-2">
         {children}
       </div>

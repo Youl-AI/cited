@@ -77,14 +77,13 @@ export default function HomePage() {
                   모바일에서는 폼 위의 머리 블록으로 접힌다(아래 border 방향
                   전환). 레일 바닥의 측정 규격은 폼 안 FlowStrip(순서)과 겹치지
                   않는 정보만 싣는다 — 무엇을 몇 번, 어디에 묻는지. */}
-              <div className="border-b border-border bg-foreground/[0.02] p-6 sm:p-8 lg:border-r lg:border-b-0">
-                {/* ★ 레일 내용은 sticky다. 폼이 안내보다 두 배 넘게 길어서
-                    그냥 두면 레일 아래가 통째로 빈다 — 붙여 두면 긴 폼을
-                    내려가는 동안 안내·규격이 시야에 동행한다(빈 공간을 채우는
-                    장식 대신 행동으로 바꾼 것). `top-24` = 머리글 높이 + 숨.
-                    sticky의 기준이 뷰포트가 되려면 조상에 overflow-hidden이
-                    없어야 한다(specimen-sheet.tsx 주석). */}
-                <div className="lg:sticky lg:top-24">
+              {/* ★ 레일은 flex-col이고 내용이 네 클러스터다(소개 · 질의
+                  미리보기 · 규격 · 방침/문의). 폼 열이 더 길어서 생기는 세로
+                  여분은 lg에서 `lg:mt-auto`로 클러스터 **사이에 고르게**
+                  분배된다 — 바닥에 빈 공간이 고이지 않고 호흡이 된다.
+                  모바일(자연 높이)에서는 mt-auto가 0이라 기본 간격이 선다. */}
+              <div className="flex flex-col border-b border-border bg-foreground/[0.02] p-6 sm:p-8 lg:border-r lg:border-b-0">
+                <div>
                   <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                     무료 진단 신청
                   </h2>
@@ -99,11 +98,31 @@ export default function HomePage() {
                     우리는 알려주신 브랜드만 셀 수 있습니다. 경쟁사를 적게 넣으면 점유율이
                     실제보다 높게 보입니다. 리포트에 분모를 항상 함께 적는 이유입니다.
                   </p>
+                </div>
 
-                  {/* 측정 규격 — 값은 전부 PLANS.free에서 온다(손으로 적은 수치
-                      없음). mono는 숫자에만 건다 — 한글을 mono에 넣으면 글자마다
-                      시스템 서체로 떨어진다(히어로 아이브로와 같은 이유). */}
-                  <dl className="mt-10 border-t border-border text-sm">
+                {/* ── 질의 미리보기 ────────────────────────────
+                    오른쪽 "업종" 칸과 직결되는 자리다: 업종 하나로 무슨
+                    질문이 만들어지는지 실물 한 줄로 즉답한다. 질의는
+                    SPECIMEN(2026-07-30 실측)에서 온다 — 아래 "무엇을
+                    묻는지 공개합니다"가 전체 프로토콜이라면 여기는 기입
+                    전 미리보기 한 줄이다. */}
+                <div className="mt-8 border border-border bg-foreground/[0.04] p-5 lg:mt-auto">
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground">
+                      업종을 적으면 질문이 만들어집니다
+                    </p>
+                    <blockquote className="mt-3 border-l-2 border-primary/60 pl-3 text-sm leading-relaxed">
+                      {SPECIMEN.query}
+                    </blockquote>
+                    <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                      업종 &lsquo;패션&rsquo;에 실제로 쓰는 질의 중 하나입니다. 전체 질의는 아래
+                      섹션에 공개되어 있습니다.
+                    </p>
+                  </div>
+
+                {/* 측정 규격 — 값은 전부 PLANS.free에서 온다(손으로 적은 수치
+                    없음). mono는 숫자에만 건다 — 한글을 mono에 넣으면 글자마다
+                    시스템 서체로 떨어진다(히어로 아이브로와 같은 이유). */}
+                <dl className="mt-8 border-t border-border text-sm lg:mt-auto">
                   {(
                     [
                       [
@@ -132,10 +151,12 @@ export default function HomePage() {
                   ))}
                   </dl>
 
-                  {/* 처리 기준은 방침 문서가 원본이다 — 여기서 새 약속을 만들지
-                      않고 문서로 보낸다(푸터에도 있지만, 정보를 적는 칸 옆이
-                      실제로 궁금해지는 자리다). */}
-                  <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
+                {/* 처리 기준은 방침 문서가 원본이다 — 여기서 새 약속을 만들지
+                    않고 문서로 보낸다(푸터에도 있지만, 정보를 적는 칸 옆이
+                    실제로 궁금해지는 자리다). 문의처도 같다: 푸터에만 있던
+                    주소를 신청을 망설이는 자리 옆에 내놓는다. */}
+                <div className="mt-6 lg:mt-auto">
+                  <p className="text-xs leading-relaxed text-muted-foreground">
                     적어주신 내용은 진단에만 씁니다. 처리 기준은{' '}
                     <Link
                       href="/legal/privacy"
@@ -144,6 +165,16 @@ export default function HomePage() {
                       개인정보처리방침
                     </Link>
                     에 있습니다.
+                  </p>
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                    궁금한 점은{' '}
+                    <a
+                      href="mailto:contact@cited.co.kr"
+                      className="underline underline-offset-2 transition-colors duration-[var(--motion-micro)] ease-instrument hover:text-foreground"
+                    >
+                      contact@cited.co.kr
+                    </a>
+                    로 보내주세요.
                   </p>
                 </div>
               </div>
