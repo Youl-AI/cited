@@ -33,7 +33,17 @@ import { SiteFooter } from '@/components/site-footer'
  *   이 컨테이너를 기준으로 잡히고(핀이 어긋나는 대표적인 원인), sticky도 함께
  *   어긋난다. clip은 잘라내기만 하고 스크롤 컨테이너를 만들지 않는다.
  */
-export function MarketingShell({ children }: { children: React.ReactNode }) {
+export function MarketingShell({
+  children,
+  /**
+   * 머리글의 진단 CTA. **자기 자신을 가리키게 되는 표면에서는 끈다** —
+   * 신청 흐름(`audit/(flow)`)이 그 경우다. 근거는 `MarketingHeader` 참고.
+   */
+  headerCta = true,
+}: {
+  children: React.ReactNode
+  headerCta?: boolean
+}) {
   return (
     <div className="surface-dark relative flex min-h-dvh w-full max-w-full flex-col overflow-x-clip">
       {/* 앰비언트 — 브랜드 색상각(258) 하나로만 만든 아주 옅은 라디얼 워시.
@@ -74,7 +84,7 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
       {/* 인쇄(PDF 납품)에서는 머리글·바닥글을 숨긴다. 머리글은 `fixed`라
           레이아웃 자리를 차지하지 않으므로 `contents` 래퍼로 감싸도 안전하다. */}
       <div className="contents print:hidden">
-        <MarketingHeader />
+        <MarketingHeader cta={headerCta} />
       </div>
 
       {/* `id="main"`·`tabIndex={-1}`은 루트 레이아웃의 "본문으로 건너뛰기"

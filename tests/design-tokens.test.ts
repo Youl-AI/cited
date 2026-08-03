@@ -73,6 +73,21 @@ function parseOklch(value: string | null): Oklch | null {
   return { l: Number(l), c: Number(c), h: Number(h) }
 }
 
+/**
+ * `oklch(L C H / P%)` — **알파를 가진** 형식을 푼다. 형식이 다르면 null.
+ *
+ * 다크 표면의 헤어라인 계열(`--border`·`--border-interactive`)이 이 형식이다.
+ * 위 `parseOklch`는 알파를 받지 않으므로(그쪽은 불투명 표면색 전용) 갈라 둔다.
+ */
+function parseOklchAlpha(value: string | null): { color: Oklch; alpha: number } | null {
+  if (value === null) return null
+  const match = /^oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\/\s*([\d.]+)%\s*\)$/.exec(value)
+  if (!match) return null
+  const [, l, c, h, a] = match
+  if (l === undefined || c === undefined || h === undefined || a === undefined) return null
+  return { color: { l: Number(l), c: Number(c), h: Number(h) }, alpha: Number(a) / 100 }
+}
+
 /** 지정한 스코프에서 토큰을 읽어 oklch로 푼다. 없거나 형식이 다르면 던진다. */
 function color(name: string, scope: string, label: string): Oklch {
   const parsed = parseOklch(readToken(name, scope))
@@ -111,18 +126,45 @@ function inSrgbGamut(color: Oklch): boolean {
   return toLinearSrgb(color).every((v) => v >= -1e-4 && v <= 1 + 1e-4)
 }
 
-/** 브라우저가 실제로 그리는 8비트 색 기준의 WCAG 상대 휘도. */
-function relativeLuminance(color: Oklch): number {
-  const [r, g, b] = toLinearSrgb(color)
-    .map((v) => Math.round(clamp01(gammaEncode(clamp01(v))) * 255) / 255)
-    .map(gammaDecode)
+/** 브라우저가 실제로 그리는 8비트 sRGB 좌표 [0..1]³. */
+function srgb8(color: Oklch): number[] {
+  return toLinearSrgb(color).map((v) => Math.round(clamp01(gammaEncode(clamp01(v))) * 255) / 255)
+}
+
+/** 8비트 sRGB 좌표의 WCAG 상대 휘도. */
+function luminanceOf(rgb: readonly number[]): number {
+  const [r, g, b] = rgb.map(gammaDecode)
   return 0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (b ?? 0)
 }
 
+/** 브라우저가 실제로 그리는 8비트 색 기준의 WCAG 상대 휘도. */
+function relativeLuminance(color: Oklch): number {
+  return luminanceOf(srgb8(color))
+}
+
+const ratioOfLuminance = (la: number, lb: number): number =>
+  (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
+
 function contrastRatio(a: Oklch, b: Oklch): number {
-  const la = relativeLuminance(a)
-  const lb = relativeLuminance(b)
-  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
+  return ratioOfLuminance(relativeLuminance(a), relativeLuminance(b))
+}
+
+/**
+ * 반투명 색을 불투명 바닥 위에 합성한다 — 브라우저와 같은 sRGB 알파 합성이고,
+ * 결과를 다시 8비트로 양자화한다(화면에 실제로 찍히는 값).
+ *
+ * 이게 필요한 이유: 다크 표면의 헤어라인·입력 테두리는 `oklch(1 0 0 / N%)`처럼
+ * **알파를 가진 색**이라 그 자체로는 대비를 말할 수 없다. 무엇 위에 놓이는지가
+ * 값을 정한다. 그래서 바닥도 인자로 받고, 바닥이 또 반투명이면(필드셋처럼)
+ * 이 함수를 겹쳐 쓴다.
+ */
+function alphaOver(src: readonly number[], alpha: number, dst: readonly number[]): number[] {
+  return src.map((v, i) => Math.round(clamp01(v * alpha + (dst[i] ?? 0) * (1 - alpha)) * 255) / 255)
+}
+
+/** 합성된 색과 그 바닥의 대비비. */
+function contrastOnBase(src: readonly number[], alpha: number, base: readonly number[]): number {
+  return ratioOfLuminance(luminanceOf(alphaOver(src, alpha, base)), luminanceOf(base))
 }
 
 /** Oklab 좌표계에서의 색차. 사람이 겨우 구분하는 차이(JND)가 대략 0.02다. */
@@ -432,6 +474,63 @@ describe('마케팅 다크 스코프 — 같은 뜻, 다른 표면', () => {
         expect(deltaE(darkColor(na), darkColor(nb))).toBeGreaterThan(0.15)
       }
     }
+  })
+
+  /**
+   * 인터랙티브 컨트롤의 경계 — WCAG 1.4.11(비텍스트 대비) 3:1.
+   *
+   * 장식 헤어라인(`--border`)에는 적용되지 않지만 **빈 입력 상자**에는 적용된다.
+   * 글자가 없는 상태에서 그 사각형이 있다는 것을 알려 주는 것이 테두리뿐이기
+   * 때문이다. `--border`(10%)와 리뉴얼 전 `--input`(14%)은 1.3~1.5:1로 한참
+   * 아래였고, 그게 Task 3·4가 두 번 인계한 항목이다.
+   *
+   * ★ 값이 아니라 **결과**를 잠근다. 알파를 조금 낮추는 것은 눈에 잘 안 띄면서
+   *   3:1을 조용히 깨는 종류의 변경이라, 리터럴 스냅샷이 아니라 합성 후 대비를
+   *   계산해서 문턱을 지킨다(이 파일의 v3 원칙과 같다).
+   */
+  describe('--border-interactive — 빈 입력 상자의 경계는 3:1이다', () => {
+    const interactive = (): { color: Oklch; alpha: number } => {
+      const parsed = parseOklchAlpha(readToken('border-interactive', darkBlock))
+      if (!parsed) {
+        throw new Error('.surface-dark에 oklch(L C H / P%) 형식의 --border-interactive가 없다')
+      }
+      return parsed
+    }
+
+    /** 폼이 실제로 앉는 세 바닥. 필드셋은 카드 위에 흰색 4%를 얹은 판이다. */
+    const bases = (): Record<string, number[]> => {
+      const card = srgb8(darkColor('card'))
+      return {
+        카드: card,
+        '페이지 배경': srgb8(darkBackground()),
+        // request-form.tsx의 선택 항목 필드셋 = `bg-foreground/[0.04]`.
+        // 바닥이 반투명이라 합성을 한 번 더 겹친다.
+        필드셋: alphaOver(srgb8(darkColor('foreground')), 0.04, card),
+      }
+    }
+
+    it.each(['카드', '페이지 배경', '필드셋'])('%s 위에서 3:1을 넘는다', (where) => {
+      const { color: c, alpha } = interactive()
+      const base = bases()[where]
+      expect(base).toBeDefined()
+      expect(contrastOnBase(srgb8(c), alpha, base ?? [])).toBeGreaterThanOrEqual(3)
+    })
+
+    it('입력 테두리가 실제로 이 토큰을 탄다 — 이름만 있고 안 쓰이면 계약이 아니다', () => {
+      // ★ 파싱 예외: `--input`은 다크 스코프에서 **색이 아니라 참조**다. 그래서
+      //   `parseOklch`가 아니라 문자열로 확인한다. 이 참조가 끊기면 위 세 단언이
+      //   전부 통과하면서도 화면의 입력 테두리는 예전 값으로 돌아간다.
+      expect(readToken('input', darkBlock)).toBe('var(--border-interactive)')
+    })
+
+    it('장식 헤어라인(--border)까지 밝히지는 않는다', () => {
+      // 유리 표면의 가장자리는 반사광이다. 여기까지 3:1로 올리면 soft-skill
+      // §3.A의 헤어라인 언어가 통째로 무너진다. 텍스트 라벨이 있는 컨트롤
+      // (ghost CTA 알약)은 글자가 식별의 몫을 하므로 1.4.11 대상이 아니다.
+      const border = parseOklchAlpha(readToken('border', darkBlock))
+      expect(border).not.toBeNull()
+      expect(border?.alpha ?? 1).toBeLessThan(interactive().alpha)
+    })
   })
 
   it('elevation 3단도 다크에서 다시 선언된다 — 라이트 틴트 그림자는 다크에서 보이지 않는다', () => {

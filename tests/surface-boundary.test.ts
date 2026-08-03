@@ -32,21 +32,18 @@ describe('audit 라우트의 표면 경계', () => {
     expect(existsSync(`${appDir}/audit/(flow)/requested/page.tsx`)).toBe(true)
   })
 
+  it('신청 흐름에서는 머리글 CTA를 끈다 — 이 그룹이 그 CTA의 목적지다', () => {
+    // `/audit/new`에서 "무료 진단 받기"는 자기 페이지를 가리키는 no-op이고,
+    // 바로 아래 제출 버튼과 의도가 겹친다(§4.5 중복 의도 금지).
+    expect(read('audit/(flow)/layout.tsx')).toMatch(/headerCta=\{false\}/)
+  })
+
   it('리포트([id])는 라이트·인쇄 껍데기에 남는다', () => {
     const layout = read('audit/(report)/layout.tsx')
     expect(layout).toContain('SiteShell')
     expect(layout).not.toContain('MarketingShell')
     expect(layout).not.toContain('surface-dark')
     expect(existsSync(`${appDir}/audit/(report)/[id]/page.tsx`)).toBe(true)
-  })
-
-  it('URL은 그대로다 — 라우트 그룹은 주소에 나타나지 않는다', () => {
-    // 메일로 나간 리포트 링크(`/audit/aud_…`)와 광고에 붙인 `/audit/new`가
-    // 살아 있어야 한다. 그룹 이름이 괄호로 싸여 있는 한 경로에 끼어들지 않는다.
-    for (const dir of ['(flow)', '(report)']) {
-      expect(dir.startsWith('(')).toBe(true)
-      expect(dir.endsWith(')')).toBe(true)
-    }
   })
 })
 

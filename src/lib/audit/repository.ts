@@ -242,8 +242,8 @@ export async function freezeQueries(auditId: string, queries: string[]): Promise
  * ★ 발송 전(status가 'sent'가 아닐 때)에만 허용한다 — `freezeQueries`와 같은
  *   가드다. 발송된 결과를 덮으면 고객이 이미 받은 리포트의 숫자가 바뀐다.
  * ★ status를 두지 않으므로 리포트 페이지는 여전히 404다 — 페이지가
- *   `status === 'sent'`를 요구한다(`src/app/audit/[id]/page.tsx`). 저장해도
- *   미검수 결과가 새어 나가지 않는다.
+ *   `status === 'sent'`를 요구한다(`src/app/audit/(report)/[id]/page.tsx`).
+ *   저장해도 미검수 결과가 새어 나가지 않는다.
  * ★ 같은 건에 다시 저장하면 이전 저장분을 덮는다. 아직 보내지 않았으므로
  *   최신 측정이 이기는 것이 맞다 — dry 재실행이 곧 재측정이다.
  */

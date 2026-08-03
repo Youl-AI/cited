@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { CtaLink } from '@/components/marketing/cta-link'
 import { Wordmark } from '@/components/wordmark'
+import { cn } from '@/lib/utils'
 
 /**
  * 마케팅 표면의 머리글 — 떠 있는 유리 알약.
@@ -37,11 +38,32 @@ import { Wordmark } from '@/components/wordmark'
  *   가입해도 볼 것이 없는 동안 그 버튼은 실제 제품과 경쟁하면서 사용자를
  *   빈 곳으로 보낸다. 유료가 열리면 되돌린다.
  */
-export function MarketingHeader() {
+export function MarketingHeader({
+  /**
+   * 진단 CTA를 세울지. **신청 흐름 안에서는 끈다**(`audit/(flow)`).
+   *
+   * `/audit/new`에서는 이 버튼이 **자기 페이지를 가리키는 no-op**이고, 바로
+   * 아래에 같은 의도의 제출 버튼("무료 진단 신청하기")이 있다 — 누르면 아무
+   * 일도 안 일어나는 가장 강한 버튼이 폼 위에 떠 있는 셈이다.
+   * `/audit/requested`도 마찬가지다: 신청을 이미 마친 사람에게 "무료 진단
+   * 받기"를 다시 권하면 같은 브랜드로 중복 신청을 부추긴다(그 화면이 필요할
+   * 때 내놓는 링크는 "다시 신청하기" 하나뿐이고, 그것도 실패·대기 상태에서만
+   * 나온다).
+   */
+  cta = true,
+}: { cta?: boolean } = {}) {
   return (
     <header className="fixed inset-x-0 top-0 z-50">
       <div className="mx-auto w-full max-w-6xl px-3 pt-3 sm:px-6 sm:pt-4">
-        <div className="glass flex h-14 items-center justify-between gap-2 rounded-full border border-border bg-card/70 pr-1.5 pl-3.5 shadow-elevation-2 sm:gap-4 sm:pl-6">
+        {/* 오른쪽 여백은 CTA 유무를 따른다. 알약이 자기 안쪽 여백을 가지므로
+            있을 때는 `pr-1.5`로 붙이고, 없을 때는 왼쪽과 같은 값으로 맞춘다
+            (안 그러면 로그인 링크가 알약 가장자리에 붙는다). */}
+        <div
+          className={cn(
+            'glass flex h-14 items-center justify-between gap-2 rounded-full border border-border bg-card/70 pl-3.5 shadow-elevation-2 sm:gap-4 sm:pl-6',
+            cta ? 'pr-1.5' : 'pr-3.5 sm:pr-6',
+          )}
+        >
           <Wordmark className="text-sm sm:text-lg" />
 
           <nav aria-label="주요" className="flex items-center gap-0.5 sm:gap-2">
@@ -51,9 +73,11 @@ export function MarketingHeader() {
             >
               로그인 · 회원가입
             </Link>
-            <CtaLink href="/audit/new" size="sm">
-              무료 진단 받기
-            </CtaLink>
+            {cta && (
+              <CtaLink href="/audit/new" size="sm">
+                무료 진단 받기
+              </CtaLink>
+            )}
           </nav>
         </div>
       </div>

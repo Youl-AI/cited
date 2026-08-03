@@ -87,17 +87,42 @@ describe('요금제', () => {
     expect(links[0]?.getAttribute('href')).toBe('/audit/new')
   })
 
-  it('권장 티어는 Starter 하나이고, 표시는 높이가 아니라 표식이다', () => {
-    const { container } = render(<PricingPage />)
+  it('권장 티어는 Starter 하나다', () => {
+    render(<PricingPage />)
     // 좁은 화면 블록 + 넓은 화면 열 머리 = 둘. 셋이면 열마다 붙인 것이다.
     expect(screen.getAllByText('권장')).toHaveLength(2)
     // 권장 표시는 Starter와 같은 상자 안에 있어야 한다.
     for (const mark of screen.getAllByText('권장')) {
-      const box = mark.parentElement
-      expect(box?.textContent).toContain('Starter')
+      expect(mark.parentElement?.textContent).toContain('Starter')
     }
-    // 높이를 키우는 유틸리티로 권장을 표시하지 않는다.
-    expect(container.innerHTML).not.toMatch(/scale-1|py-1[2-9]\b.*Starter/)
+  })
+
+  /**
+   * redesign-skill이 금지하는 것은 "권장 티어를 **더 높은 카드**로 표시"다.
+   * 그래서 강조가 치수에 들어가지 않았음을 구조로 확인한다 — 세 열 머리의
+   * 클래스가 **틴트 하나만 빼면 글자 그대로 같아야** 한다. 누가 권장 열에만
+   * `py-*`·`scale-*`·`text-*`를 하나 더 붙이면 여기서 걸린다(특정 유틸리티
+   * 이름을 나열하는 정규식은 다음 사람이 쓸 유틸리티를 못 맞힌다).
+   */
+  it('권장 강조는 색이지 치수가 아니다 — 세 열 머리의 치수 클래스가 같다', () => {
+    render(<PricingPage />)
+    const headers = within(screen.getByRole('table'))
+      .getAllByRole('columnheader')
+      // 첫 칸은 행 라벨용 빈 머리다.
+      .filter((th) => (th.textContent ?? '').trim().length > 0)
+    expect(headers).toHaveLength(3)
+
+    const shapeOf = (th: HTMLElement): string[] =>
+      [...th.classList].filter((c) => !c.startsWith('bg-[')).sort()
+
+    const [free, starter, business] = headers.map(shapeOf)
+    expect(starter).toEqual(free)
+    expect(business).toEqual(free)
+
+    // 그리고 색은 실제로 권장 열에만 붙어 있다.
+    const tinted = headers.filter((th) => [...th.classList].some((c) => c.startsWith('bg-[')))
+    expect(tinted).toHaveLength(1)
+    expect(tinted[0]?.textContent).toContain('Starter')
   })
 
   it('표는 세 무리로 묶여 있다 — 행마다 선을 긋지 않는다', () => {

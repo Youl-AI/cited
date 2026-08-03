@@ -237,21 +237,32 @@ export default function PricingPage() {
                 <p className="mt-1 text-sm text-muted-foreground">{PLAN_META[id].tagline}</p>
                 <PlanPrice id={id} />
 
-                {GROUPS.map((group) => (
-                  <div key={group.title} className="mt-6">
-                    <p className="text-xs font-medium tracking-wide text-muted-foreground">
-                      {group.title}
-                    </p>
-                    <dl className="mt-2 space-y-2 text-sm">
-                      {group.rows.map((row) => (
-                        <div key={row.label} className="flex justify-between gap-4">
-                          <dt className="text-muted-foreground">{row.label}</dt>
-                          <dd className="text-right">{row.value(id)}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </div>
-                ))}
+                {/* 무리 제목이 목록과 실제로 이어져 있어야 한다. 넓은 화면의
+                    `<th scope="rowgroup">`이 하는 일을 여기서는 `aria-labelledby`가
+                    한다 — 제목을 `<h3>`로 올리면 플랜 셋 × 무리 셋 = 아홉 개
+                    제목이 문서 개요에 얹혀서, 화면에서 훑는 사람과 개요로 훑는
+                    사람이 서로 다른 페이지를 보게 된다. */}
+                {GROUPS.map((group, groupIndex) => {
+                  const titleId = `plan-${id}-group-${groupIndex}`
+                  return (
+                    <div key={group.title} className="mt-6">
+                      <p
+                        id={titleId}
+                        className="text-xs font-medium tracking-wide text-muted-foreground"
+                      >
+                        {group.title}
+                      </p>
+                      <dl aria-labelledby={titleId} className="mt-2 space-y-2 text-sm">
+                        {group.rows.map((row) => (
+                          <div key={row.label} className="flex justify-between gap-4">
+                            <dt className="text-muted-foreground">{row.label}</dt>
+                            <dd className="text-right">{row.value(id)}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  )
+                })}
               </div>
             ))}
           </div>
@@ -286,7 +297,10 @@ export default function PricingPage() {
               </thead>
               {GROUPS.map((group) => (
                 <tbody key={group.title}>
-                  {/* 무리 머리. 선은 여기 한 줄뿐이고 행마다 긋지 않는다. */}
+                  {/* 무리 머리. 선은 여기 한 줄뿐이고 행마다 긋지 않는다.
+                      뒤따르는 빈 칸들은 선과 틴트 띠를 잇기 위한 것뿐이라
+                      보조기술에서 숨긴다 — 안 숨기면 무리마다 "빈 셀" 셋을
+                      읽고 지나간다. */}
                   <tr>
                     <th
                       scope="rowgroup"
@@ -297,6 +311,7 @@ export default function PricingPage() {
                     {ORDER.map((id) => (
                       <td
                         key={id}
+                        aria-hidden="true"
                         className={cn(
                           'border-t border-border',
                           id === RECOMMENDED && RECOMMENDED_TINT,
@@ -326,8 +341,9 @@ export default function PricingPage() {
               ))}
               {/* 틴트 띠가 마지막 행의 글자 밑줄에서 뚝 끊기지 않게 받치는 줄.
                   무리 사이에서는 다음 무리 머리의 `pt-7`이 같은 몫을 하므로
-                  띠는 표 전체에 끊기지 않고 이어진다. */}
-              <tbody>
+                  띠는 표 전체에 끊기지 않고 이어진다.
+                  내용이 없는 순수 여백이라 행 전체를 보조기술에서 숨긴다. */}
+              <tbody aria-hidden="true">
                 <tr>
                   <td className="h-5" />
                   {ORDER.map((id) => (

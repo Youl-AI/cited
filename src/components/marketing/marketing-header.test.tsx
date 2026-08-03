@@ -37,4 +37,23 @@ describe('마케팅 머리글', () => {
     // (tasteskill §4.7)을 다시 계산해야 한다.
     expect(screen.getAllByRole('link')).toHaveLength(3)
   })
+
+  /**
+   * 신청 흐름(`audit/(flow)`)에서는 이 CTA가 **자기 목적지 위에** 서게 된다.
+   * `/audit/new`에서는 눌러도 아무 일이 없고 바로 아래 제출 버튼과 의도가
+   * 겹치며, `/audit/requested`에서는 이미 신청한 사람에게 중복 신청을 권한다.
+   */
+  it('CTA를 끌 수 있다 — 그 목적지 위에서는 세우지 않는다', () => {
+    render(<MarketingHeader cta={false} />)
+    expect(screen.queryByRole('link', { name: '무료 진단 받기' })).toBeNull()
+    // 워드마크와 로그인은 남는다. 껍데기가 통째로 사라지면 빠져나갈 길이 없다.
+    expect(screen.getAllByRole('link')).toHaveLength(2)
+    expect(screen.getByRole('link', { name: 'Cited' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: '로그인 · 회원가입' })).toBeTruthy()
+  })
+
+  it('기본값은 켜짐이다 — 랜딩·요금제가 아무것도 넘기지 않는다', () => {
+    render(<MarketingHeader />)
+    expect(screen.getByRole('link', { name: '무료 진단 받기' })).toBeTruthy()
+  })
 })
