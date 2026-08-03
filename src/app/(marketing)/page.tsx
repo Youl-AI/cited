@@ -5,7 +5,6 @@ import { ClosingCta } from '@/components/marketing/closing-cta'
 import { CtaLink } from '@/components/marketing/cta-link'
 import { DeliverablesBento } from '@/components/marketing/deliverables-bento'
 import { FlowSteps } from '@/components/marketing/flow-steps'
-import { GlassPanel } from '@/components/marketing/glass-panel'
 import { SpecimenSheet } from '@/components/marketing/specimen-sheet'
 import { Hero } from '@/components/marketing/hero'
 import { ReplayScene } from '@/components/marketing/replay-scene'
@@ -62,32 +61,77 @@ export default function HomePage() {
       {/* ── 신청 ─────────────────────────────────────────────
           히어로 CTA(`#request`)가 여기로 온다. `scroll-mt-24`가 없으면 앵커로
           점프했을 때 제목이 떠 있는 머리글 밑으로 들어간다.
-          히어로가 자기 아래 여백을 이미 가지므로 위쪽 패딩은 두지 않는다. */}
-      <section id="request" className={`${SECTION_X} scroll-mt-24 pb-28 md:pb-40`}>
-        <div className="grid gap-10 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:gap-14">
-          <Reveal index={0}>
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">무료 진단 신청</h2>
-            <p className="mt-4 max-w-[34em] text-base leading-relaxed text-muted-foreground">
-              질의 <span className="font-mono tabular-nums">{PLANS.free.maxQueries}</span>개를{' '}
-              <span className="font-mono tabular-nums">1</span>회 측정해 메일로 보내드립니다.
-              결제 정보는 받지 않습니다.
-            </p>
-            {/* 히어로의 표시 규칙 설명이 이어지는 자리다. 경쟁사를 실제로
-                입력하는 칸 바로 옆이라, 여기서 읽어야 결정에 쓸 수 있다. */}
-            <p className="mt-5 max-w-[34em] text-sm leading-relaxed text-muted-foreground">
-              우리는 알려주신 브랜드만 셀 수 있습니다. 경쟁사를 적게 넣으면 점유율이 실제보다
-              높게 보입니다. 리포트에 분모를 항상 함께 적는 이유입니다.
-            </p>
-          </Reveal>
+          히어로가 자기 아래 여백을 이미 가지므로 위쪽 패딩은 두지 않는다.
 
-          <Reveal index={1}>
-            <GlassPanel>
+          ★ 처음에는 왼쪽에 떠 있는 제목·문단 + 오른쪽 유리 카드였다. 폼이
+            훨씬 길어서 왼쪽 아래가 통째로 빈 여백이 됐고, "제목 왼쪽 + 카드
+            오른쪽"은 그 자체로 템플릿 냄새였다. 지금은 **신청서 한 장**이다 —
+            접수 안내 레일과 기입란이 한 시트 안에서 헤어라인으로 나뉜다.
+            신청서는 기입하는 문서라 유리가 아니라 시트다(specimen-sheet.tsx). */}
+      <section id="request" className={`${SECTION_X} scroll-mt-24 pb-28 md:pb-40`}>
+        <Reveal index={0}>
+          <SpecimenSheet>
+            <div className="grid lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+              {/* ── 접수 안내 레일 ──────────────────────────
+                  모바일에서는 폼 위의 머리 블록으로 접힌다(아래 border 방향
+                  전환). 레일 바닥의 측정 규격은 폼 안 FlowStrip(순서)과 겹치지
+                  않는 정보만 싣는다 — 무엇을 몇 번, 어디에 묻는지. */}
+              <div className="flex flex-col border-b border-border bg-foreground/[0.02] p-6 sm:p-8 lg:border-r lg:border-b-0">
+                <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                  무료 진단 신청
+                </h2>
+                <p className="mt-4 max-w-[34em] text-base leading-relaxed text-muted-foreground">
+                  질의 <span className="font-mono tabular-nums">{PLANS.free.maxQueries}</span>개를{' '}
+                  <span className="font-mono tabular-nums">1</span>회 측정해 메일로 보내드립니다.
+                  결제 정보는 받지 않습니다.
+                </p>
+                {/* 히어로의 표시 규칙 설명이 이어지는 자리다. 경쟁사를 실제로
+                    입력하는 칸 바로 옆이라, 여기서 읽어야 결정에 쓸 수 있다. */}
+                <p className="mt-5 max-w-[34em] text-sm leading-relaxed text-muted-foreground">
+                  우리는 알려주신 브랜드만 셀 수 있습니다. 경쟁사를 적게 넣으면 점유율이 실제보다
+                  높게 보입니다. 리포트에 분모를 항상 함께 적는 이유입니다.
+                </p>
+
+                {/* 측정 규격 — 값은 전부 PLANS.free에서 온다(손으로 적은 수치
+                    없음). `mt-auto`로 레일 바닥에 앉아 남는 세로 공간을 구조로
+                    바꾼다. mono는 숫자에만 건다 — 한글을 mono에 넣으면 글자마다
+                    시스템 서체로 떨어진다(히어로 아이브로와 같은 이유). */}
+                <dl className="mt-10 border-t border-border text-sm lg:mt-auto">
+                  {(
+                    [
+                      [
+                        '질의',
+                        <>
+                          <span className="font-mono tabular-nums">{PLANS.free.maxQueries}</span>개
+                          · 업종 고정 템플릿
+                        </>,
+                      ],
+                      [
+                        '측정',
+                        <>
+                          <span className="font-mono tabular-nums">1</span>회
+                        </>,
+                      ],
+                      ['엔진', engineLabels(PLANS.free.engines).join(' · ')],
+                    ] as const
+                  ).map(([term, value]) => (
+                    <div
+                      key={term}
+                      className="flex items-baseline justify-between gap-4 border-b border-border py-3"
+                    >
+                      <dt className="text-muted-foreground">{term}</dt>
+                      <dd className="text-right text-[0.875rem]">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+
               <div className="p-6 sm:p-8">
                 <RequestForm />
               </div>
-            </GlassPanel>
-          </Reveal>
-        </div>
+            </div>
+          </SpecimenSheet>
+        </Reveal>
       </section>
 
       {/* ── 무엇을 받나 — 벤토 ───────────────────────────────
