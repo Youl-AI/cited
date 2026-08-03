@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { SpecimenMarks } from '@/components/audit/answer-specimen'
 import { IntervalBar } from '@/components/interval-bar'
 import { MEASURED, SPECIMEN } from '@/components/marketing/actuals'
-import { GlassPanel } from '@/components/marketing/glass-panel'
+import { SpecimenSheet } from '@/components/marketing/specimen-sheet'
 import { PinScene } from '@/components/motion/pin-scene'
 import { formatInterval, formatPercent } from '@/lib/stats/wilson'
 
@@ -196,7 +196,7 @@ export function ReplayScene() {
 
           {/* ── 재생되는 표본 ────────────────────────────── */}
           <div>
-            <GlassPanel>
+            <SpecimenSheet>
               {/* 계측 조건 띠 — AnswerSpecimen과 같은 문법(mono는 기계, sans는 사람).
                   ★ 여기만 `bg-muted/50`이 아니라 불투명 `bg-muted`다. 가리개가
                     같은 색으로 글자를 덮어야 하는데, 반투명이면 밑의 글자가
@@ -234,7 +234,7 @@ export function ReplayScene() {
                   <span className="absolute inset-x-0 top-0 h-px bg-primary/70" />
                 </div>
               </div>
-            </GlassPanel>
+            </SpecimenSheet>
 
             <div
               ref={readout}

@@ -69,7 +69,9 @@ export function DeliverablesBento() {
       className={
         // gapless — 셀 사이 간격이 아니라 **1px 헤어라인**이다. 바닥의
         // `bg-border`가 그 틈으로 보여서 선이 되고, 셀은 서로 붙어 있다.
-        'grid grid-flow-dense gap-px overflow-hidden rounded-[2rem] border border-border bg-border shadow-elevation-3 sm:grid-cols-2 lg:grid-cols-4'
+        // 각(radius 0)이다 — 벤토 셀은 전부 실측 데이터라 문서 표면 계열이고,
+        // 문서는 둥글지 않다(표면 역할 규칙: specimen-sheet.tsx 머리말).
+        'grid grid-flow-dense gap-px overflow-hidden border border-border bg-border shadow-elevation-3 sm:grid-cols-2 lg:grid-cols-4'
       }
     >
       {/* ── 1. 언급률과 신뢰구간 ─────────────────────────────

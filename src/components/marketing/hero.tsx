@@ -2,7 +2,7 @@ import { AnswerSpecimen } from '@/components/audit/answer-specimen'
 import { IntervalBar } from '@/components/interval-bar'
 import { MEASURED, SPECIMEN } from '@/components/marketing/actuals'
 import { CtaLink } from '@/components/marketing/cta-link'
-import { GlassPanel } from '@/components/marketing/glass-panel'
+import { SpecimenSheet } from '@/components/marketing/specimen-sheet'
 import { formatInterval, formatPercent } from '@/lib/stats/wilson'
 
 /**
@@ -24,8 +24,8 @@ import { formatInterval, formatPercent } from '@/lib/stats/wilson'
  *
  * ## 히어로 텍스트 스택은 넷이다 (tasteskill §4.7)
  *
- * 아이브로 · H1 · 서브텍스트 · CTA 두 개. 그 아래 유리 패널은 **자산**이고,
- * 패널 안의 계측 레일과 패널 밑 한 줄은 그 자산의 판독 눈금이다. 신뢰
+ * 아이브로 · H1 · 서브텍스트 · CTA 두 개. 그 아래 계측 시트는 **자산**이고,
+ * 시트 안의 계측 레일과 시트 밑 한 줄은 그 자산의 판독 눈금이다. 신뢰
  * 마이크로스트립·가격 티저·기능 목록은 히어로에 없다.
  *
  * ## H1 두 줄 계약
@@ -85,7 +85,9 @@ export function Hero() {
 
         {/* ── 증거물 ───────────────────────────────────────── */}
         <div className="enter-rise [animation-delay:240ms] xl:mt-8">
-          <GlassPanel>
+          {/* 증거물은 유리 카드가 아니라 계측 시트다 — 표면 역할 규칙은
+              specimen-sheet.tsx 머리말 참고. */}
+          <SpecimenSheet>
             <AnswerSpecimen
               engineId={SPECIMEN.engineId}
               query={SPECIMEN.query}
@@ -142,7 +144,7 @@ export function Hero() {
                 측정했기 때문입니다. 여러 번 재면 좁아집니다.
               </p>
             </div>
-          </GlassPanel>
+          </SpecimenSheet>
 
           {/* 표시 규칙이 곧 제품의 한계 설명이다. 나머지 두 문장은 경쟁사 칸
               바로 옆(신청 섹션)에 둔다 — 읽는 사람이 실제로 결정하는 자리다. */}

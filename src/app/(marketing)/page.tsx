@@ -6,6 +6,7 @@ import { CtaLink } from '@/components/marketing/cta-link'
 import { DeliverablesBento } from '@/components/marketing/deliverables-bento'
 import { FlowSteps } from '@/components/marketing/flow-steps'
 import { GlassPanel } from '@/components/marketing/glass-panel'
+import { SpecimenSheet } from '@/components/marketing/specimen-sheet'
 import { Hero } from '@/components/marketing/hero'
 import { ReplayScene } from '@/components/marketing/replay-scene'
 import { SECTION_X, Section } from '@/components/marketing/section'
@@ -135,15 +136,16 @@ export default function HomePage() {
           </p>
         </Reveal>
 
-        {/* 계측 카드는 유리 패널 안쪽 알맹이가 된다 — 테두리·반경·그림자를
-            패널에 넘기고 자기 껍데기를 벗는다(히어로의 표본과 같은 처리). */}
+        {/* 계측 카드는 시트 안쪽 알맹이가 된다 — 테두리·반경·그림자를
+            시트에 넘기고 자기 껍데기를 벗는다(히어로의 표본과 같은 처리).
+            질의는 실측 문서라 유리가 아니라 계측 시트다(specimen-sheet.tsx). */}
         <Reveal index={1} className="mt-10 max-w-4xl">
-          <GlassPanel>
+          <SpecimenSheet>
             <QueryProtocol
               specimenQuery={SPECIMEN.query}
               className="rounded-none border-0 bg-transparent shadow-none"
             />
-          </GlassPanel>
+          </SpecimenSheet>
         </Reveal>
 
         {/* ★ 반전 카피. 직접 검증한 사람의 답은 우리 표본과 다를 수 있고,

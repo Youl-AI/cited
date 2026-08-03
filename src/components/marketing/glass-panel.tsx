@@ -3,6 +3,11 @@ import { cn } from '@/lib/utils'
 /**
  * 이중 베젤 패널 (soft-skill §4.A "Doppelrand").
  *
+ * ★ 표면 역할 규칙(specimen-sheet.tsx 머리말): 이 유리는 **행동 표면**
+ *   (신청 폼·요금제·진단 신청)에만 쓴다. 실측 데이터를 싣는 문서 표면은
+ *   각진 `SpecimenSheet`다. 모든 표면에 유리를 씌우는 순간 §0.D의
+ *   "generic glassmorphism on everything" 텔로 돌아간다.
+ *
  * 프리미엄 표면에서 카드는 배경 위에 **평평하게 놓이지 않는다.** 알루미늄
  * 트레이에 앉은 유리판처럼, 바깥 껍데기와 안쪽 알맹이가 각각 자기 테두리를
  * 갖는다. 그래서 두 겹이다:
