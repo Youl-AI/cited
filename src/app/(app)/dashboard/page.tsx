@@ -96,15 +96,14 @@ export default async function DashboardPage({
     //   있다는 뜻이므로 아래 대시보드로 내려간다 — 이 분기는 "보여 줄 것이
     //   아무것도 없는" 계정 전용이다.
     return (
+      // ★ 여기에는 "정기 측정" 아이브로우를 달지 않는다. 바로 아래 문장이
+      //   "정기 측정은 구독 고객에게 열려 있습니다"인데, 그 위에 같은 말을
+      //   현재 화면의 이름표로 붙이면 **없는 것을 있다고 말하는 셈**이다.
+      //   아이브로우는 실제로 정기 측정을 보고 있는 화면에만 붙는다.
       <div className="instrument-enter max-w-2xl space-y-5">
-        <div>
-          <p className="font-mono text-xs tracking-[0.14em] text-muted-foreground uppercase">
-            정기 측정
-          </p>
-          <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-            대시보드
-          </h1>
-        </div>
+        <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
+          대시보드
+        </h1>
         <p className="max-w-prose leading-relaxed text-muted-foreground">
           {gate.user.name}님, 정기 측정은 구독 고객에게 열려 있습니다. 지금 바로 받을 수 있는
           것은 무료 진단입니다 — 계정과는 별개로 동작하며, 결과는 메일로 갑니다.
@@ -125,6 +124,40 @@ export default async function DashboardPage({
   const data = await loadDashboard(gate.user.id, brand)
   if (!data.selected) redirect('/onboarding')
   const canAdd = gate.limits !== null && data.brands.length < gate.limits.maxBrands
+  // 회차가 하나도 없으면 히트맵·SoV·출처는 그릴 것이 없다(각 컴포넌트도
+  // 스스로 null을 내지만, 제목과 리드까지 남으면 빈 제목 셋이 늘어선다).
+  const hasPoints = data.points.length > 0
+  const sections = [
+    {
+      title: '언급률 추이',
+      lede: '회차별 언급률과 95% 신뢰구간입니다. 엔진을 골라 따로 볼 수 있습니다.',
+      body: <TrendChart points={data.points} />,
+    },
+    ...(hasPoints
+      ? [
+          {
+            title: '질문별 히트맵',
+            lede: '어느 질문에서 비는가 — 여기가 가장 실행 가능한 정보입니다. 셀의 숫자는 언급된 답변 수 / 전체 답변 수입니다.',
+            body: <QueryHeatmap points={data.points} />,
+          },
+          {
+            title: '언급 점유율 추이',
+            lede: '등록한 경쟁사 대비 언급 비중입니다. 경쟁사를 더 등록하면 이 값은 달라집니다.',
+            body: <SovTrend points={data.points} />,
+          },
+          {
+            title: 'AI가 읽는 출처',
+            lede: '최신 회차에서 인용된 도메인과 직전 회차 대비 변화입니다 — 여기가 콘텐츠를 실을 곳입니다.',
+            body: <SourceChanges points={data.points} />,
+          },
+        ]
+      : []),
+    {
+      title: '측정 회차',
+      lede: '회차를 누르면 진단 리포트와 같은 화면 문법의 상세를 봅니다.',
+      body: <RunListSection items={data.runList} />,
+    },
+  ]
 
   return (
     <div className="space-y-9">
@@ -172,56 +205,28 @@ export default async function DashboardPage({
       {/* 조건을 래퍼에 건다 — `HeadlineCard`는 회차가 없으면 스스로 null을
           내지만, 그때도 래퍼가 남으면 `space-y-9`가 빈 자리에 간격을 하나 더
           만든다(아래 섹션들이 이미 같은 모양으로 조건을 걸고 있다). */}
-      {data.points.length > 0 && (
+      {hasPoints && (
         <div className={`instrument-enter ${ENTER_DELAY[1]}`}>
           <HeadlineCard points={data.points} />
         </div>
       )}
 
-      <Section
-        title="언급률 추이"
-        lede="회차별 언급률과 95% 신뢰구간입니다. 엔진을 골라 따로 볼 수 있습니다."
-        index={2}
-      >
-        <TrendChart points={data.points} />
-      </Section>
-
-      {data.points.length > 0 && (
+      {/* ★ 순번은 **실제로 그려지는 순서**에서 나와야 한다. 섹션마다 상수를
+          박아 두면 회차가 없는 계정(히트맵·SoV·출처 셋이 통째로 빠진다)에서
+          번호에 구멍이 생겨, 마지막 섹션이 아무것도 없는 360ms를 기다렸다가
+          등장한다. 배열로 만들어 map의 인덱스를 쓰면 구멍이 생길 수 없다. */}
+      {sections.map((section, i) => (
         <Section
-          title="질문별 히트맵"
-          lede="어느 질문에서 비는가 — 여기가 가장 실행 가능한 정보입니다. 셀의 숫자는 언급된 답변 수 / 전체 답변 수입니다."
-          index={3}
+          key={section.title}
+          title={section.title}
+          lede={section.lede}
+          // 앞서 그려진 블록 수만큼 뒤에서 시작한다 — 머리글(0)은 항상 있고,
+          // 헤드라인 카드(1)는 회차가 있을 때만 있다.
+          index={(hasPoints ? 2 : 1) + i}
         >
-          <QueryHeatmap points={data.points} />
+          {section.body}
         </Section>
-      )}
-      {data.points.length > 0 && (
-        <Section
-          title="언급 점유율 추이"
-          lede="등록한 경쟁사 대비 언급 비중입니다. 경쟁사를 더 등록하면 이 값은 달라집니다."
-          index={4}
-        >
-          <SovTrend points={data.points} />
-        </Section>
-      )}
-
-      {data.points.length > 0 && (
-        <Section
-          title="AI가 읽는 출처"
-          lede="최신 회차에서 인용된 도메인과 직전 회차 대비 변화입니다 — 여기가 콘텐츠를 실을 곳입니다."
-          index={5}
-        >
-          <SourceChanges points={data.points} />
-        </Section>
-      )}
-
-      <Section
-        title="측정 회차"
-        lede="회차를 누르면 진단 리포트와 같은 화면 문법의 상세를 봅니다."
-        index={6}
-      >
-        <RunListSection items={data.runList} />
-      </Section>
+      ))}
     </div>
   )
 }

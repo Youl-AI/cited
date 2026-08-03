@@ -11,8 +11,12 @@ import { Skeleton } from '@/components/ui/skeleton'
  * ★ **모양이 곧 약속이다.** 같은 크기 회색 박스를 늘어놓는 것은 스켈레톤이
  *   아니라 스피너를 네모나게 그린 것이다(`skeleton.tsx` JSDoc). 여기 있는
  *   상자들은 실제로 올 것과 같은 치수·같은 순서다 — 머리(브랜드명+트레이),
- *   헤드라인 카드(5xl 수치 + 구간 띠), 추이 차트(SVG 판), 히트맵(표),
- *   회차 목록(행). 도착했을 때 레이아웃이 튀지 않는 것이 목적이다.
+ *   헤드라인 카드(5xl 수치 + 구간 띠), 그리고 **여섯 섹션 전부**: 추이 차트
+ *   (SVG 판 + 캡션) · 히트맵(표) · SoV 추이(소형 SVG + 캡션) · 출처(도메인 행)
+ *   · 회차 목록(행). 섹션 하나를 빠뜨리면 도착하는 순간 그 아래가 통째로
+ *   밀린다 — 레이아웃이 튀지 않는 것이 이 파일의 목적이다.
+ *   (회차가 없는 계정은 가운데 셋이 빠진 화면을 받는다. 뼈대는 **있는 쪽**에
+ *   맞춘다 — 로딩 중에는 어느 쪽인지 알 수 없고, 있는 쪽이 기본값이다.)
  * ★ **수치는 한 글자도 흉내 내지 않는다.** 회색 상자만 둔다 — 자리 채우기용
  *   가짜 퍼센트가 한 프레임이라도 보이면 그건 측정된 적 없는 숫자다 (§6의
  *   count-up 금지와 같은 규칙).
@@ -49,7 +53,9 @@ export default function DashboardLoading() {
           </CardContent>
         </Card>
 
-        {/* 추이 차트 — 제목·리드·엔진 트레이·SVG 판 */}
+        {/* 추이 차트 — 제목·리드·엔진 트레이·SVG 판·캡션.
+            캡션(구간 읽는 법)은 이 화면에서 **항상 나오는 줄**이라 뼈대에도
+            있어야 한다 — 빠뜨리면 도착하는 순간 아래가 한 줄만큼 밀린다. */}
         <section className="border-t border-foreground/[0.07] pt-8">
           <Skeleton className="h-6 w-28" />
           <Skeleton className="mt-2.5 h-4 w-full max-w-md" />
@@ -57,6 +63,7 @@ export default function DashboardLoading() {
           {/* 차트의 종횡비는 viewBox 640×220이다 — 같은 비율로 잡아야 도착할 때
               아래 섹션들이 위아래로 밀리지 않는다. */}
           <Skeleton className="mt-4 aspect-[640/220] w-full rounded-xl" />
+          <Skeleton className="mt-3 h-4 w-full max-w-prose" />
         </section>
 
         {/* 히트맵 — 표 머리 한 줄 + 행 다섯 */}
@@ -68,6 +75,30 @@ export default function DashboardLoading() {
               <Skeleton className="h-4 w-full" />
               {[0, 1, 2, 3, 4].map((row) => (
                 <Skeleton key={row} className="h-7 w-full" />
+              ))}
+            </div>
+          </Card>
+        </section>
+
+        {/* 언급 점유율 추이 — 추이 차트와 같은 문법의 소형판(viewBox 640×150) */}
+        <section className="border-t border-foreground/[0.07] pt-8">
+          <Skeleton className="h-6 w-36" />
+          <Skeleton className="mt-2.5 h-4 w-full max-w-md" />
+          <Skeleton className="mt-5 aspect-[640/150] w-full rounded-xl" />
+          <Skeleton className="mt-3 h-4 w-full max-w-prose" />
+        </section>
+
+        {/* AI가 읽는 출처 — 도메인 행 다섯 */}
+        <section className="border-t border-foreground/[0.07] pt-8">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="mt-2.5 h-4 w-full max-w-lg" />
+          <Card className="mt-5 gap-0 py-(--card-bezel)">
+            <div className="divide-y divide-border">
+              {[0, 1, 2, 3, 4].map((row) => (
+                <div key={row} className="flex items-center justify-between gap-4 px-5 py-3.5">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-4 w-14" />
+                </div>
               ))}
             </div>
           </Card>

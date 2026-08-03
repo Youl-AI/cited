@@ -117,7 +117,9 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
           활성 조각만 카드색으로 1단). 예전에는 활성 토글이 --primary로 꽉 찬
           알약이었는데, 그 색은 이 화면에서 **차트의 계열색**이기도 하다 —
           같은 색이 "선택됨"과 "전체 계열"을 동시에 뜻하고 있었다 (§2: 색의 뜻은
-          하나). 반경은 카드와 같은 동심 뺄셈(껍질 --radius-xl, 베젤 4px). */}
+          하나). 반경은 카드와 같은 동심 뺄셈(껍질 --radius×1.4, 베젤 4px) —
+          `var(--radius-xl)`로 줄여 쓰지 않는 이유는 card.tsx 주석에 있다
+          (`:root`에서 치환돼 표면 스케일을 못 탄다). */}
       <div
         className="mb-4 flex w-fit max-w-full flex-wrap items-center gap-0.5 rounded-xl bg-muted/70 p-1 ring-1 ring-foreground/[0.06]"
         role="group"
@@ -134,7 +136,7 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
                 setEngine(id)
                 setHover(null)
               }}
-              className={`motion-press rounded-[calc(var(--radius-xl)-0.25rem)] px-2.5 py-1 text-xs active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+              className={`motion-press rounded-[calc(var(--radius)*1.4-0.25rem)] px-2.5 py-1 text-xs active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
                 active
                   ? 'bg-card font-medium text-foreground shadow-elevation-1'
                   : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
