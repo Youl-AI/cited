@@ -99,7 +99,7 @@ export function MarketingHeader({
           <nav aria-label="주요" className="flex items-center gap-0.5 sm:gap-2">
             <Link
               href="/sign-in"
-              className="rounded-full px-1.5 py-2 text-xs text-muted-foreground transition-colors duration-[var(--motion-micro)] ease-instrument hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-3 sm:text-sm"
+              className="rounded-none px-1.5 py-2 text-xs text-muted-foreground transition-colors duration-[var(--motion-micro)] ease-instrument hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-3 sm:text-sm"
             >
               로그인 · 회원가입
             </Link>

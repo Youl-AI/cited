@@ -50,7 +50,7 @@ export function FlowSteps() {
                   없다 — 레일이 끝나는 곳이 도착점이다. */}
               <div className="flex flex-col items-center sm:flex-row sm:gap-4">
                 <span
-                  className={`flex size-8 shrink-0 items-center justify-center rounded-full border font-mono text-xs tabular-nums ${
+                  className={`flex size-8 shrink-0 items-center justify-center rounded-none border font-mono text-xs tabular-nums ${
                     last
                       ? 'border-primary/60 text-primary'
                       : 'border-border text-muted-foreground'

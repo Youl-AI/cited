@@ -15,16 +15,11 @@ import { formatInterval, formatPercent } from '@/lib/stats/wilson'
  *
  * ## 셀 수 = 콘텐츠 수 = 4 (tasteskill §4.7 BENTO CELL COUNT)
  *
- * 4셀이 격자를 **빈칸 없이** 채운다. `lg`에서 4열 2행:
- *
- *   ┌───────────────┬───────────────┐
- *   │ 언급률·구간 (2)  │ 답변 원문 (2, 2행) │
- *   ├───────┬───────┤               │
- *   │ 출처(1)│ 언급수(1)│               │
- *   └───────┴───────┘───────────────┘
- *
- * 1행 = 2 + 2 = 4, 2행 = 1 + 1 + (원문이 이어받은 2) = 4.
- * `sm`에서는 2열(2 / 2 / 1+1)로, 그 아래는 단일 열로 접힌다.
+ * 4셀이 2×2 격자를 **빈칸 없이** 채운다. 원래 원문 셀이 세로 두 칸(전문
+ * 게재)이었는데, 원문이 발췌로 줄면서(히어로·재현 장면과의 3중 전문 등장
+ * 완화 — 아래 "발췌" 주석) 두 칸 높이가 빈 공간이 됐다. 지금은 네 셀이
+ * 각 한 칸씩이고, 위계는 칸 크기 대신 틴트·콘텐츠 밀도가 말한다. 행 높이는
+ * 내용대로 달라 격자가 목록으로 굳지 않는다. `sm` 아래는 단일 열.
  *
  * ★ `grid-flow-dense`는 **지금 이 배치를 성립시키는 조건이 아니다.** 기본
  *   (sparse) 배치도 같은 결과를 낸다 — 원문 셀을 1행 3~4열에 놓은 뒤 커서가
@@ -71,12 +66,12 @@ export function DeliverablesBento() {
         // `bg-border`가 그 틈으로 보여서 선이 되고, 셀은 서로 붙어 있다.
         // 각(radius 0)이다 — 벤토 셀은 전부 실측 데이터라 문서 표면 계열이고,
         // 문서는 둥글지 않다(표면 역할 규칙: specimen-sheet.tsx 머리말).
-        'grid grid-flow-dense gap-px overflow-hidden border border-border bg-border shadow-elevation-3 sm:grid-cols-2 lg:grid-cols-4'
+        'grid grid-flow-dense gap-px overflow-hidden border border-border bg-border shadow-elevation-3 sm:grid-cols-2'
       }
     >
       {/* ── 1. 언급률과 신뢰구간 ─────────────────────────────
           브랜드 틴트 + 실측 계측 UI. 이 셀이 제품의 주장을 그림으로 만든다. */}
-      <div className={`${CELL} ${TINT_BRAND} sm:col-span-2`}>
+      <div className={`${CELL} ${TINT_BRAND}`}>
         <h3 className="text-base font-semibold">언급률과 신뢰구간</h3>
         <p className="text-sm leading-relaxed text-muted-foreground">
           몇 번 물어서 몇 번 나왔는지, 그리고 그 숫자를 얼마나 믿어도 되는지 범위로 함께
@@ -102,19 +97,22 @@ export function DeliverablesBento() {
       </div>
 
       {/* ── 2. 답변 원문 ─────────────────────────────────────
-          세로 두 칸짜리 큰 셀. 히어로의 표본 카드와 **같은 표시 규칙**을 쓰되
-          (`SpecimenMarks`) 조건 띠와 캡션은 벗는다 — 여기서는 완제품이 아니라
-          "이런 게 들어갑니다"의 견본이다. */}
-      <div className={`${CELL} bg-card sm:col-span-2 lg:row-span-2`}>
+          히어로의 표본 카드와 **같은 표시 규칙**을 쓰되(`SpecimenMarks`)
+          조건 띠와 캡션은 벗는다 — 여기서는 완제품이 아니라 "이런 게
+          들어갑니다"의 견본이고, 그래서 전문이 아니라 **발췌**다(전문은
+          히어로 표본과 실측 재현 두 곳으로 충분하다 — 같은 원문이 세 번
+          전문으로 등장하면 중복으로 읽힌다). line-clamp는 시각 절단이라
+          원문 텍스트 자체는 손대지 않는다. */}
+      <div className={`${CELL} bg-card`}>
         <h3 className="text-base font-semibold">답변 원문</h3>
         <p className="text-sm leading-relaxed text-muted-foreground">
           실제 AI가 뭐라고 답했는지 그대로 보여드립니다. 직접 물어서 확인하실 수 있습니다.
         </p>
-        <blockquote className="mt-2 border-l-2 border-border pl-4 text-sm leading-[1.9] whitespace-pre-wrap">
+        <blockquote className="mt-2 line-clamp-4 border-l-2 border-border pl-4 text-sm leading-[1.9] whitespace-pre-wrap">
           <SpecimenMarks text={SPECIMEN.text} marks={SPECIMEN.marks} />
         </blockquote>
         <p className="mt-auto pt-4 text-xs text-muted-foreground">
-          2026-07-30 실측 · 밑줄이 우리가 센 브랜드입니다
+          2026-07-30 실측 발췌 · 밑줄이 우리가 센 브랜드입니다
         </p>
       </div>
 

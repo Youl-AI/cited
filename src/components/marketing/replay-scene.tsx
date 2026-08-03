@@ -176,7 +176,7 @@ export function ReplayScene() {
               이 숫자는 이렇게 나왔습니다
             </h2>
             <p className="mt-3 max-w-[30em] text-sm leading-relaxed text-muted-foreground sm:mt-4 sm:text-base">
-              2026-07-30에 실제로 던진 질문과 그때 받은 답변입니다. 리포트도 이 순서로
+              맨 위에서 보신 2026-07-30 표본 그대로입니다. 리포트도 이 순서로
               만들어집니다.
             </p>
             <ol className="mt-6 flex flex-wrap gap-x-5 gap-y-1 lg:mt-8 lg:block lg:space-y-2.5">

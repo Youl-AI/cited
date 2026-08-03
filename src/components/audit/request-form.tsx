@@ -38,8 +38,8 @@ const SUGGESTED_CATEGORIES: readonly string[] = KNOWN_CATEGORIES.filter(
  *
  * 랜딩(`(marketing)`)과 `/audit/new`(`audit/(flow)`) 둘뿐이고 둘 다
  * `.surface-dark`다. 그래서 조판을 마케팅 쪽에 맞춘다 — 컨트롤 높이를 키우고
- * (앱 기본 `h-8` = 32px은 터치 타깃 권장치의 3/4다), 제출 버튼은 마케팅
- * 표면의 모서리 규칙대로 알약이다.
+ * (앱 기본 `h-8` = 32px은 터치 타깃 권장치의 3/4다), 모서리는 마케팅
+ * 표면의 규칙대로 각(radius 0)이다 — cta-link.tsx 모서리 규칙 참고.
  *
  * ★ 입력 **테두리**의 대비는 여기가 아니라 토큰이 푼다 — globals.css의
  *   `--border-interactive`(다크 카드 위 3.33:1). 클래스로 밝히면 랜딩과
@@ -56,7 +56,7 @@ const SUGGESTED_CATEGORIES: readonly string[] = KNOWN_CATEGORIES.filter(
  * 모바일에서 16px를 유지하는 것은 iOS Safari가 그 아래에서 확대하기 때문이다
  * (`Input` 기본값 `text-base`가 그 몫을 한다).
  */
-const FIELD = 'h-11 md:text-[0.9375rem]'
+const FIELD = 'h-11 rounded-none md:text-[0.9375rem]'
 
 interface FieldError {
   field: string | null
@@ -182,7 +182,7 @@ export function RequestForm() {
           ★ 범례에서 `uppercase`를 뺐다. 한글에는 대소문자가 없어서 아무 일도
             하지 않으면서, 기계적으로 세는 아이브로(`uppercase tracking`)로만
             잡혔다(tasteskill §4.7 EYEBROW RESTRAINT). 자간은 남긴다. */}
-      <fieldset className="space-y-4 rounded-lg border border-border bg-foreground/[0.04] p-5">
+      <fieldset className="space-y-4 rounded-none border border-border bg-foreground/[0.04] p-5">
         <legend className="px-1.5 text-xs font-medium tracking-[0.06em] text-muted-foreground">
           넣으면 리포트가 늘어납니다
         </legend>
@@ -227,8 +227,8 @@ export function RequestForm() {
               type="button"
               variant="outline"
               size="sm"
-              // 마케팅 표면에서 누르는 것은 전부 알약이다(Task 3 §2.8).
-              className="h-9 rounded-full px-4"
+              // 마케팅 표면의 모서리 규칙: 컨트롤도 각이다(cta-link.tsx).
+              className="h-9 rounded-none px-4"
               onClick={() => setCompetitors([...competitors, ''])}
             >
               경쟁사 추가 ({competitors.length}/{MAX_COMPETITORS})
@@ -248,7 +248,7 @@ export function RequestForm() {
       {error && (
         <p
           role="alert"
-          className="rounded-lg border border-destructive/60 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          className="rounded-none border border-destructive/60 bg-destructive/10 px-4 py-3 text-sm text-destructive"
         >
           {error.message}
         </p>
@@ -257,7 +257,7 @@ export function RequestForm() {
       {/* ★ 순서를 **누르기 전에** 보여준다. 이게 없으면 확인 메일이 회원가입
           인증처럼 읽힌다 — 실제로 그렇게 읽혔다. 폼 안에 두는 이유는 폼이
           렌더링되는 모든 곳(랜딩·`/audit/new`)에서 빠질 수 없게 하기 위함이다. */}
-      <div className="rounded-lg border border-border bg-foreground/[0.04] p-5">
+      <div className="rounded-none border border-border bg-foreground/[0.04] p-5">
         <FlowStrip className="space-y-2" />
         <p className="mt-4 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
           <strong className="font-medium text-foreground">{NO_ACCOUNT_NOTE}</strong> 확인 메일은
@@ -266,9 +266,9 @@ export function RequestForm() {
       </div>
 
       {/* ★ 제출은 `CtaLink`가 될 수 없다(그건 `<Link>`다). 대신 그 치수·모서리·
-          눌림을 그대로 가져온다 — 마케팅 표면에서 누르는 것은 전부 알약이고,
-          이 버튼이 그 규칙의 예외가 되면 페이지에서 가장 중요한 것 하나만
-          앱 버튼으로 남는다.
+          눌림을 그대로 가져온다 — 마케팅 표면의 컨트롤은 전부 각이고(cta-link.tsx
+          모서리 규칙), 이 버튼이 그 규칙의 예외가 되면 페이지에서 가장 중요한
+          것 하나만 앱 버튼으로 남는다.
         ★ 호버를 `hover:bg-primary/80`(앱 기본값)에서 되돌렸다. 어두운 배경
           위에서 투명도를 낮추면 배경이 비쳐 **누를수록 흐려지고 대비가 함께
           떨어진다.** 마케팅 CTA와 같은 방향, 즉 **밝히는** 쪽으로 간다.
@@ -281,7 +281,7 @@ export function RequestForm() {
         type="submit"
         size="lg"
         aria-busy={pending}
-        className="h-12 w-full rounded-full text-[0.9375rem] font-semibold ease-spring hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_12%)] disabled:opacity-60"
+        className="h-12 w-full rounded-none text-[0.9375rem] font-semibold ease-spring hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_12%)] disabled:opacity-60"
         disabled={pending}
       >
         {pending ? '신청 중…' : '무료 진단 신청하기'}
