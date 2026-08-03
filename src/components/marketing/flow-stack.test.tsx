@@ -44,6 +44,12 @@ describe('신청하면 — 스티키 스택', () => {
     }
   })
 
+  it('순서가 시맨틱에 있다 — 눈에 보이는 01/02/03만으로는 부족하다', () => {
+    const { container } = render(<FlowStack />)
+    expect(container.querySelector('ol')).not.toBeNull()
+    expect(screen.getAllByRole('listitem')).toHaveLength(AUDIT_FLOW.length)
+  })
+
   it('reduced-motion이어도 세 단계가 전부 읽힌다', () => {
     motionState.reduce = true
     render(<FlowStack />)

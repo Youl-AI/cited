@@ -80,6 +80,8 @@ export function ReplayScene() {
   const steps = useRef<(HTMLLIElement | null)[]>([])
   const marks = useRef<MarkHandle[] | null>(null)
   const started = useRef(false)
+  /** 지금 `will-change`를 세워 둔 상태인가. 매 프레임 같은 값을 쓰지 않으려는 것 */
+  const layered = useRef(false)
 
   const apply = useCallback((p: number) => {
     started.current = true
@@ -88,13 +90,20 @@ export function ReplayScene() {
     const m = span(p, PHASES[2].from, PHASES[2].to)
     const r = span(p, PHASES[3].from, PHASES[3].to)
 
+    // ★ `transform`이 아니라 **`translate` 프로퍼티**다(실브라우저에서 잡은 버그).
+    //   Tailwind v4의 `translate-x-full`은 `transform: translateX(100%)`이 아니라
+    //   `translate: var(--tw-translate-x) var(--tw-translate-y)`로 컴파일된다.
+    //   두 프로퍼티는 서로를 덮지 않고 **합성**되므로, 인라인에 transform을 쓰면
+    //   q=0에서 100%(클래스) + 0%(인라인) = 100%가 되어 가리개가 영영 비켜나 있다.
+    //   jsdom에도 `style.translate`가 있어 테스트가 같은 값을 본다.
+    //
     // ① 질의 타이핑 — 가리개가 오른쪽으로 비켜나며 글자가 드러난다.
     if (queryCover.current) {
-      queryCover.current.style.transform = `translateX(${q * 100}%)`
+      queryCover.current.style.translate = `${q * 100}% 0`
     }
     // ② 답변 스트리밍 — 가리개가 아래로 내려간다. 그 윗변의 헤어라인이 커서다.
     if (answerCover.current) {
-      answerCover.current.style.transform = `translateY(${a * 100}%)`
+      answerCover.current.style.translate = `0 ${a * 100}%`
     }
 
     // ③ 언급 판정 — 밑줄과 순서 번호가 들어온다. 밑줄 색은 클래스가 정한
@@ -114,9 +123,11 @@ export function ReplayScene() {
     }
 
     // ④ 언급률 정착 — 숫자는 처음부터 최종값이다. 들어오는 것은 판 자체다.
+    //    여기도 `translate`로 통일한다 — 이 컴포넌트 안에 transform과 translate가
+    //    섞여 있으면 다음 사람이 위 함정을 그대로 다시 밟는다.
     if (readout.current) {
       readout.current.style.opacity = String(r)
-      readout.current.style.transform = `translateY(${(1 - r) * 16}px)`
+      readout.current.style.translate = `0 ${(1 - r) * 16}px`
     }
 
     // 단계 표시 — 지금 무엇이 진행 중인지. 지나간 단계는 밝은 채로 남는다.
@@ -124,6 +135,23 @@ export function ReplayScene() {
       const el = steps.current[index]
       if (el) el.style.opacity = String(0.3 + span(p, phase.from, phase.to) * 0.7)
     })
+
+    // `will-change`는 **장면이 도는 동안만** 세운다. 클래스로 상주시키면 브라우저가
+    // 페이지 수명 내내 세 요소를 별도 레이어로 승격해 둔다(tasteskill §6.A:
+    // "실제로 움직일 요소에만, 아껴서"). 진행률이 0이거나 1이면 장면은 끝났거나
+    // 시작 전이라 승격을 쥐고 있을 이유가 없다. 같은 문자열을 매 프레임 다시
+    // 쓰면 그 자체가 스타일 무효화라, 값이 바뀔 때만 건드린다.
+    // ε를 두는 이유(실측): ScrollTrigger는 refresh 때 진행률 0에 **아주 가까운**
+    // 값(1e-6 수준)으로 한 번 흘린다. `p > 0`으로 두면 장면이 화면에 들어오기도
+    // 전에 레이어가 서고, 그 뒤로 영영 내려가지 않는다.
+    const wantsLayer = p > 0.001 && p < 0.999
+    if (layered.current !== wantsLayer) {
+      layered.current = wantsLayer
+      const value = wantsLayer ? 'translate' : 'auto'
+      for (const el of [queryCover.current, answerCover.current, readout.current]) {
+        if (el) el.style.willChange = value
+      }
+    }
   }, [])
 
   // 마운트 직후 "시작 전" 상태로 덮는다.
@@ -185,7 +213,7 @@ export function ReplayScene() {
                   <span
                     ref={queryCover}
                     aria-hidden
-                    className="absolute inset-0 translate-x-full bg-muted will-change-transform"
+                    className="absolute inset-0 translate-x-full bg-muted"
                   />
                 </span>
               </div>
@@ -200,7 +228,7 @@ export function ReplayScene() {
                 <div
                   ref={answerCover}
                   aria-hidden
-                  className="absolute inset-0 translate-y-full bg-card will-change-transform"
+                  className="absolute inset-0 translate-y-full bg-card"
                 >
                   {/* 커서. 스트리밍의 앞머리를 표시한다 */}
                   <span className="absolute inset-x-0 top-0 h-px bg-primary/70" />
@@ -210,7 +238,7 @@ export function ReplayScene() {
 
             <div
               ref={readout}
-              className="mt-4 rounded-lg border border-border bg-foreground/[0.03] px-4 py-3.5 will-change-transform sm:mt-5 sm:px-5 sm:py-4"
+              className="mt-4 rounded-lg border border-border bg-foreground/[0.03] px-4 py-3.5 sm:mt-5 sm:px-5 sm:py-4"
             >
               <p className="text-xs font-medium tracking-wide text-muted-foreground">
                 이 측정의 언급률

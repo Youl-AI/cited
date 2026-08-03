@@ -21,16 +21,21 @@ import { StickyStack } from '@/components/motion/sticky-stack'
  * 스크롤이 오래 갇힌 것처럼 느껴진다. 사이에 "무엇을 묻는지 공개합니다"가
  * 들어가 숨을 돌린다.
  *
- * ## 번호는 장식이 아니다
+ * ## 번호는 장식이 아니다 — 그리고 그 주장은 시맨틱이 받쳐야 한다
  *
  * 01/02/03은 아이브로가 아니라 **실제 순서**다(§9.F가 금지하는 것은
  * "Stage 1 / Phase 02" 꼴의 지어낸 단계 라벨이고, 여기 라벨은 신청·메일
- * 확인·리포트 수신이라는 실제 행위다). 문구는 `components/audit/flow.tsx`
- * 한 벌에서 온다 — 폼 안의 압축판과 갈리면 "영업일 1일"이 한쪽에서만 사라진다.
+ * 확인·리포트 수신이라는 실제 행위다). 그 주장을 눈에 보이는 숫자로만 하면
+ * **스크린리더에는 아무 순서도 없다.** `ordered`로 `<ol>`/`<li>`를 세워
+ * "목록, 항목 3개 중 1"이 읽히게 한다.
+ *
+ * 문구는 `components/audit/flow.tsx` 한 벌에서 온다 — 폼 안의 압축판과
+ * 갈리면 "영업일 1일"이 한쪽에서만 사라진다.
  */
 export function FlowStack() {
   return (
     <StickyStack
+      ordered
       cards={AUDIT_FLOW.map((step, index) => (
         <div key={step.label} className="w-full max-w-3xl px-6">
           <GlassPanel>

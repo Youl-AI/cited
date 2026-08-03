@@ -28,7 +28,12 @@ import { cn } from '@/lib/utils'
  */
 
 const TONE = {
-  /** 페이지에 하나. 무료 진단으로 보내는 길. */
+  /**
+   * 무료 진단으로 보내는 길. **의도가 하나**라는 뜻이지 인스턴스가 하나라는
+   * 뜻이 아니다 — tasteskill §4.5는 같은 의도에 라벨을 하나만 쓰라고 하지
+   * 그 라벨을 한 번만 놓으라고 하지 않는다. 랜딩에서는 머리글·히어로·마감
+   * 셋이 같은 문구("무료 진단 받기")를 쓴다. 새 문구를 만드는 순간이 위반이다.
+   */
   primary:
     'bg-primary text-primary-foreground shadow-elevation-2 hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_12%)]',
   /** 보조. 유리 표면 위의 헤어라인 알약. */

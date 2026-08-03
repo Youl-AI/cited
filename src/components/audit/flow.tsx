@@ -44,7 +44,8 @@ export const NO_ACCOUNT_NOTE = '가입이나 로그인은 필요 없습니다. �
  *
  * ★ 번호를 붙인다. 장식이 아니라 **실제 순서**이고, 읽는 사람이 "지금
  *   어디쯤인가"를 알아야 하는 정보다. (순서가 없는 목록에는 붙이지 않는다 —
- *   랜딩의 `DELIVERABLES`가 그 예다.)
+ *   랜딩의 "리포트에 들어가는 것" 벤토 네 셀이 그 예다. 같은 이유로 이 세
+ *   단계는 랜딩에서도 `<ol>`로 조판된다 — `marketing/flow-stack.tsx`.)
  */
 export function FlowStrip({ className }: { className?: string }) {
   return (

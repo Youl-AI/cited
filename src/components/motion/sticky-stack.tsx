@@ -20,9 +20,26 @@ gsap.registerPlugin(ScrollTrigger)
  *
  * ★ **이 트리 안에서 Motion(`motion.div` 등)을 쓰지 않는다** — 혼용 금지.
  *   `useReducedMotion`은 §5.A 골격이 직접 쓰는 미디어 쿼리 훅이라 예외다.
+ *
+ * ## `ordered`
+ *
+ * 이 컴포넌트가 카드를 `<div>`로 감싸면 **호출부가 세운 목록 시맨틱이 사라진다**
+ * (실제로 그랬다 — 랜딩의 "신청하면" 3단계가 `<ol>`을 잃고 그냥 div 셋이 됐다).
+ * 순서가 정보인 목록이면 `ordered`를 켠다. 그러면 뿌리가 `<ol>`, 카드가 `<li>`가
+ * 되어 스크린리더가 "목록, 항목 3개 중 1"을 읽는다 — 눈에 보이는 01/02/03이
+ * 장식이 아니라 실제 순서라는 주장이 그 시맨틱 위에 선다.
+ * 순서 없는 카드 더미면 기본값(`div`) 그대로 둔다.
  */
-export function StickyStack({ cards }: { cards: ReactNode[] }) {
-  const ref = useRef<HTMLDivElement>(null)
+export function StickyStack({
+  cards,
+  ordered = false,
+}: {
+  cards: ReactNode[]
+  ordered?: boolean
+}) {
+  // 뿌리 요소가 `div`일 수도 `ol`일 수도 있어서 콜백 ref로 받는다. `useRef`에
+  // 구체 타입을 박으면 두 분기 중 하나에서 반드시 캐스팅이 필요해진다.
+  const ref = useRef<HTMLElement | null>(null)
   const reduce = useReducedMotion()
 
   useEffect(() => {
@@ -64,18 +81,31 @@ export function StickyStack({ cards }: { cards: ReactNode[] }) {
     return () => ctx.revert()
   }, [reduce])
 
-  return (
-    <div ref={ref} className="relative">
-      {cards.map((card, i) => (
-        <div
-          // 카드는 ReactNode라 안정적인 키가 없다. 순서가 곧 정체성인
-          // (재정렬되지 않는) 목록이므로 인덱스 키가 맞는 선택이다.
-          key={i}
-          className="stack-card sticky top-0 flex min-h-[100dvh] items-center justify-center"
-        >
-          {card}
-        </div>
-      ))}
+  const setRoot = (el: HTMLElement | null) => {
+    ref.current = el
+  }
+  const cardClass = 'stack-card sticky top-0 flex min-h-[100dvh] items-center justify-center'
+  // 카드는 ReactNode라 안정적인 키가 없다. 순서가 곧 정체성인
+  // (재정렬되지 않는) 목록이므로 인덱스 키가 맞는 선택이다.
+  const items = cards.map((card, i) =>
+    ordered ? (
+      <li key={i} className={cardClass}>
+        {card}
+      </li>
+    ) : (
+      <div key={i} className={cardClass}>
+        {card}
+      </div>
+    ),
+  )
+
+  return ordered ? (
+    <ol ref={setRoot} className="relative">
+      {items}
+    </ol>
+  ) : (
+    <div ref={setRoot} className="relative">
+      {items}
     </div>
   )
 }

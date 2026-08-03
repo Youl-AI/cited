@@ -23,10 +23,15 @@ import { formatInterval, formatPercent } from '@/lib/stats/wilson'
  *   │ 출처(1)│ 언급수(1)│               │
  *   └───────┴───────┘───────────────┘
  *
- * 1행 = 2 + 2 = 4, 2행 = 1 + 1 + (원문이 이어받은 2) = 4. `grid-flow-dense`가
- * 세로 2행짜리 셀 옆의 빈자리를 뒤 항목으로 되메운다 — dense가 장식이 아니라
- * 이 배치를 성립시키는 조건이다.
+ * 1행 = 2 + 2 = 4, 2행 = 1 + 1 + (원문이 이어받은 2) = 4.
  * `sm`에서는 2열(2 / 2 / 1+1)로, 그 아래는 단일 열로 접힌다.
+ *
+ * ★ `grid-flow-dense`는 **지금 이 배치를 성립시키는 조건이 아니다.** 기본
+ *   (sparse) 배치도 같은 결과를 낸다 — 원문 셀을 1행 3~4열에 놓은 뒤 커서가
+ *   2행 1열로 넘어가는데 그 자리가 비어 있기 때문이다. 그럼에도 다는 이유는
+ *   gpt-taste §4가 벤토에 요구하는 안전장치이기 때문이다: 셀을 재정렬하거나
+ *   span을 손대는 순간 sparse는 구멍을 남기고 dense는 되메운다. 성립 조건이
+ *   아니라 **구멍 방지 장치**로 읽어라.
  *
  * ## 배경 다양성 (tasteskill §4.7 Bento Background Diversity)
  *
@@ -44,6 +49,20 @@ import { formatInterval, formatPercent } from '@/lib/stats/wilson'
 /** 셀 공통. 바닥색만 셀마다 다르다. */
 const CELL = 'flex flex-col gap-3 p-7 sm:p-8'
 
+/**
+ * 셀 바닥은 **전부 불투명이어야 한다.**
+ *
+ * 처음에는 `bg-primary/[0.07]`·`bg-foreground/[0.05]`처럼 알파로 틴트했는데,
+ * 이 격자는 바닥(`bg-border` = `oklch(1 0 0 / 10%)`)이 1px 틈으로 비쳐서 선이
+ * 되는 구조다. 셀이 반투명이면 그 흰 판이 **셀 전체를 통째로 비춘다** — 틴트가
+ * 의도보다 밝아지고 헤어라인은 주변과 같은 색이 되어 사라진다.
+ *
+ * `color-mix`로 같은 색을 **미리 섞어** 불투명한 값으로 만든다. 토큰을 그대로
+ * 참조하므로 표면이 바뀌면 따라 바뀐다(리터럴 색을 박지 않는다).
+ */
+const TINT_BRAND = 'bg-[color-mix(in_oklch,var(--card),var(--primary)_9%)]'
+const TINT_RAISED = 'bg-[color-mix(in_oklch,var(--card),var(--foreground)_6%)]'
+
 export function DeliverablesBento() {
   return (
     <div
@@ -55,7 +74,7 @@ export function DeliverablesBento() {
     >
       {/* ── 1. 언급률과 신뢰구간 ─────────────────────────────
           브랜드 틴트 + 실측 계측 UI. 이 셀이 제품의 주장을 그림으로 만든다. */}
-      <div className={`${CELL} bg-primary/[0.07] sm:col-span-2`}>
+      <div className={`${CELL} ${TINT_BRAND} sm:col-span-2`}>
         <h3 className="text-base font-semibold">언급률과 신뢰구간</h3>
         <p className="text-sm leading-relaxed text-muted-foreground">
           몇 번 물어서 몇 번 나왔는지, 그리고 그 숫자를 얼마나 믿어도 되는지 범위로 함께
@@ -99,7 +118,7 @@ export function DeliverablesBento() {
 
       {/* ── 3. AI가 읽는 출처 ────────────────────────────────
           언급률이 0%인 브랜드에게도 남는 유일한 집행 가능한 정보다. */}
-      <div className={`${CELL} bg-foreground/[0.05]`}>
+      <div className={`${CELL} ${TINT_RAISED}`}>
         <h3 className="text-base font-semibold">AI가 읽는 출처</h3>
         <p className="text-sm leading-relaxed text-muted-foreground">
           한 번도 언급되지 않았더라도, AI가 이 질문에 답할 때 어떤 사이트를 읽는지 알려드립니다.

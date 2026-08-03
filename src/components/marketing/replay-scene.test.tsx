@@ -38,11 +38,22 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 
-/** 인라인 transform이 붙은 노드들의 값. 가리개와 판독 패널이 여기 잡힌다. */
-function transforms(container: HTMLElement): string[] {
-  return [...container.querySelectorAll<HTMLElement>('[style]')]
-    .map((el) => el.style.transform)
-    .filter((t) => t !== '')
+/**
+ * 두 가리개의 인라인 `translate` 값.
+ *
+ * ★ `transform`이 아니라 `translate`를 본다. Tailwind v4의 `translate-x-full`이
+ *   `translate` 프로퍼티로 컴파일되기 때문이고, 두 프로퍼티는 서로를 덮지 않고
+ *   합성된다 — 인라인을 transform으로 쓰면 클래스의 100%가 그대로 남아 가리개가
+ *   **한 번도 가리지 못한다**(실브라우저에서 잡힌 버그). 이 헬퍼가 그 회귀를 막는다.
+ *
+ * ★ `[aria-hidden]`으로 좁힌다. ScrollTrigger가 핀하면서 `<section>`에도
+ *   `translate: none`과 `transform`을 직접 박기 때문에, 트리 전체를 훑으면
+ *   GSAP이 관리하는 노드까지 딸려 들어와 단언이 흔들린다.
+ */
+function coverTranslates(container: HTMLElement): string[] {
+  return [...container.querySelectorAll<HTMLElement>('[aria-hidden][style]')]
+    .map((el) => el.style.translate)
+    .filter((t) => t !== '' && t !== 'none')
 }
 
 describe('실측 재현 — 핀 스크럽 스크롤텔링', () => {
@@ -76,11 +87,25 @@ describe('실측 재현 — 핀 스크럽 스크롤텔링', () => {
     const { container } = render(<ReplayScene />)
     // 진행률이 정하는 것은 "무엇이 보이는가"다. 마운트만으로 장면을 끝난
     // 상태로 그리면 스크롤이 되감을 것이 남지 않는다.
-    expect(transforms(container).some((t) => t.includes('100%'))).toBe(false)
+    const moved = coverTranslates(container)
+    // 가리개 둘 다 인라인 값을 받았고(= 클래스의 100%를 실제로 되돌렸고),
+    // 아직 어느 쪽도 비켜나지 않았다. GSAP이 refresh 때 0에 아주 가까운 값을
+    // 한 번 흘리므로 정확히 "0%"를 단언하지 않는다.
+    expect(moved).toHaveLength(2)
+    expect(moved.some((t) => t.includes('100%'))).toBe(false)
     const hidden = [...container.querySelectorAll<HTMLElement>('[style]')].some(
       (el) => el.style.opacity === '0',
     )
     expect(hidden).toBe(true)
+  })
+
+  it('가리개는 transform이 아니라 translate로 움직인다 (합성 함정 회귀)', () => {
+    // `translate-x-full`은 `translate` 프로퍼티다. 인라인을 transform으로 쓰면
+    // 둘이 합성되어 가리개가 화면 밖에 붙박이가 된다.
+    const { container } = render(<ReplayScene />)
+    const withTransform = [...container.querySelectorAll<HTMLElement>('[aria-hidden][style]')]
+      .filter((el) => el.style.transform !== '')
+    expect(withTransform).toHaveLength(0)
   })
 
   it('JS가 없으면 답변이 그냥 보인다 — 프리렌더에는 덮는 상태가 없다', () => {
@@ -89,6 +114,7 @@ describe('실측 재현 — 핀 스크럽 스크롤텔링', () => {
     const html = renderToStaticMarkup(<ReplayScene />)
     expect(html).toContain('translate-x-full')
     expect(html).toContain('translate-y-full')
+    expect(html).not.toContain('style="translate')
     expect(html).not.toContain('style="transform')
     expect(html).not.toContain('opacity:0')
   })
@@ -96,9 +122,9 @@ describe('실측 재현 — 핀 스크럽 스크롤텔링', () => {
   it('reduced-motion이면 완성 상태로 선다 (가리개가 전부 비켜난다)', () => {
     motionState.reduce = true
     const { container } = render(<ReplayScene />)
-    const moved = transforms(container)
-    expect(moved).toContain('translateX(100%)')
-    expect(moved).toContain('translateY(100%)')
+    const moved = coverTranslates(container)
+    expect(moved).toContain('100% 0')
+    expect(moved).toContain('0 100%')
     // 판독 패널은 불투명하게 정착한다 — 모션이 꺼진 환경에서 숫자가 사라지면
     // 콘텐츠가 사라지는 것과 같다(design-language §6).
     const opaque = [...container.querySelectorAll<HTMLElement>('[style]')].some(

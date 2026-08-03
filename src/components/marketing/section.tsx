@@ -22,21 +22,25 @@ export const SECTION_Y = 'py-28 md:py-40'
 /** 본문 컨테이너. 랜딩의 모든 섹션이 같은 좌측 정렬선을 쓴다. */
 export const SECTION_X = 'mx-auto w-full max-w-6xl px-6'
 
+/**
+ * 컨테이너까지 포함한 표준 섹션.
+ *
+ * 전폭이 필요한 섹션(스티키 스택·핀 장면)은 이걸 쓰지 않고 `SECTION_Y`·
+ * `SECTION_X`를 직접 조합한다. "전폭 모드" prop을 달아 두면 호출부가 둘 중
+ * 무엇인지 읽으려고 이 파일까지 와야 한다.
+ */
 export function Section({
   id,
   className,
   children,
-  /** 컨테이너 없이 전폭으로 쓴다(스티키 스택처럼 화면을 채우는 섹션) */
-  bleed = false,
 }: {
   id?: string
   className?: string
   children: React.ReactNode
-  bleed?: boolean
 }) {
   return (
     <section id={id} className={cn('relative', SECTION_Y, className)}>
-      {bleed ? children : <div className={SECTION_X}>{children}</div>}
+      <div className={SECTION_X}>{children}</div>
     </section>
   )
 }

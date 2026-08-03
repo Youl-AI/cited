@@ -68,4 +68,19 @@ describe('StickyStack — 스티키 스택', () => {
     const { container } = render(<StickyStack cards={[]} />)
     expect(container.querySelectorAll('.stack-card')).toHaveLength(0)
   })
+
+  it('기본값은 목록이 아니다 — 순서 없는 카드 더미에 목록을 씌우지 않는다', () => {
+    render(<StickyStack cards={cards} />)
+    expect(screen.queryByRole('list')).toBeNull()
+  })
+
+  it('`ordered`면 목록 시맨틱이 선다 — 스크린리더가 "3개 중 n"을 읽는다', () => {
+    // 눈에 보이는 번호만으로는 순서가 시맨틱에 없다. 호출부가 `<ol>`을 세워도
+    // 이 컴포넌트가 div로 감싸면 그 시맨틱이 사라진다(실제로 그랬다).
+    const { container } = render(<StickyStack ordered cards={cards} />)
+    expect(container.querySelector('ol')).not.toBeNull()
+    expect(screen.getAllByRole('listitem')).toHaveLength(3)
+    // 핀 대상은 여전히 `.stack-card`다 — 시맨틱을 바꿔도 모션 계약은 그대로다.
+    expect(container.querySelectorAll('li.stack-card')).toHaveLength(3)
+  })
 })
