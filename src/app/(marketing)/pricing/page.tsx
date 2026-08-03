@@ -117,12 +117,17 @@ const ROWS: readonly { label: string; value: (id: PlanId) => React.ReactNode }[]
   { label: '경쟁사', value: (id) => countCell(PLANS[id].maxCompetitors, '개') },
   { label: '브랜드', value: (id) => countCell(PLANS[id].maxBrands, '개') },
   { label: '이력 보관', value: (id) => historyCell(PLANS[id].historyMonths) },
-  { label: 'CSV 내보내기', value: (id) => (PLANS[id].csvExport ? '가능' : '—') },
+  // '없음'이지 대시가 아니다. 마케팅 화면에서 em-dash는 쓰지 않고(tasteskill §9.G),
+  // 표 안의 대시는 "값이 없다"인지 "해당 없음"인지도 읽는 사람이 추측하게 만든다.
+  { label: 'CSV 내보내기', value: (id) => (PLANS[id].csvExport ? '가능' : '없음') },
 ]
 
 export default function PricingPage() {
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-24">
+    // `pt-24`는 여백 취향이 아니라 **떠 있는 머리글의 자리**다. 마케팅 머리글은
+    // `fixed`(높이 72px)라 문서 흐름을 차지하지 않는다. 이보다 줄이면 첫 줄이
+    // 유리 알약 밑으로 들어간다.
+    <div className="mx-auto w-full max-w-6xl px-6 pt-24 pb-16 sm:pb-24">
       <p className="text-sm font-medium tracking-wide text-muted-foreground">요금제</p>
       <h1 className="mt-4 max-w-2xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
         측정 횟수가 곧 신뢰구간의 넓이입니다
@@ -221,8 +226,8 @@ export default function PricingPage() {
       <section className="mt-16 rounded-lg border border-border bg-muted/30 p-6 sm:p-7">
         <h2 className="text-base font-semibold">질의를 더 넣고 싶으면</h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          질의 <Num>{QUERY_PACK_SIZE}</Num>개 단위로 추가할 수 있습니다 — 월{' '}
-          <Num>{QUERY_PACK_PRICE_KRW.toLocaleString('ko-KR')}</Num>원. 질의를 늘리면 측정 횟수가 그만큼 늘어나므로 원가가 그대로 따라옵니다.
+          질의 <Num>{QUERY_PACK_SIZE}</Num>개 단위로 추가할 수 있습니다. 월{' '}
+          <Num>{QUERY_PACK_PRICE_KRW.toLocaleString('ko-KR')}</Num>원입니다. 질의를 늘리면 측정 횟수가 그만큼 늘어나므로 원가가 그대로 따라옵니다.
         </p>
       </section>
 

@@ -442,6 +442,18 @@ describe('마케팅 다크 스코프 — 같은 뜻, 다른 표면', () => {
     }
   })
 
+  it('마케팅이 열리면 루트도 다크로 넘어간다 — 창 스크롤바가 밝은 채 남으면 안 된다', () => {
+    // `.surface-dark`는 자기 서브트리만 바꾼다. 뷰포트 스크롤바와 오버스크롤
+    // 캔버스는 루트 요소가 정하므로 래퍼가 손댈 수 없다.
+    expect(css).toMatch(/html:has\(\.surface-dark\)\s*\{\s*color-scheme:\s*dark;/)
+
+    // 그리고 그 캔버스 색은 다크 표면의 배경과 **같은 값**이어야 한다. 여기서는
+    // var(--background)를 쓸 수 없어서(그 변수는 래퍼 안쪽에서만 다크다) 값을
+    // 한 번 더 적었고, 그래서 갈라질 수 있다. 갈라지면 여기서 걸린다.
+    const rule = /html:has\(\.surface-dark\)\s+body\s*\{\s*background-color:\s*([^;]+);/.exec(css)
+    expect(rule?.[1]?.trim()).toBe(readToken('background', darkBlock))
+  })
+
   it('다크 표면의 기본 칠은 base 레이어에 있다 — 유틸리티가 이겨야 한다', () => {
     // 언레이어로 두면 같은 특이도(0,1,0)의 bg-*·text-*를 레이어 순서로 이겨
     // 버려서, 래퍼에 붙인 배경 오버라이드가 통째로 죽는다.

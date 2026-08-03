@@ -314,12 +314,9 @@
   /* 이 서브트리 안에서 **브라우저가 그리는 것들**을 다크로 넘긴다: 기본 폼
      컨트롤·자동완성 배경·select 팝업, 그리고 이 안에 있는 스크롤 컨테이너의
      스크롤바.
-     ★ 다만 **뷰포트(창) 스크롤바는 여기가 정하지 못한다** — 그건 루트 요소의
-       color-scheme이 결정하고, 루트는 :root의 `light`다. 즉 마케팅 페이지를
-       전체 스크롤할 때 창 스크롤바는 밝은 채로 남는다. 래퍼가 아니라 <html>에
-       색 스킴을 걸어야 바뀌는데, 그러면 앱 라우트까지 물린다.
-       Task 3에서 실물로 확인하고, 거슬리면 마케팅 레이아웃이 <html>에
-       색 스킴을 얹는 방식(라우트 그룹 단위)을 따로 검토한다. */
+     ★ 뷰포트(창) 스크롤바는 여기가 정하지 못한다 — 그건 루트 요소의
+       color-scheme이 결정한다. 파일 끝의 `html:has(.surface-dark)` 규칙이
+       그 몫을 맡는다(라우트 그룹 단위로 켜지고 꺼진다). */
   color-scheme: dark;
 
   --background: oklch(0.155 0.008 258); /* #0a0c10 · 순수 검정 아님 */
@@ -452,6 +449,24 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* 히어로 H1. 크기·굵기·자간을 한 곳에 둔다 — 마케팅 화면이 늘어날 때마다
+     clamp 수식을 컴포넌트에 다시 적으면 화면마다 다른 스케일이 생긴다.
+     ★ clamp의 두 끝은 임의값이 아니라 **줄 수 계약**이다. H1 문장의 자연 폭은
+       약 23.2em(SUIT 기준 한글 1em·공백 0.28em으로 계산)이고, 두 어절 덩어리
+       중 긴 쪽이 11.84em이다. 즉 컨테이너 폭이 11.84em~23.2em 안에 있으면
+       **정확히 2줄**이다.
+       - 상한 2.75rem: 호출부의 `max-w-[20em]`(< 23.2em)이 한 줄을 막고,
+         히어로 좌측 컬럼(xl에서 약 13.7em > 11.84em)이 세 줄을 막는다.
+       - 하한 1.75rem: 좁은 화면에서 줄 수가 늘어나는 것은 정상이지만
+         **네 줄은 실패**다(gpt-taste §3). 320px 폭에서 가장 긴 어절 덩어리가
+         한 줄에 들어가는 마지막 크기가 이 값이다. */
+  .hero-display {
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+    line-height: 1.16;
+    font-weight: 800;
+    letter-spacing: var(--tracking-tighter);
+  }
+
   /* 모션 전역 킬 스위치. 움직임을 줄여 달라는 사용자에게는 전부 끈다 —
      개별 컴포넌트(GSAP·Motion 포함)가 각자 기억할 일이 아니다.
      ★ 지속시간만 줄이면 안 된다. 스태거 등장(--motion-stagger × 순번)과
@@ -467,5 +482,89 @@
       animation-delay: 0.01ms !important;
       transition-delay: 0ms !important;
     }
+  }
+}
+
+@layer components {
+  /* 등장 오케스트레이션 — **히어로 전용, JS 없이.**
+     ★ 왜 `Reveal`(Motion whileInView)을 쓰지 않는가: 그쪽은 프리렌더 HTML에
+       인라인 `opacity:0`을 박고 하이드레이션 뒤에야 풀린다. 첫 화면 요소에
+       그걸 걸면 **LCP가 JS 뒤로 밀린다**(브라우저는 완전 투명한 페인트를
+       LCP로 세지 않는다). 청크 하나가 실패하면 히어로가 통째로 빈 화면이 되는
+       위험도 같이 온다. CSS 애니메이션은 스타일시트가 오는 즉시 시작하므로
+       첫 페인트 다음 프레임에 이미 보인다.
+     ★ reduced-motion은 위 킬 스위치가 처리한다 — duration·delay가 0.01ms로
+       중화되고 `both`가 마지막 프레임을 붙잡으므로 "끝난 상태로 시작"이 된다.
+     스크롤해서 만나는 아래 섹션은 계속 `Reveal`이다(뷰포트 진입 판정이 필요하고,
+     그 요소들은 LCP 후보가 아니다). */
+  .enter-rise {
+    animation: enter-rise var(--motion-reveal) var(--ease-glide) both;
+  }
+
+  @keyframes enter-rise {
+    from {
+      opacity: 0;
+      /* transform·opacity만 움직인다(GPU 합성). 높이·여백은 건드리지 않는다. */
+      transform: translateY(1.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* 유리 표면(soft-skill §3.A "Ethereal Glass").
+     ★ **고정·스티키 요소에만 붙인다.** 스크롤하는 컨테이너에 backdrop-filter를
+       걸면 매 프레임 배경을 다시 합성해서 모바일 FPS가 무너진다
+       (soft-skill §6 · tasteskill §6.E). 지금 쓰는 곳은 마케팅 머리글 하나다.
+     배경색·테두리는 유틸리티로 붙인다 — 여기는 필터만 정의해서, 표면마다
+     다른 틴트를 줄 수 있게 남긴다. */
+  /* ★ 접두사를 손으로 적지 않는다. Lightning CSS(Tailwind v4의 변환기)가
+     타깃 브라우저를 보고 붙인다. 실측: `backdrop-filter`와
+     `-webkit-backdrop-filter`를 나란히 적었더니 산출물에 **웹킷 접두사만**
+     남았다(파이어폭스는 접두사판을 모른다). 하나만 적는 쪽이 맞다. */
+  .glass {
+    backdrop-filter: blur(20px) saturate(140%);
+  }
+}
+
+/* ★ 언레이어다(레이어 안에 두면 안 된다). 투명도를 줄여 달라는 사용자에게
+   유리를 불투명하게 되돌리는 규칙인데, 배경 틴트는 `bg-card/70` 같은
+   **유틸리티**로 붙어 있다. 레이어 순서상 utilities가 components를 이기므로
+   레이어 안에서는 이 되돌림이 조용히 무시된다. 언레이어는 모든 레이어를 이긴다.
+   `prefers-reduced-transparency`는 브라우저 지원이 고르지 않다 — blur가 없어도
+   읽히도록 대비를 먼저 확보해 두고, 이 규칙은 그 위의 보강이다. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    backdrop-filter: none;
+    background-color: var(--card);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   루트 대응 — 마케팅 표면이 열려 있는 동안만
+   `.surface-dark`는 자기 서브트리만 다크로 만든다. 창(뷰포트) 스크롤바와
+   오버스크롤로 드러나는 캔버스는 **루트 요소**가 정하므로 래퍼가 손대지 못한다
+   (실제로 다크 랜딩 옆에 밝은 스크롤바가 남는다). `:has()`로 "다크 표면이
+   문서 안에 있을 때만" 루트를 넘긴다 — 라우트를 옮기면 저절로 꺼지므로
+   `.dark` 전역 토글을 만들지 않겠다는 원칙이 그대로 유지된다.
+
+   ★ 언레이어 + `@media screen`인 이유:
+     - 언레이어 — body의 `bg-background`는 utilities 레이어라 base 규칙으로는
+       못 이긴다.
+     - screen 한정 — 그 결과로 루트 레이아웃의 `print:bg-white`(역시 utilities)
+       까지 이겨 버리면 인쇄물 여백이 검게 나온다. 마케팅 화면을 인쇄할 일은
+       없지만, 인쇄 경로를 이긴 채로 두지 않는다.
+   ★ 값이 `.surface-dark`의 --background과 **같아야 한다**. 여기서 var()를 쓸
+     수 없다(그 변수는 래퍼 안쪽에서만 다크다). tests/design-tokens.test.ts가
+     두 값이 같은지 계산해서 잠근다.
+--------------------------------------------------------------------------- */
+@media screen {
+  html:has(.surface-dark) {
+    color-scheme: dark;
+  }
+
+  html:has(.surface-dark) body {
+    background-color: oklch(0.155 0.008 258);
   }
 }

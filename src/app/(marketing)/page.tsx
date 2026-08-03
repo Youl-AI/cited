@@ -1,11 +1,13 @@
 import Link from 'next/link'
-import { AnswerSpecimen } from '@/components/audit/answer-specimen'
 import { AUDIT_FLOW } from '@/components/audit/flow'
 import { QueryProtocol } from '@/components/audit/query-protocol'
 import { RequestForm } from '@/components/audit/request-form'
+import { SPECIMEN } from '@/components/marketing/actuals'
+import { GlassPanel } from '@/components/marketing/glass-panel'
+import { Hero } from '@/components/marketing/hero'
+import { Reveal } from '@/components/motion/reveal'
 import { Button } from '@/components/ui/button'
 import { PLANS, engineLabels } from '@/lib/plans'
-import { formatInterval, formatPercent, wilsonInterval } from '@/lib/stats/wilson'
 
 /**
  * 랜딩.
@@ -20,33 +22,17 @@ import { formatInterval, formatPercent, wilsonInterval } from '@/lib/stats/wilso
  * 그리고 랜딩에서 본 것과 리포트에서 받는 것이 **같은 컴포넌트**다
  * (`AnswerSpecimen`). "이거 진짜야?"에 대한 답이 그 일치에서 나온다.
  *
- * ## 아래 답변은 실측이다
+ * ## 구조 (AIDA — gpt-taste §2)
  *
- * 2026-07-30 `pnpm audit:run`으로 실제 ChatGPT에 물어 받은 답변의 일부다.
- * 지어낸 예시를 쓰면 첫 리포트에서 톤이 달라지고, 그 차이가 바로 의심이 된다.
- * `docs/superpowers/notes/2026-07-30-first-audit-actuals.md` 참고.
+ * Attention 히어로 · Action(신청 폼, 히어로 직하) · Interest(질의 공개 ·
+ * 리포트 내용) · Desire(순서 · 한계). 신청 폼이 위쪽에 있는 것은 의도다 —
+ * 이 페이지의 유일한 전환 지점이고, 스크롤 끝까지 읽어야 신청할 수 있는
+ * 페이지는 신청을 읽기의 보상으로 만든다.
+ *
+ * 실측 데이터(답변 원문·언급률)는 `components/marketing/actuals.ts` 한 곳에
+ * 있다. 히어로와 질의 프로토콜이 **같은 표본**을 가리켜야 "위 표본의 질문"
+ * 표시가 성립한다.
  */
-
-const SPECIMEN = {
-  engineId: 'chatgpt',
-  query: '30대 남자 옷 어디서 사는 게 좋아?',
-  text: `좋아요 — 스타일·예산에 따라 다릅니다. 간단히 정리할게요.
-
-- 온라인 / 편리: 무신사(스트리트·캐주얼), W컨셉(디자이너), 29CM·쿠팡·지마켓(빠른 배송).
-- 베이식·미니멀(30대에 무난): 유니클로, COS, 무탠다드.`,
-  // ★ 등록한 브랜드만 표시한다. W컨셉·쿠팡·유니클로는 평문으로 남는다 —
-  //   우리는 고객이 등록하지 않은 브랜드를 셀 수 없고, 그 사실을 감추면
-  //   언급 점유율을 오해하게 된다. 이 규칙 하나가 그 주의사항을 가르친다.
-  //
-  // ★ 순서 번호는 **자기 브랜드에만** 붙인다. 리포트가 정확히 그렇게 그린다
-  //   (`evidenceMarks`) — 랜딩에서 본 것과 배송물이 달라지면 "이거 진짜야?"가
-  //   되살아난다. 여기 표시 규칙을 바꾸려면 그쪽도 같이 봐야 한다.
-  marks: [
-    { text: '무신사', position: 1, isSelf: true },
-    { text: '무탠다드', position: 1, isSelf: true },
-    { text: '29CM', isSelf: false },
-  ],
-} as const
 
 /** 무료 진단이 실제로 무엇을 보내는가. 순서가 없는 목록이므로 번호를 붙이지 않는다. */
 const DELIVERABLES = [
@@ -68,111 +54,45 @@ const DELIVERABLES = [
   },
 ] as const
 
-/**
- * 위 답변이 속한 측정의 **실제 결과**. 같은 실행에서 나온 숫자다
- * (`notes/2026-07-30-first-audit-actuals.md`).
- *
- * ★ 히어로에서 이미 신뢰구간을 보여준다. 이 제품의 정체성이 "숫자"가 아니라
- *   "그 숫자를 얼마나 믿어도 되는가"이므로, 구간을 뒤쪽 섹션으로 미루면
- *   가장 중요한 차별점을 스크롤 아래에 숨기는 것이 된다.
- */
-const MEASURED = {
-  cited: wilsonInterval(5, 6),
-  byEngine: [
-    { engine: 'ChatGPT', interval: wilsonInterval(3, 3) },
-    { engine: 'Gemini', interval: wilsonInterval(2, 3) },
-  ],
-} as const
-
-// 신청 순서는 `components/audit/flow.tsx`에 한 벌만 둔다 — 폼 안의 압축판과
+// 신청 순서는 `components/audit/flow.tsx`에 한 벌만 둔다. 폼 안의 압축판과
 // 아래 섹션이 갈리면 "영업일 1일"이 한쪽에서만 사라지는 식으로 약속이
 // 조용히 달라진다.
 
 export default function HomePage() {
   return (
     <>
-      {/* ── 히어로 ───────────────────────────────────────────── */}
-      <section className="mx-auto w-full max-w-6xl px-6 pt-16 pb-20 sm:pt-24">
-        {/* ★ mono를 쓰지 않는다. mono에는 한글 글리프가 없어서 "한국어"와
-            "모니터링"만 시스템 서체로 떨어지고, 한 줄 안에서 서체가 세 번
-            갈린다(실제로 그렇게 보였다). 그리고 이건 계측값이 아니라 말이다 —
-            "sans는 말, mono는 계측값" 규칙을 여기서도 지킨다. */}
-        <p className="text-sm font-medium tracking-wide text-muted-foreground">
-          한국어 GEO 모니터링
-        </p>
-        <h1 className="mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-          고객이 AI에게 물었을 때, 우리 브랜드가 불리고 있나
-        </h1>
-        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-          검색 순위는 우리가 올릴 수 있습니다. AI 답변은 그렇지 않습니다. Cited는 ChatGPT와
-          Gemini에 직접 물어보고, 답변에 브랜드가 나왔는지 세어 기록합니다.
-        </p>
+      <Hero />
 
-        <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-12">
-          {/* 서명 요소 — 남의 문장 하나. */}
-          <div>
-            <AnswerSpecimen
-              engineId={SPECIMEN.engineId}
-              query={SPECIMEN.query}
-              text={SPECIMEN.text}
-              marks={SPECIMEN.marks}
-              footer={<span>2026-07-30 실측 · 밑줄이 우리가 센 브랜드입니다</span>}
-            />
-            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              표시가 없는 브랜드는{' '}
-              <strong className="font-medium text-foreground">등록되지 않아 세지 않은 것</strong>
-              입니다. 우리는 알려주신 브랜드만 셀 수 있습니다 — 그래서 경쟁사를 적게 넣으면
-              점유율이 실제보다 높게 보입니다. 리포트에 분모를 항상 함께 적는 이유입니다.
-            </p>
-
-            {/* 같은 측정의 결과. 답변 바로 아래에 붙여야 "무엇을 보고 무엇이
-                나오는가"가 한 눈에 이어진다. */}
-            <div className="mt-8 rounded-lg border border-border bg-muted/30 p-5">
-              <p className="text-sm font-medium">위 측정의 결과</p>
-              <div className="mt-3 flex flex-wrap items-baseline gap-x-3">
-                <span className="font-mono text-3xl font-semibold tracking-tighter tabular-nums">
-                  {formatPercent(MEASURED.cited.point)}
-                </span>
-                <span className="font-mono text-xs text-muted-foreground">
-                  {formatInterval(MEASURED.cited)}
-                </span>
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                답변 <span className="font-mono tabular-nums">{MEASURED.cited.n}</span>개 중{' '}
-                <span className="font-mono tabular-nums">{MEASURED.cited.k}</span>개에서 언급
-              </p>
-              <dl className="mt-4 space-y-1.5 border-t border-border pt-3 text-sm">
-                {MEASURED.byEngine.map((row) => (
-                  <div key={row.engine} className="flex items-baseline justify-between gap-4">
-                    <dt className="text-muted-foreground">{row.engine}</dt>
-                    <dd className="font-mono tabular-nums">
-                      {formatPercent(row.interval.point)}
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {formatInterval(row.interval)}
-                      </span>
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-              {/* ★ 옆의 범위가 왜 그렇게 넓은지 말하지 않으면, 숫자를 못 믿을
-                  제품으로 읽힌다. 넓이의 원인이 측정 횟수라는 걸 여기서 밝힌다. */}
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                옆의 범위가 넓은 것은 <span className="font-mono tabular-nums">1</span>회만
-                측정했기 때문입니다. 여러 번 재면 좁아집니다.
-              </p>
-            </div>
-          </div>
-
-          {/* 폼 — 히어로 안에 둔다. 스크롤해서 찾게 만들 이유가 없다. */}
-          <div className="rounded-lg border border-border bg-card p-6 sm:p-7">
-            <h2 className="text-xl font-semibold tracking-tight">무료 진단 신청</h2>
-            <p className="mt-2 mb-6 text-sm text-muted-foreground">
+      {/* ── 신청 ─────────────────────────────────────────────
+          히어로 CTA(`#request`)가 여기로 온다. `scroll-mt-24`가 없으면 앵커로
+          점프했을 때 제목이 떠 있는 머리글 밑으로 들어간다. */}
+      <section
+        id="request"
+        className="mx-auto w-full max-w-6xl scroll-mt-24 px-6 pb-20 sm:pb-28"
+      >
+        <div className="grid gap-10 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:gap-14">
+          <Reveal index={0}>
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">무료 진단 신청</h2>
+            <p className="mt-4 max-w-[34em] text-base leading-relaxed text-muted-foreground">
               질의 <span className="font-mono tabular-nums">{PLANS.free.maxQueries}</span>개를{' '}
               <span className="font-mono tabular-nums">1</span>회 측정해 메일로 보내드립니다.
               결제 정보는 받지 않습니다.
             </p>
-            <RequestForm />
-          </div>
+            {/* 히어로의 표시 규칙 설명이 이어지는 자리다. 경쟁사를 실제로
+                입력하는 칸 바로 옆이라, 여기서 읽어야 결정에 쓸 수 있다. */}
+            <p className="mt-5 max-w-[34em] text-sm leading-relaxed text-muted-foreground">
+              우리는 알려주신 브랜드만 셀 수 있습니다. 경쟁사를 적게 넣으면 점유율이 실제보다
+              높게 보입니다. 리포트에 분모를 항상 함께 적는 이유입니다.
+            </p>
+          </Reveal>
+
+          <Reveal index={1}>
+            <GlassPanel>
+              <div className="p-6 sm:p-8">
+                <RequestForm />
+              </div>
+            </GlassPanel>
+          </Reveal>
         </div>
       </section>
 
@@ -180,7 +100,7 @@ export default function HomePage() {
           "직접 물어서 확인하실 수 있습니다"라는 약속을 실행 가능하게 만드는
           섹션이다. 질의는 고정 템플릿이라 공개해도 잃을 것이 없고, 방문자가
           30초 안에 본인 손으로 검증하는 것이 어떤 문구보다 강하다.
-          여기 질의는 측정 파이프라인과 **같은 함수**가 만든다 — 어긋날 수 없다. */}
+          여기 질의는 측정 파이프라인과 **같은 함수**가 만든다. 어긋날 수 없다. */}
       <section className="border-t border-border">
         <div className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -188,7 +108,7 @@ export default function HomePage() {
           </h2>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
             질문은 업종마다 고정된 템플릿이고, <strong className="font-medium text-foreground">브랜드명을
-            넣지 않습니다</strong> — 이름을 대고 물으면 AI는 당연히 그 브랜드를 말하니까요.
+            넣지 않습니다</strong>. 이름을 대고 물으면 AI는 당연히 그 브랜드를 말하니까요.
             그대로 복사해 ChatGPT에 붙여넣어 보세요.
           </p>
 
@@ -200,7 +120,7 @@ export default function HomePage() {
               그 순간 "틀렸네?"가 되면 섹션이 역효과다. 그 차이가 바로 이 제품이
               측정하는 대상(변동성)임을 먼저 말해 둔다. */}
           <p className="mt-6 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            받은 답이 위 표본과 달라도 정상입니다. AI 답변은 물을 때마다 바뀝니다 — 한 번의
+            받은 답이 위 표본과 달라도 정상입니다. AI 답변은 물을 때마다 바뀝니다. 한 번의
             측정에 신뢰구간을 붙이는 이유가 그것입니다.
           </p>
         </div>
@@ -224,7 +144,7 @@ export default function HomePage() {
       </section>
 
       {/* ── 순서 ─────────────────────────────────────────────
-          번호를 붙인다 — 이건 장식이 아니라 실제 순서이고, 읽는 사람이
+          번호를 붙인다. 이건 장식이 아니라 실제 순서이고, 읽는 사람이
           "지금 어디쯤인가"를 알아야 하는 정보다. */}
       <section className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
         <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">신청하면</h2>
@@ -243,7 +163,7 @@ export default function HomePage() {
 
       {/* ── 한계 ─────────────────────────────────────────────
           팔기 전에 못 하는 것을 먼저 말한다. 1회 측정의 한계를 우리가 먼저
-          꺼내지 않으면, 고객이 리포트를 받고 스스로 발견한다 — 그때는
+          꺼내지 않으면, 고객이 리포트를 받고 스스로 발견한다. 그때는
           "숨겼다"가 된다. */}
       <section className="border-t border-border">
         {/* 위 섹션들과 같은 좌측 정렬선을 쓴다. max-w-3xl을 그대로 중앙에 두면

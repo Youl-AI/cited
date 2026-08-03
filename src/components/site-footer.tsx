@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Wordmark } from '@/components/wordmark'
 import { BUSINESS_INFO as B } from '@/lib/business-info'
 
 /**
@@ -44,18 +45,7 @@ export function SiteFooter() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
         <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-3">
-            <Link
-              href="/"
-              className="group inline-flex items-baseline gap-px rounded-sm text-base font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-            >
-              Cited
-              <span
-                aria-hidden="true"
-                className="font-mono text-[0.6em] leading-none text-muted-foreground transition-colors group-hover:text-primary"
-              >
-                [1]
-              </span>
-            </Link>
+            <Wordmark className="text-base" />
             {/* ★ 지금 실제로 하는 것만 적는다. 이전 문구는 "네이버 AI 브리핑 ·
                 Google AI Overviews에서 브랜드 언급을 **매주 자동 추적**"이었는데,
                 그 두 엔진은 아직 붙지 않았고 정기 측정도 열리지 않았다. 이용약관은

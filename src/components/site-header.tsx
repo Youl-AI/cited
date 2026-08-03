@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Wordmark } from '@/components/wordmark'
 import { signOut } from '@/lib/auth-client'
 
 /** 로그인 영역의 상단 내비게이션. 순서는 쓰는 빈도 순이다. */
@@ -70,21 +71,10 @@ export function SiteHeader({ user }: { user?: HeaderUser }) {
         {/* ★ 로그인 상태에서도 `/`로 간다. 원래는 `/dashboard`였는데, 지금
             대시보드는 5단계 전까지 빈 스텁이라 **거기서 나갈 길이 없었다** —
             로고를 눌러도 제자리, 설정·결제는 "준비 중". 실제로 그렇게 갇혔다.
-            대시보드가 내용을 갖게 되면 `user ? '/dashboard' : '/'`로 되돌린다. */}
-        <Link
-          href="/"
-          className="group inline-flex items-baseline gap-px rounded-sm text-lg font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-        >
-          Cited
-          {/* 각주 표식. 인용된 문장 뒤에 붙는 바로 그 기호이고, 이 제품이
-              하는 일 자체다. 읽어 줄 내용은 없으므로 보조기기에는 숨긴다. */}
-          <span
-            aria-hidden="true"
-            className="font-mono text-[0.6em] leading-none text-muted-foreground transition-colors group-hover:text-primary"
-          >
-            [1]
-          </span>
-        </Link>
+            대시보드가 내용을 갖게 되면 `user ? '/dashboard' : '/'`로 되돌린다.
+            마케팅 머리글·바닥글과 같은 워드마크를 쓴다(`components/wordmark.tsx`) —
+            세 곳에 따로 적어 두면 각주 표식이 한 곳에서만 사라진다. */}
+        <Wordmark className="text-lg" />
 
         {user ? (
           <nav className="flex items-center gap-1 text-sm">
