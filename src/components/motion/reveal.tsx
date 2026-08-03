@@ -51,9 +51,12 @@ export function Reveal({
       //   프레임 투명하게 지나가고, 인쇄 매체에서는 아예 안 보일 수 있다.
       initial={reduce ? false : { opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
-      // `once: true` — 되돌아 스크롤할 때 다시 사라졌다 나타나면 콘텐츠가
-      // 깜빡이는 장식이 된다. `amount: 0.3`은 요소가 30% 보일 때 시작.
-      viewport={{ once: true, amount: 0.3 }}
+      // `once: false` — 양방향이다. 내려가며 만나도, 올라오며 다시 만나도
+      // 같은 등장을 한다(사용자 결정: 위로 스크롤할 때도 페이지가 살아 있어야
+      // 한다). 문턱 떨림은 Motion의 교차 판정이 amount 기준으로 이력을
+      // 가져서 실사용 스크롤에서는 나타나지 않는다. `amount: 0.3`은 요소가
+      // 30% 보일 때 시작.
+      viewport={{ once: false, amount: 0.3 }}
       transition={{
         duration: REVEAL_DURATION_S,
         delay: index * REVEAL_STAGGER_S,

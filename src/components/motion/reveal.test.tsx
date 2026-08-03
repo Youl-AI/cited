@@ -35,7 +35,7 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('Reveal — Motion whileInView 리빌', () => {
-  it('자식을 렌더하고 viewport-once 리빌 래퍼를 단다', () => {
+  it('자식을 렌더하고 viewport 리빌 래퍼를 단다 (양방향, once:false)', () => {
     render(<Reveal index={2}>내용</Reveal>)
     expect(screen.getByText('내용')).toBeTruthy()
   })
