@@ -24,11 +24,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader user={{ name: user.name, email: user.email }} />
-      {/* id·tabindex는 루트 레이아웃의 "본문으로 건너뛰기" 링크가 쓴다. */}
+      {/* id·tabindex는 루트 레이아웃의 "본문으로 건너뛰기" 링크가 쓴다.
+          ★ 좌우 여백은 머리글(`px-4 sm:px-6`)과 **같은 값이어야 한다.** 다르면
+            워드마크와 첫 카드의 왼쪽 모서리가 어긋나서, 화면 전체가 미묘하게
+            비뚤어 보인다(세로선 하나가 어긋나는 것이 가장 눈에 띈다).
+            `max-w-6xl`도 머리글과 같다.
+          ★ 위아래 여백이 비대칭인 것은 의도다(redesign-skill Layout —
+            "symmetrical vertical padding"). 머리글은 스티키라 늘 화면에 붙어 있어서 위쪽은 이미
+            닫혀 있는 반면, 아래쪽은 푸터까지가 열린 공간이다. 광학적으로
+            같아 보이려면 아래가 더 커야 한다 — 40/56px에서 시작한다. */}
       <main
         id="main"
         tabIndex={-1}
-        className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 outline-none"
+        className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-12 outline-none sm:px-6 sm:pt-10 sm:pb-14 lg:pt-12 lg:pb-16"
       >
         {children}
       </main>

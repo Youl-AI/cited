@@ -548,6 +548,59 @@
     }
   }
 
+  /* 스켈레톤 셔머 — `animate-pulse` 대체.
+     ★ 왜 대체했나: `animate-pulse`는 **불투명도만** 깜박인다. 그건 "무언가
+       로딩 중"이라는 신호이지 "여기에 무엇이 올 것인가"라는 신호가 아니고,
+       화면 전체가 같은 박자로 명멸해서 계기판이 고장 난 것처럼 읽힌다
+       (redesign-skill Interactivity: "skeleton loaders that match the layout
+       shape"). 셔머는 왼쪽에서 오른쪽으로 한 번 훑고 지나가므로 **읽는 방향**을
+       그대로 따라가고, 여러 스켈레톤이 같이 있어도 시선이 한 줄기로 흐른다.
+     ★ 모양은 호출부가 정한다. 이 클래스는 "바닥색 + 훑고 지나가는 빛"만 담고,
+       크기·반경·배치는 `<Skeleton className="…">`가 실제 콘텐츠 상자와 같은
+       치수로 넘긴다.
+     ★ 성능(soft-skill §6): 움직이는 것은 `transform`뿐이다. 배경 위치·너비를
+       애니메이션하면 매 프레임 페인트가 다시 돈다.
+     ★ 무한 루프인 것은 의도다 — 로딩이 언제 끝날지 모르는 표시이므로 멈추면
+       "고장난 화면"이 된다. reduced-motion에서는 base 레이어의 킬 스위치가
+       iteration-count를 1로, duration을 0.01ms로 눌러 **훑는 빛이 즉시 오른쪽
+       끝(화면 밖)으로 사라지고** 무채색 바닥만 남는다 — 정적 스켈레톤이다. */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--muted);
+  }
+
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      oklch(1 0 0 / 0.65),
+      transparent
+    );
+    animation: skeleton-sweep 1.6s var(--ease-instrument) infinite;
+  }
+
+  /* 다크 표면에서는 흰 빛을 그대로 쓰면 바닥(--muted 0.25)을 덮어 버린다.
+     반사광이지 조명이 아니므로 아주 얇게. */
+  .surface-dark .skeleton::after {
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      oklch(1 0 0 / 0.07),
+      transparent
+    );
+  }
+
+  @keyframes skeleton-sweep {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
   /* 유리 표면(soft-skill §3.A "Ethereal Glass").
      ★ **고정·스티키 요소에만 붙인다.** 스크롤하는 컨테이너에 backdrop-filter를
        걸면 매 프레임 배경을 다시 합성해서 모바일 FPS가 무너진다
