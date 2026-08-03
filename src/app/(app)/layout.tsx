@@ -43,8 +43,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </main>
       {/* ★ 푸터에는 전자상거래법 제10조가 요구하는 사업자 표시가 들어 있다.
           `SiteShell`(공개 화면)에는 붙어 있는데 여기만 빠져 있었다 — 로그인
-          구간 세 화면에서 그 표시가 통째로 없었다는 뜻이다. */}
-      <SiteFooter />
+          구간 세 화면에서 그 표시가 통째로 없었다는 뜻이다.
+          ★ `contents print:hidden` — 인쇄물에 화면 크롬(내비게이션·푸터 링크)을
+            찍지 않는다. `SiteShell`이 공개 화면에서 쓰는 것과 **같은 래퍼**이고,
+            로그인 구간에는 그것이 없어서 회차 상세를 브라우저에서 인쇄하면
+            푸터가 마지막 장에 따라 나왔다(머리글 쪽 짝은 `site-header.tsx`가
+            자기 자신에게 들고 있다).
+            래퍼가 `contents`인 이유도 `SiteShell`과 같다: 평범한 div로 감싸면
+            바깥 `flex min-h-dvh flex-col`의 항목이 하나 더 생겨 `flex-1`
+            분배가 바뀐다. `display: contents`는 박스를 만들지 않아 화면
+            레이아웃이 그대로고, 인쇄에서는 `print:hidden`이 하위 전체를 숨긴다.
+            사업자 표시 의무는 화면에서 이행된다 — 인쇄물은 그 표시의 게시
+            매체가 아니다(PDF 납품 경로에서도 이미 숨겨져 있었다). */}
+      <div className="contents print:hidden">
+        <SiteFooter />
+      </div>
     </div>
   )
 }

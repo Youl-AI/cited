@@ -34,13 +34,19 @@ export default async function RunDetailPage({
           {/* 화살표만 되돌아간다 — 방향을 손끝에 붙여 주는 최소량이다.
               `aria-hidden`인 이유: 낭독은 "대시보드"면 충분하고, 화살표까지
               읽으면 링크 이름이 기호로 시작한다.
-              ★ `transition-transform`이 **아니라** `transition-[translate]`이다.
-                Tailwind v4는 `-translate-x-0.5`를 `transform`이 아니라 독립
-                `translate` 속성으로 낸다(빌드 산출물 실측:
-                `--tw-translate-x:…;translate:var(--tw-translate-x) …`).
-                `transform`만 적으면 전이가 붙지 않아 화살표가 뚝 끊긴다 —
-                `.motion-press`가 `scale`에서 겪은 것과 같은 함정이고,
-                `run-list.tsx`의 쐐기가 쓰는 형태와 같게 맞춘다. */}
+              ★ `transition-[translate]`인 이유는 **더 좁게 선언하기 위해서**다.
+                Tailwind v4에서 `-translate-x-0.5`는 독립 `translate` 속성으로
+                나오고(`--tw-translate-x:…;translate:var(--tw-translate-x) …`),
+                `transition-transform` 유틸리티는 그걸 포함한다 — 실측:
+                `transition-property:transform,translate,scale,rotate`. 즉
+                **둘 다 동작한다.** 여기서 굳이 좁히는 것은 이 span이 움직이는
+                것이 translate 하나뿐이라, 쓰지 않는 세 속성까지 전이 목록에
+                올려 두지 않기 위해서다(`transition-all`을 쓰지 않는 것과 같은
+                이유 — button.tsx 주석). `run-list.tsx`의 쐐기도 같은 형태다.
+                ※ globals.css `.motion-press`가 `scale`을 **직접 적어야 했던**
+                  것은 그쪽이 유틸리티가 아니라 손으로 쓴 `transition-property`
+                  선언이기 때문이다. 원시 CSS의 `transform`은 `scale`을 포함하지
+                  않는다 — 유틸리티의 확장 목록과 혼동하지 말 것. */}
           <span
             aria-hidden="true"
             className="transition-[translate] duration-[var(--motion-micro)] ease-instrument group-hover/back:-translate-x-0.5"
