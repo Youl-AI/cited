@@ -47,32 +47,34 @@ export function StickyStack({
     // CSS라 남지만, 그건 모션이 아니라 레이아웃이고 카드는 전부 읽을 수 있다.
     if (reduce || !ref.current) return
     const ctx = gsap.context(() => {
+      // 핀은 GSAP이 아니라 카드의 CSS `sticky top-0`이 담당한다. GSAP
+      // `pin: true`는 카드를 `div.pin-spacer`로 감싸 `ordered`가 세운
+      // `ol > li` 시맨틱을 깨고, sticky와 핀 기제가 이중이 된다(실제로 그랬다).
+      // 여기서 GSAP이 하는 일은 물러나는 연출 하나뿐이다.
+      //
       // 선택자 문자열은 context가 `ref` 안으로 스코프한다 — 페이지에 스택이
       // 둘 있어도 서로의 카드를 잡지 않는다.
       const cardEls = gsap.utils.toArray<HTMLElement>('.stack-card')
       cardEls.forEach((card, i) => {
-        // 마지막 카드는 핀하지 않는다 — 핀할 대상(다음 카드)이 없다.
+        // 마지막 카드는 물러날 일이 없다 — 뒤에 올 카드가 없다.
         if (i === cardEls.length - 1) return
-        ScrollTrigger.create({
-          trigger: card,
-          start: 'top top', // ★ 뷰포트 상단에서 핀. "top center"·"top 80%"로
-          //    두면 스크롤 도중에 트리거가 걸려 스택이 어긋난다(스킬 §5 실패 사례).
-          endTrigger: cardEls[cardEls.length - 1]!,
-          end: 'top top',
-          pin: true,
-          // 핀 간격을 만들지 않는다 — 만들면 카드 수만큼 빈 화면이 생긴다.
-          pinSpacing: false,
-        })
         // 물러나는 연출은 **다음 카드의** 스크롤에 매단다. 그래야 "다음이
         // 올라오는 만큼 이전이 물러난다"가 된다.
         gsap.to(card, {
           scale: 0.92,
-          opacity: 0.55,
+          // 카드가 불투명 전면이 아니라 투명 100dvh 컨테이너 속 유리 패널이라,
+          // 다음 패널이 닿는 순간 이전 패널이 또렷하면 "덮으며 대체"가 아니라
+          // "겹치며 밀림"으로 읽힌다. 거의 사라질 때까지 감광하고(0.15),
+          yPercent: -4,
+          opacity: 0.15,
           ease: 'none',
           scrollTrigger: {
             trigger: cardEls[i + 1]!,
             start: 'top bottom',
-            end: 'top top',
+            // 다음 카드가 뷰포트 45%에 오면 물러남을 끝낸다. 'top top'까지
+            // 끌면 패널끼리 겹치는 구간에 이전 패널이 아직 70% 가시라
+            // 잘린 채 비쳐 보인다 — 패널이 닿기 전에 물러남이 끝나야 한다.
+            end: 'top 45%',
             scrub: true,
           },
         })
