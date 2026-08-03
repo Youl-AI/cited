@@ -1,7 +1,9 @@
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import { CtaLink } from '@/components/marketing/cta-link'
+import { GlassPanel } from '@/components/marketing/glass-panel'
+import { Reveal } from '@/components/motion/reveal'
 import { PLANS, QUERY_PACK_PRICE_KRW, QUERY_PACK_SIZE, engineLabels } from '@/lib/plans'
 import type { PlanId } from '@/lib/plans'
+import { cn } from '@/lib/utils'
 
 /**
  * 요금제.
@@ -12,33 +14,68 @@ import type { PlanId } from '@/lib/plans'
  * ★ 무료의 한계가 **표에서 보여야** 한다. 무료를 매력적으로 그리는 것이 목표가
  *   아니다. 측정 횟수 1회와 이력 없음이 나란히 보이면, 유료로 가는 이유를
  *   우리가 설명하지 않아도 읽는 사람이 스스로 안다.
+ *
+ * ## 3-타워를 세우지 않는다 (redesign-skill "Pricing table with 3 towers")
+ *
+ * 권장 티어를 **더 높은 카드**로 표시하는 것이 그 클리셰다. 여기서 Starter를
+ * 가리키는 것은 높이가 아니라 **색**이다 — 열 전체에 브랜드색을 아주 옅게 깐
+ * 띠 하나와 "권장" 표시. 세 열의 높이·굵기·여백은 완전히 같다.
+ *
+ * ## 행을 세 무리로 묶었다
+ *
+ * 여덟 행에 헤어라인을 하나씩 그으면 그게 tasteskill §4.9가 말하는 스펙 시트다.
+ * 월 요금은 열 머리로 올리고(원래 모바일 카드가 이미 그렇게 하고 있었다),
+ * 남은 일곱 행을 측정 · 범위 · 기록 세 무리로 묶어 **무리마다 선 하나**만
+ * 긋는다(§9.F: 위아래로 두르지 않는다, 선은 아껴 쓴다).
+ *
+ * ## 행동은 하나뿐이다
+ *
+ * 열마다 버튼을 다는 것은 세 열이 전부 같은 곳(`/audit/new`)으로 가는 지금
+ * 상황에서 §4.5 "한 의도에 한 라벨"의 정면 위반이다. 결제가 열려 있지 않으므로
+ * **지금 할 수 있는 일은 무료 진단 하나**이고, 그 사실을 말하는 정직 블록
+ * 바로 밑에 버튼 하나를 둔다. 라벨은 머리글·랜딩과 같은 "무료 진단 받기"다.
  */
 
 export const metadata = { title: '요금제' }
 
-const PLAN_META: Record<PlanId, { name: string; tagline: string; cta: { href: string; label: string } }> = {
+const PLAN_META: Record<PlanId, { name: string; tagline: string }> = {
   free: {
     name: '무료 진단',
     tagline: '지금 어디쯤인지 한 번 확인합니다.',
-    cta: { href: '/audit/new', label: '무료로 신청하기' },
   },
-  // ★ 유료 두 칸의 CTA가 `/sign-up`이었다. 결제가 열려 있지 않으므로 가입해도
-  //   대시보드에 볼 것이 없다 — 요금제 화면 아래에서 스스로 "결제는 아직 열리지
-  //   않았습니다"라고 말하면서 가입으로 보내고 있었다. 지금 실제로 받을 수 있는
-  //   것으로 보낸다. 결제가 열리면 `/sign-up`으로 되돌린다.
   starter: {
     name: 'Starter',
     tagline: '변화를 판정할 수 있는 최소 구성입니다.',
-    cta: { href: '/audit/new', label: '무료 진단부터 받기' },
   },
   business: {
     name: 'Business',
     tagline: '브랜드가 여럿이거나 질의를 넓게 봐야 할 때.',
-    cta: { href: '/audit/new', label: '무료 진단부터 받기' },
   },
 }
 
 const ORDER: PlanId[] = ['free', 'starter', 'business']
+
+/**
+ * 권장 티어.
+ *
+ * ★ 마케팅 판단이 아니라 이 페이지의 주장에서 나온다 — H1이 "측정 횟수가 곧
+ *   신뢰구간의 넓이"라고 말하고, 같은 질문을 여러 번 재는 첫 플랜이 Starter다.
+ *   무료는 1회뿐이라 구간이 벌어지고, Business의 차이는 측정 횟수가 아니라
+ *   범위(브랜드·질의 수)다.
+ */
+const RECOMMENDED: PlanId = 'starter'
+
+/**
+ * 권장 열의 바닥.
+ *
+ * ★ 알파가 아니라 **미리 섞은 불투명색**이다. `bg-primary/[0.09]`로 두면 밑에
+ *   깔린 유리 패널의 반투명 껍데기가 그대로 비쳐서 틴트가 의도보다 밝아진다
+ *   (Task 4에서 벤토 셀이 정확히 그렇게 무너졌다). 토큰을 참조하므로 표면이
+ *   바뀌면 따라 바뀐다.
+ *   대비 실측: 카드 대비 1.11:1(띠로만 읽힌다) · 그 위 본문 15.16:1 ·
+ *   보조 텍스트 6.67:1 · 브랜드색 6.66:1로 전부 AA를 넘는다.
+ */
+const RECOMMENDED_TINT = 'bg-[color-mix(in_oklch,var(--card),var(--primary)_9%)]'
 
 /**
  * 숫자만 mono로 조판한다.
@@ -92,42 +129,83 @@ function historyCell(months: number | null): React.ReactNode {
   return countCell(months, '개월')
 }
 
-const ROWS: readonly { label: string; value: (id: PlanId) => React.ReactNode }[] = [
-  { label: '월 요금', value: (id) => priceCell(PLANS[id].priceKrw) },
-  // ★ 질의 한도는 계정 전체다 — 브랜드마다 주는 것이 아니다(`plans.ts` 참고).
-  //   브랜드가 여럿인 플랜에서 그 사실을 여기 적지 않으면, 고객은 브랜드마다
-  //   받는다고 읽는다. 나중에 "3개 등록했는데 왜 90개가 아니냐"가 된다.
+interface Row {
+  label: string
+  value: (id: PlanId) => React.ReactNode
+}
+
+/**
+ * 비교 항목. 월 요금은 여기 없다 — 열 머리에서 큰 조판으로 보여준다.
+ *
+ * 무리 이름은 지어낸 단계 이름이 아니라 항목이 실제로 무엇을 정하는지다
+ * (§9.F: "Stage 1 / Step 2" 꼴 금지).
+ */
+const GROUPS: readonly { title: string; rows: readonly Row[] }[] = [
   {
-    label: '측정 질의',
-    value: (id) =>
-      PLANS[id].maxBrands > 1 ? (
-        <>
-          {countCell(PLANS[id].maxQueries, '개')}
-          <span className="block text-xs text-muted-foreground">
-            브랜드 <span className="font-mono tabular-nums">{PLANS[id].maxBrands}</span>개에 나눠
-            사용
-          </span>
-        </>
-      ) : (
-        countCell(PLANS[id].maxQueries, '개')
-      ),
+    title: '측정',
+    rows: [
+      // ★ 질의 한도는 계정 전체다 — 브랜드마다 주는 것이 아니다(`plans.ts` 참고).
+      //   브랜드가 여럿인 플랜에서 그 사실을 여기 적지 않으면, 고객은 브랜드마다
+      //   받는다고 읽는다. 나중에 "3개 등록했는데 왜 90개가 아니냐"가 된다.
+      {
+        label: '측정 질의',
+        value: (id) =>
+          PLANS[id].maxBrands > 1 ? (
+            <>
+              {countCell(PLANS[id].maxQueries, '개')}
+              <span className="block text-xs text-muted-foreground">
+                브랜드 <Num>{PLANS[id].maxBrands}</Num>개에 나눠 사용
+              </span>
+            </>
+          ) : (
+            countCell(PLANS[id].maxQueries, '개')
+          ),
+      },
+      { label: '측정 횟수', value: cadenceCell },
+      { label: '엔진', value: (id) => engineLabels(PLANS[id].engines).join(', ') },
+    ],
   },
-  { label: '측정 횟수', value: cadenceCell },
-  { label: '엔진', value: (id) => engineLabels(PLANS[id].engines).join(', ') },
-  { label: '경쟁사', value: (id) => countCell(PLANS[id].maxCompetitors, '개') },
-  { label: '브랜드', value: (id) => countCell(PLANS[id].maxBrands, '개') },
-  { label: '이력 보관', value: (id) => historyCell(PLANS[id].historyMonths) },
-  // '없음'이지 대시가 아니다. 마케팅 화면에서 em-dash는 쓰지 않고(tasteskill §9.G),
-  // 표 안의 대시는 "값이 없다"인지 "해당 없음"인지도 읽는 사람이 추측하게 만든다.
-  { label: 'CSV 내보내기', value: (id) => (PLANS[id].csvExport ? '가능' : '없음') },
+  {
+    title: '범위',
+    rows: [
+      { label: '경쟁사', value: (id) => countCell(PLANS[id].maxCompetitors, '개') },
+      { label: '브랜드', value: (id) => countCell(PLANS[id].maxBrands, '개') },
+    ],
+  },
+  {
+    title: '기록',
+    rows: [
+      { label: '이력 보관', value: (id) => historyCell(PLANS[id].historyMonths) },
+      // '없음'이지 대시가 아니다. 마케팅 화면에서 em-dash는 쓰지 않고(tasteskill §9.G),
+      // 표 안의 대시는 "값이 없다"인지 "해당 없음"인지도 읽는 사람이 추측하게 만든다.
+      { label: 'CSV 내보내기', value: (id) => (PLANS[id].csvExport ? '가능' : '없음') },
+    ],
+  },
 ]
+
+/** 권장 표시. 열 머리와 모바일 블록이 같은 것을 쓴다. */
+function RecommendedMark() {
+  return <p className="text-xs font-medium tracking-wide text-primary">권장</p>
+}
+
+/** 열 머리·모바일 블록의 요금 조판. */
+function PlanPrice({ id }: { id: PlanId }) {
+  return (
+    <p className="mt-4 text-2xl font-semibold tracking-tighter">
+      {priceCell(PLANS[id].priceKrw)}
+      {PLANS[id].priceKrw > 0 && (
+        <span className="ml-1 text-sm font-normal text-muted-foreground">/ 월</span>
+      )}
+    </p>
+  )
+}
 
 export default function PricingPage() {
   return (
     // `pt-24`는 여백 취향이 아니라 **떠 있는 머리글의 자리**다. 마케팅 머리글은
     // `fixed`(높이 72px)라 문서 흐름을 차지하지 않는다. 이보다 줄이면 첫 줄이
     // 유리 알약 밑으로 들어간다.
-    <div className="mx-auto w-full max-w-6xl px-6 pt-24 pb-16 sm:pb-24">
+    <div className="mx-auto w-full max-w-6xl px-6 pt-24 pb-28 md:pb-40">
       <p className="text-sm font-medium tracking-wide text-muted-foreground">요금제</p>
       <h1 className="mt-4 max-w-2xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
         측정 횟수가 곧 신뢰구간의 넓이입니다
@@ -137,107 +215,160 @@ export default function PricingPage() {
         아니라 <strong className="font-medium text-foreground">몇 번 재는지</strong>입니다.
       </p>
 
-      {/* ── 카드 (모바일·태블릿) ─────────────────────────────── */}
-      <div className="mt-14 grid gap-6 lg:hidden">
-        {ORDER.map((id) => (
-          <div key={id} className="rounded-lg border border-border bg-card p-6">
-            <h2 className="text-lg font-semibold tracking-tight">{PLAN_META[id].name}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{PLAN_META[id].tagline}</p>
-            <p className="mt-4 text-3xl font-semibold tracking-tighter">
-              {priceCell(PLANS[id].priceKrw)}
-              {PLANS[id].priceKrw > 0 && (
-                <span className="ml-1 font-sans text-sm font-normal text-muted-foreground">
-                  / 월
-                </span>
-              )}
-            </p>
-            <dl className="mt-5 space-y-2 text-sm">
-              {ROWS.slice(1).map((row) => (
-                <div key={row.label} className="flex justify-between gap-4">
-                  <dt className="text-muted-foreground">{row.label}</dt>
-                  <dd className="text-right">{row.value(id)}</dd>
-                </div>
-              ))}
-            </dl>
-            <Button
-              className="mt-6 w-full"
-              variant={id === 'starter' ? 'default' : 'outline'}
-              asChild
-            >
-              <Link href={PLAN_META[id].cta.href}>{PLAN_META[id].cta.label}</Link>
-            </Button>
-          </div>
-        ))}
-      </div>
+      {/* ── 비교 원장 ────────────────────────────────────────
+          한 표면 안에서 조판만 갈린다. 좁은 화면은 플랜별 블록, 넓은 화면은
+          표다. 나란히 놓는 것이 목적이므로 넓은 화면에서는 표를 쓴다 —
+          무료의 "1회 (단발)"과 "이력 없음"이 유료 열 옆에 붙어 있어야
+          차이가 눈으로 보인다. */}
+      <Reveal index={0} className="mt-16">
+        <GlassPanel>
+          {/* 좁은 화면: 플랜마다 한 블록. 카드를 세 개 겹쳐 놓지 않는다 —
+              패널 안에 또 카드를 넣으면 테두리가 두 겹이 된다. */}
+          <div className="divide-y divide-border lg:hidden">
+            {ORDER.map((id) => (
+              <div
+                key={id}
+                className={cn('p-6 sm:p-8', id === RECOMMENDED && RECOMMENDED_TINT)}
+              >
+                {id === RECOMMENDED && <RecommendedMark />}
+                <h2 className="mt-1 text-lg font-semibold tracking-tight">
+                  {PLAN_META[id].name}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">{PLAN_META[id].tagline}</p>
+                <PlanPrice id={id} />
 
-      {/* ── 표 (데스크톱) ────────────────────────────────────
-          나란히 놓는 것이 목적이다. 무료의 "1회 (단발)"과 "이력 없음"이
-          유료 열 옆에 붙어 있어야 차이가 눈으로 보인다. */}
-      <div className="mt-14 hidden lg:block">
-        <table className="w-full border-collapse text-sm">
-          <caption className="sr-only">플랜별 측정 조건 비교</caption>
-          <thead>
-            <tr>
-              <th scope="col" className="w-[22%] border-b border-border py-4 text-left" />
-              {ORDER.map((id) => (
-                <th
-                  key={id}
-                  scope="col"
-                  className="border-b border-border px-5 py-4 text-left align-bottom"
-                >
-                  <span className="block text-base font-semibold tracking-tight">
-                    {PLAN_META[id].name}
-                  </span>
-                  <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                    {PLAN_META[id].tagline}
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {ROWS.map((row) => (
-              <tr key={row.label} className="border-b border-border/70">
-                <th scope="row" className="py-3.5 text-left font-normal text-muted-foreground">
-                  {row.label}
-                </th>
-                {ORDER.map((id) => (
-                  <td key={id} className="px-5 py-3.5">
-                    {row.value(id)}
-                  </td>
+                {GROUPS.map((group) => (
+                  <div key={group.title} className="mt-6">
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground">
+                      {group.title}
+                    </p>
+                    <dl className="mt-2 space-y-2 text-sm">
+                      {group.rows.map((row) => (
+                        <div key={row.label} className="flex justify-between gap-4">
+                          <dt className="text-muted-foreground">{row.label}</dt>
+                          <dd className="text-right">{row.value(id)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
                 ))}
-              </tr>
+              </div>
             ))}
-            <tr>
-              <td />
-              {ORDER.map((id) => (
-                <td key={id} className="px-5 pt-6">
-                  <Button variant={id === 'starter' ? 'default' : 'outline'} asChild>
-                    <Link href={PLAN_META[id].cta.href}>{PLAN_META[id].cta.label}</Link>
-                  </Button>
-                </td>
+          </div>
+
+          {/* 넓은 화면: 표 */}
+          <div className="hidden p-8 lg:block">
+            <table className="w-full border-collapse text-sm">
+              <caption className="sr-only">플랜별 측정 조건 비교</caption>
+              <thead>
+                <tr>
+                  <th scope="col" className="w-[26%] border-b border-border pb-5 text-left" />
+                  {ORDER.map((id) => (
+                    <th
+                      key={id}
+                      scope="col"
+                      className={cn(
+                        'border-b border-border px-5 pb-5 text-left align-bottom',
+                        id === RECOMMENDED && RECOMMENDED_TINT,
+                      )}
+                    >
+                      {id === RECOMMENDED && <RecommendedMark />}
+                      <span className="mt-1 block text-base font-semibold tracking-tight">
+                        {PLAN_META[id].name}
+                      </span>
+                      <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                        {PLAN_META[id].tagline}
+                      </span>
+                      <PlanPrice id={id} />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              {GROUPS.map((group) => (
+                <tbody key={group.title}>
+                  {/* 무리 머리. 선은 여기 한 줄뿐이고 행마다 긋지 않는다. */}
+                  <tr>
+                    <th
+                      scope="rowgroup"
+                      className="border-t border-border pt-7 pb-2 text-left text-xs font-medium tracking-wide text-muted-foreground"
+                    >
+                      {group.title}
+                    </th>
+                    {ORDER.map((id) => (
+                      <td
+                        key={id}
+                        className={cn(
+                          'border-t border-border',
+                          id === RECOMMENDED && RECOMMENDED_TINT,
+                        )}
+                      />
+                    ))}
+                  </tr>
+                  {group.rows.map((row) => (
+                    <tr key={row.label}>
+                      <th scope="row" className="py-2.5 text-left font-normal text-muted-foreground">
+                        {row.label}
+                      </th>
+                      {ORDER.map((id) => (
+                        <td
+                          key={id}
+                          className={cn(
+                            'px-5 py-2.5 align-top',
+                            id === RECOMMENDED && RECOMMENDED_TINT,
+                          )}
+                        >
+                          {row.value(id)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
               ))}
-            </tr>
-          </tbody>
-        </table>
-      </div>
+              {/* 틴트 띠가 마지막 행의 글자 밑줄에서 뚝 끊기지 않게 받치는 줄.
+                  무리 사이에서는 다음 무리 머리의 `pt-7`이 같은 몫을 하므로
+                  띠는 표 전체에 끊기지 않고 이어진다. */}
+              <tbody>
+                <tr>
+                  <td className="h-5" />
+                  {ORDER.map((id) => (
+                    <td key={id} className={cn(id === RECOMMENDED && RECOMMENDED_TINT)} />
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </GlassPanel>
+      </Reveal>
 
-      {/* ── 질의 팩 ──────────────────────────────────────────── */}
-      <section className="mt-16 rounded-lg border border-border bg-muted/30 p-6 sm:p-7">
-        <h2 className="text-base font-semibold">질의를 더 넣고 싶으면</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+      {/* ── 질의 팩 ──────────────────────────────────────────
+          카드를 만들지 않는다. 두 문장이고, 위아래 여백이 이미 챕터를 가른다
+          (§14 "Cards omitted in favor of spacing"). */}
+      <Reveal index={0} className="mt-20 max-w-2xl">
+        <h2 className="text-2xl font-semibold tracking-tight">질의를 더 넣고 싶으면</h2>
+        <p className="mt-4 text-base leading-relaxed text-muted-foreground">
           질의 <Num>{QUERY_PACK_SIZE}</Num>개 단위로 추가할 수 있습니다. 월{' '}
-          <Num>{QUERY_PACK_PRICE_KRW.toLocaleString('ko-KR')}</Num>원입니다. 질의를 늘리면 측정 횟수가 그만큼 늘어나므로 원가가 그대로 따라옵니다.
+          <Num>{QUERY_PACK_PRICE_KRW.toLocaleString('ko-KR')}</Num>원입니다. 질의를 늘리면 측정
+          횟수가 그만큼 늘어나므로 원가가 그대로 따라옵니다.
         </p>
-      </section>
+      </Reveal>
 
-      {/* ── 정직 블록 ────────────────────────────────────────── */}
-      <section className="mt-10 max-w-3xl border-l-2 border-border pl-5">
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          유료 플랜과 결제는 아직 열리지 않았습니다. 지금 신청할 수 있는 것은 무료 진단입니다.
-          위 조건은 유료 오픈 시점에 그대로 적용됩니다.
-        </p>
-      </section>
+      {/* ── 정직 블록 + 유일한 행동 ──────────────────────────
+          마감 패널은 랜딩과 같은 어휘다(유리 패널 + 평면 브랜드 틴트 + 알약).
+          색면을 반전시키지 않는다 — 다크 페이지 한가운데가 라이트로 뒤집히면
+          Page Theme Lock(§4.11) 위반이다. */}
+      <Reveal index={0} className="mt-14">
+        <GlassPanel className="bg-primary/[0.06]">
+          <div className="px-8 py-12 sm:px-12 sm:py-14">
+            <p className="max-w-[46em] text-base leading-relaxed text-muted-foreground">
+              유료 플랜과 결제는 아직 열리지 않았습니다. 지금 신청할 수 있는 것은 무료 진단입니다.
+              위 조건은 유료 오픈 시점에 그대로 적용됩니다.
+            </p>
+            <div className="mt-8">
+              <CtaLink href="/audit/new">무료 진단 받기</CtaLink>
+            </div>
+          </div>
+        </GlassPanel>
+      </Reveal>
     </div>
   )
 }

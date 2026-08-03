@@ -33,7 +33,30 @@ const SUGGESTED_CATEGORIES: readonly string[] = KNOWN_CATEGORIES.filter(
  * 경쟁사를 넣으면 언급 점유율이 나오고 그게 가장 강한 후킹인데, 비면 `n=0`이라
  * 리포트에서 그 섹션이 **아예 사라진다.** 접어 두면 아무도 안 넣고, 그러면
  * 우리가 가진 가장 좋은 화면을 우리 손으로 없애는 셈이다.
+ *
+ * ## 이 폼은 이제 다크 표면에서만 렌더된다
+ *
+ * 랜딩(`(marketing)`)과 `/audit/new`(`audit/(flow)`) 둘뿐이고 둘 다
+ * `.surface-dark`다. 그래서 조판을 마케팅 쪽에 맞춘다 — 컨트롤 높이를 키우고
+ * (앱 기본 `h-8` = 32px은 터치 타깃 권장치의 3/4다), 제출 버튼은 마케팅
+ * 표면의 모서리 규칙대로 알약이다.
+ *
+ * ★ 입력 **테두리**의 대비는 여기가 아니라 토큰이 푼다 — globals.css의
+ *   `--border-interactive`(다크 카드 위 3.33:1). 클래스로 밝히면 랜딩과
+ *   `/audit/new`가 조용히 갈린다.
+ * ★ 필드 이름·순서·검증 로직·문구는 한 글자도 건드리지 않았다. 분석 이벤트와
+ *   브라우저 자동완성이 이름에 붙어 있고, e2e가 라벨로 찾는다.
  */
+
+/**
+ * 마케팅 표면의 폼 컨트롤 치수.
+ *
+ * `h-11`(44px)은 터치 타깃 권장치다. 데스크톱 글자를 `md:text-sm`(14px)에서
+ * 15px로 올린 이유는 이 폼이 앱의 촘촘한 표가 아니라 전환 지점이기 때문이고,
+ * 모바일에서 16px를 유지하는 것은 iOS Safari가 그 아래에서 확대하기 때문이다
+ * (`Input` 기본값 `text-base`가 그 몫을 한다).
+ */
+const FIELD = 'h-11 md:text-[0.9375rem]'
 
 interface FieldError {
   field: string | null
@@ -102,7 +125,7 @@ export function RequestForm() {
   const canAddCompetitor = competitors.length < MAX_COMPETITORS
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-5">
+    <form onSubmit={onSubmit} noValidate className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor={ids.brandName}>브랜드명</Label>
         <Input
@@ -112,6 +135,7 @@ export function RequestForm() {
           maxLength={100}
           autoComplete="organization"
           placeholder="무신사"
+          className={FIELD}
         />
       </div>
 
@@ -127,6 +151,7 @@ export function RequestForm() {
           maxLength={100}
           list={ids.categoryList}
           placeholder="패션"
+          className={FIELD}
         />
         <datalist id={ids.categoryList}>
           {SUGGESTED_CATEGORIES.map((category) => (
@@ -144,6 +169,7 @@ export function RequestForm() {
           required
           autoComplete="email"
           placeholder="you@company.com"
+          className={FIELD}
         />
         <p className="text-xs text-muted-foreground">
           이 주소로 확인 메일과 리포트를 보냅니다.
@@ -152,9 +178,12 @@ export function RequestForm() {
 
       {/* ── 선택 항목 ─────────────────────────────────────────
           두 칸 모두 리포트의 특정 섹션을 켜고 끈다. 비면 그 섹션이 사라지므로,
-          "선택"이라고만 쓰고 무엇이 없어지는지 말하지 않으면 아무도 안 넣는다. */}
-      <fieldset className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
-        <legend className="px-1.5 text-xs font-medium tracking-[0.06em] text-muted-foreground uppercase">
+          "선택"이라고만 쓰고 무엇이 없어지는지 말하지 않으면 아무도 안 넣는다.
+          ★ 범례에서 `uppercase`를 뺐다. 한글에는 대소문자가 없어서 아무 일도
+            하지 않으면서, 기계적으로 세는 아이브로(`uppercase tracking`)로만
+            잡혔다(tasteskill §4.7 EYEBROW RESTRAINT). 자간은 남긴다. */}
+      <fieldset className="space-y-4 rounded-lg border border-border bg-foreground/[0.04] p-5">
+        <legend className="px-1.5 text-xs font-medium tracking-[0.06em] text-muted-foreground">
           넣으면 리포트가 늘어납니다
         </legend>
 
@@ -166,6 +195,7 @@ export function RequestForm() {
             inputMode="url"
             autoComplete="url"
             placeholder="musinsa.com"
+            className={FIELD}
           />
           <p className="text-xs text-muted-foreground">
             AI가 인용한 출처 중 <strong className="font-medium">우리 사이트가 있는지</strong>{' '}
@@ -183,6 +213,7 @@ export function RequestForm() {
                 value={value}
                 maxLength={100}
                 placeholder={index === 0 ? '29CM' : '한 곳씩'}
+                className={FIELD}
                 onChange={(e) => {
                   const next = [...competitors]
                   next[index] = e.target.value
@@ -196,6 +227,8 @@ export function RequestForm() {
               type="button"
               variant="outline"
               size="sm"
+              // 마케팅 표면에서 누르는 것은 전부 알약이다(Task 3 §2.8).
+              className="h-9 rounded-full px-4"
               onClick={() => setCompetitors([...competitors, ''])}
             >
               경쟁사 추가 ({competitors.length}/{MAX_COMPETITORS})
@@ -208,10 +241,14 @@ export function RequestForm() {
         </div>
       </fieldset>
 
+      {/* 오류는 인라인이다 — 토스트로 띄우면 스크롤 위치에 따라 못 보고
+          지나간다(§4.5 Error States). 다크 표면에서 `/5` 틴트는 거의 보이지
+          않아 `/10`으로 올렸다: 카드 대비 1.12:1로 면이 읽히고, 그 위
+          `text-destructive`는 5.28:1로 AA를 넘는다. */}
       {error && (
         <p
           role="alert"
-          className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+          className="rounded-lg border border-destructive/60 bg-destructive/10 px-4 py-3 text-sm text-destructive"
         >
           {error.message}
         </p>
@@ -220,15 +257,32 @@ export function RequestForm() {
       {/* ★ 순서를 **누르기 전에** 보여준다. 이게 없으면 확인 메일이 회원가입
           인증처럼 읽힌다 — 실제로 그렇게 읽혔다. 폼 안에 두는 이유는 폼이
           렌더링되는 모든 곳(랜딩·`/audit/new`)에서 빠질 수 없게 하기 위함이다. */}
-      <div className="rounded-lg border border-border bg-muted/30 p-4">
+      <div className="rounded-lg border border-border bg-foreground/[0.04] p-5">
         <FlowStrip className="space-y-2" />
-        <p className="mt-3 border-t border-border pt-3 text-xs leading-relaxed text-muted-foreground">
+        <p className="mt-4 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
           <strong className="font-medium text-foreground">{NO_ACCOUNT_NOTE}</strong> 확인 메일은
           가입 인증이 아니라 본인 확인입니다. 카드 정보는 받지 않습니다.
         </p>
       </div>
 
-      <Button type="submit" size="lg" className="w-full" disabled={pending}>
+      {/* ★ 제출은 `CtaLink`가 될 수 없다(그건 `<Link>`다). 대신 그 치수·모서리·
+          눌림을 그대로 가져온다 — 마케팅 표면에서 누르는 것은 전부 알약이고,
+          이 버튼이 그 규칙의 예외가 되면 페이지에서 가장 중요한 것 하나만
+          앱 버튼으로 남는다.
+        ★ 호버를 `hover:bg-primary/80`(앱 기본값)에서 되돌렸다. 어두운 배경
+          위에서 투명도를 낮추면 배경이 비쳐 **누를수록 흐려지고 대비가 함께
+          떨어진다.** 마케팅 CTA와 같은 방향, 즉 **밝히는** 쪽으로 간다.
+        ★ `aria-busy`는 로직이 아니라 이미 있는 `pending` 상태를 보조기술에
+          전달하는 표시다. 문구("신청 중…")·비활성화 조건은 그대로다.
+        ★ 눌림은 `Button`이 이미 가진 `translate-y-px`가 낸다. 여기에 스케일을
+          더하지 않는다 — 한 동작에 물리 법칙이 둘이면 손끝 반응이 흐려진다. */}
+      <Button
+        type="submit"
+        size="lg"
+        aria-busy={pending}
+        className="h-12 w-full rounded-full text-[0.9375rem] font-semibold ease-spring hover:bg-[color-mix(in_oklch,var(--primary),var(--foreground)_12%)] disabled:opacity-60"
+        disabled={pending}
+      >
         {pending ? '신청 중…' : '무료 진단 신청하기'}
       </Button>
     </form>
