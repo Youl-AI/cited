@@ -11,6 +11,7 @@ import type { AuditTier } from '@/lib/audit/tiers'
 import { engineLabel } from '@/lib/plans'
 import { changeSentence } from '@/lib/stats/change-copy'
 import { formatInterval, formatPercent, judgeChange } from '@/lib/stats/wilson'
+import { cn } from '@/lib/utils'
 
 /**
  * 진단 리포트 화면. 서버 컴포넌트다 — 상태가 없다.
@@ -28,6 +29,28 @@ import { formatInterval, formatPercent, judgeChange } from '@/lib/stats/wilson'
  * 측정한 숫자"임이 읽기 전에 보인다. 이 규칙을 섞으면 그 신호가 사라진다.
  * 개선 가이드가 sans인 것도 같은 규칙이다 — 그건 계측이 아니라 사람의 말이다.
  */
+
+/**
+ * 계측값이 앉는 판(plate).
+ *
+ * 리포트는 대시보드와 달리 **문서**라 double-bezel `Card`를 쓰지 않는다.
+ * 이유가 둘이다:
+ *   1. `Card`의 내핵은 `::before`(절대 배치)다. 절대 배치 상자는 **페이지
+ *      경계에서 쪼개지지 않으므로**, 장을 넘기는 목록(질의별·증거·출처)에서
+ *      둘째 장 조각만 배경·헤어라인 없이 찍힌다.
+ *   2. 트레이(`bg-muted/60`)는 종이에서 회색 띠 한 겹이 더 늘어나는 일이다.
+ *      납품 문서에 화면 크롬을 인쇄하지 않는다.
+ * 그래서 판은 그대로 두고 **화면에서만** 1단 띄운다:
+ *   - `shadow-elevation-1` — 앱 배경(0.994)과 카드색이 거의 같아서, 그림자가
+ *     없으면 이 판들이 테두리 하나로만 존재한다(redesign-skill이 지목하는
+ *     "테두리+흰 배경" 제네릭 룩).
+ *   - `print:shadow-none` — `pnpm audit:pdf`는 `printBackground: true`로 찍는다.
+ *     즉 **그림자도 인쇄된다.** 가드가 없으면 이번 격상이 PDF 납품물의 잉크를
+ *     바꾼다. 인쇄 규칙은 지우지 않고 **더한다**.
+ * 반경만 카드 가족(`--radius`×1.4)으로 맞춘다 — 화면·종이 양쪽에서 같은 값이고,
+ * 이 앱에 반경 스케일은 하나뿐이라는 규칙(globals.css `--radius`)을 따른다.
+ */
+const PLATE = 'rounded-xl border border-border bg-card shadow-elevation-1 print:shadow-none'
 
 /** 계측값 조판 — 이 파일 안에서 숫자는 반드시 이걸 통과한다. */
 function Metric({ children }: { children: React.ReactNode }) {
@@ -81,7 +104,18 @@ export function ResultView({
   return (
     // `print:[orphans:3] print:[widows:3]` — 상속되는 속성이라 여기 한 번만
     // 건다. 문단이 장 사이에서 쪼개질 때 한두 줄만 떨어져 남지 않게 한다.
-    <div className="mx-auto w-full max-w-3xl px-6 py-14 sm:py-20 print:py-0 print:[orphans:3] print:[widows:3]">
+    // ★ 회차 상세(variant='run')만 위아래 여백이 작다. 그 화면은 `(app)` 셸
+    //   **안**에 들어가므로 레이아웃이 이미 위 32~48px·아래 48~64px을 주고
+    //   있고, 여기에 py-14/20을 더하면 뒤로가기 링크와 표제 사이가 88px 넘게
+    //   벌어진다. `/audit/[id]`(단독 배송 문서)는 셸이 여백을 주지 않으므로
+    //   원래 값 그대로다 — 즉 **납품 PDF의 여백은 한 픽셀도 바뀌지 않는다.**
+    //   `print:py-0`은 print 변형이라 두 갈래 어느 쪽보다 나중에 출력된다.
+    <div
+      className={cn(
+        'mx-auto w-full max-w-3xl px-6 print:py-0 print:[orphans:3] print:[widows:3]',
+        isRun ? 'py-6 sm:py-8' : 'py-14 sm:py-20',
+      )}
+    >
       {/* ── PDF 표지 (유료 전용) ─────────────────────────────── */}
       {/* 화면에는 없다(`hidden print:flex`). 무료는 표지 없이 바로 본문 —
           공짜 PDF에 납품 문서의 옷을 입히지 않는다. */}
@@ -105,7 +139,7 @@ export function ResultView({
       {/* ── 대표 지표 ────────────────────────────────────────── */}
       <section
         data-testid="headline"
-        className="mb-10 rounded-lg border border-border bg-card p-6 sm:p-7 print:break-inside-avoid"
+        className={cn(PLATE, 'mb-10 p-6 sm:p-7 print:break-inside-avoid')}
       >
         <p className="text-sm text-muted-foreground">AI 답변에 인용된 비율</p>
         <div className="mt-1 flex flex-wrap items-baseline gap-x-3">
@@ -165,7 +199,7 @@ export function ResultView({
             등록한 경쟁사({result.competitors.join(', ')}) 대비 언급 비중입니다. 경쟁사를 더
             등록하면 이 값은 달라집니다.
           </SectionNote>
-          <div className="flex flex-wrap items-baseline gap-x-3 rounded-lg border border-border bg-card px-5 py-4">
+          <div className={cn(PLATE, 'flex flex-wrap items-baseline gap-x-3 px-5 py-4')}>
             <span className="font-mono text-2xl font-semibold tabular-nums">
               {formatPercent(result.shareOfVoice.point)}
             </span>
@@ -177,7 +211,7 @@ export function ResultView({
       )}
 
       {result.unresolved > 0 && (
-        <p className="mb-10 rounded-lg border border-incomplete/40 bg-incomplete/5 px-4 py-3 text-sm text-incomplete-fg">
+        <p className="mb-10 rounded-xl border border-incomplete/40 bg-incomplete/5 px-4 py-3 text-sm text-incomplete-fg">
           <Metric>{result.unresolved}</Metric>건은 판정하지 못해 결과에서 제외했습니다.
         </p>
       )}
@@ -186,7 +220,7 @@ export function ResultView({
       <section className="mb-10 print:break-inside-avoid">
         <SectionHeading>브랜드별 언급 횟수</SectionHeading>
         <SectionNote>같은 답변 안에서 어떤 브랜드가 몇 번 등장했는지입니다.</SectionNote>
-        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+        <ul className={cn(PLATE, 'divide-y divide-border overflow-hidden')}>
           {result.ranking.map((item) => (
             <li
               key={item.name}
@@ -223,7 +257,7 @@ export function ResultView({
         {/* metrics가 이미 언급률 낮은 순으로 준다. 여기서 다시 정렬하지 않는다 —
             "이 질문에서 안 나온다"가 위로 와야 행동으로 이어진다. */}
         <SectionNote>못 나오는 질문이 위에 옵니다. 손볼 곳이 거기입니다.</SectionNote>
-        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+        <ul className={cn(PLATE, 'divide-y divide-border overflow-hidden')}>
           {result.byQuery.map((q) => (
             <li
               key={q.queryText}
@@ -292,7 +326,7 @@ export function ResultView({
 
           <SelfCitationLine result={result} />
 
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+          <ul className={cn(PLATE, 'divide-y divide-border overflow-hidden')}>
             {result.sources.slice(0, 8).map((source) => (
               <li
                 key={source.domain}
@@ -305,8 +339,15 @@ export function ResultView({
                       우리
                     </span>
                   )}
+                  {/* ★ `text-incomplete-fg`였다(이연 백로그). incomplete는 **수집
+                      품질**의 색이다 — "판정하지 못했다 / 빠져 있다"는 뜻으로
+                      이 리포트의 다른 세 곳(미판정 건수·업종 공통 질의 누락·
+                      자사 미인용)이 쓴다. 경쟁사 도메인이 출처에 뜬 것은 결함이
+                      아니라 **정상적인 측정 결과**이고, 그 색을 여기 쓰면 "우리"
+                      배지(브랜드색)와 나란히 놓였을 때 소유 표시가 아니라 경고로
+                      읽힌다. 소유를 말하는 축에서 경쟁사의 자리는 중립이다. */}
                   {source.owner === 'competitor' && (
-                    <span className="text-[0.625rem] tracking-[0.08em] text-incomplete-fg uppercase">
+                    <span className="text-[0.625rem] tracking-[0.08em] text-muted-foreground uppercase">
                       경쟁사
                     </span>
                   )}
@@ -337,14 +378,14 @@ export function ResultView({
               ★ 인쇄 끊김 규칙 — 소제목은 다음 문단과 붙이고(h2·h3 뒤 금지),
                 목록 항목·문단은 반으로 쪼개지 않는다. 실측: 가이드가 장 경계에서
                 갈리며 마지막 불릿 하나가 다음 장에 홀로 남았다. */}
-          <div className="rounded-lg border border-border bg-muted/30 p-6 text-[0.9375rem] leading-relaxed sm:p-7 [&_a]:underline [&_a]:underline-offset-2 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:text-muted-foreground [&_code]:font-mono [&_code]:text-[0.8125rem] [&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2:first-child]:mt-0 [&_h3]:mt-4 [&_h3]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_li]:my-1 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 print:[&_h2]:break-after-avoid print:[&_h3]:break-after-avoid print:[&_li]:break-inside-avoid print:[&_p]:break-inside-avoid">
+          <div className="rounded-xl border border-border bg-muted/30 p-6 text-[0.9375rem] leading-relaxed sm:p-7 [&_a]:underline [&_a]:underline-offset-2 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:text-muted-foreground [&_code]:font-mono [&_code]:text-[0.8125rem] [&_h2]:mt-6 [&_h2]:mb-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:tracking-tight [&_h2:first-child]:mt-0 [&_h3]:mt-4 [&_h3]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_li]:my-1 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 print:[&_h2]:break-after-avoid print:[&_h3]:break-after-avoid print:[&_li]:break-inside-avoid print:[&_p]:break-inside-avoid">
             <Markdown>{guide}</Markdown>
           </div>
         </section>
       )}
 
       {/* ── 측정 조건 ────────────────────────────────────────── */}
-      <section className="mb-10 rounded-lg bg-muted/40 px-5 py-4 print:break-inside-avoid">
+      <section className="mb-10 rounded-xl bg-muted/40 px-5 py-4 print:break-inside-avoid">
         <p className="text-xs text-muted-foreground">
           측정 표기{' '}
           <span className="font-mono text-foreground">
@@ -363,7 +404,7 @@ export function ResultView({
           ★ 회차 상세(variant='run')에서는 아예 없다 — 이미 구독 중인 고객에게
             "요금제 보기" 업셀은 틀린 말이다. */}
       {!isRun && (
-      <section className="rounded-lg border border-border bg-card p-6 sm:p-7 print:hidden">
+      <section className={cn(PLATE, 'p-6 sm:p-7 print:hidden')}>
         <h2 className="text-lg font-semibold tracking-tight">
           이 리포트는 <Metric>1</Metric>회 측정입니다
         </h2>
@@ -414,7 +455,7 @@ function CompareSection({
     currEngines: result.engines,
   })
   return (
-    <section className="mb-10 rounded-lg border border-border bg-card p-6 sm:p-7 print:break-inside-avoid">
+    <section className={cn(PLATE, 'mb-10 p-6 sm:p-7 print:break-inside-avoid')}>
       <SectionHeading>전후 비교</SectionHeading>
       <SectionNote>
         <Metric>{beforeDate}</Metric> 측정과 같은 질의 <Metric>{result.byQuery.length}</Metric>
@@ -501,7 +542,7 @@ function SelfCitationLine({ result }: { result: AuditResult }) {
   // 경계에서 갈라지면 리포트의 가장 강한 문장이 반 토막으로 읽힌다.
   if (!result.hasSelfDomains) {
     return (
-      <p className="mb-4 rounded-lg bg-muted/40 px-4 py-3 text-sm text-muted-foreground print:break-inside-avoid">
+      <p className="mb-4 rounded-xl bg-muted/40 px-4 py-3 text-sm text-muted-foreground print:break-inside-avoid">
         사이트 주소를 알려주시면 다음 측정에서 {result.brandName} 사이트가 인용되는지 함께
         확인해 드립니다.
       </p>
@@ -509,14 +550,14 @@ function SelfCitationLine({ result }: { result: AuditResult }) {
   }
   if (result.sourceSummary.selfAnswers > 0) {
     return (
-      <p className="mb-4 rounded-lg border border-metric-up/30 bg-metric-up/5 px-4 py-3 text-sm text-metric-up-fg print:break-inside-avoid">
+      <p className="mb-4 rounded-xl border border-metric-up/30 bg-metric-up/5 px-4 py-3 text-sm text-metric-up-fg print:break-inside-avoid">
         {result.brandName} 사이트는 <Metric>{result.sourceSummary.selfAnswers}</Metric>개
         답변에서 인용됐습니다.
       </p>
     )
   }
   return (
-    <p className="mb-4 rounded-lg border border-incomplete/40 bg-incomplete/5 px-4 py-3 text-sm text-incomplete-fg print:break-inside-avoid">
+    <p className="mb-4 rounded-xl border border-incomplete/40 bg-incomplete/5 px-4 py-3 text-sm text-incomplete-fg print:break-inside-avoid">
       <strong className="font-semibold">
         {result.brandName} 사이트는 한 번도 인용되지 않았습니다.
       </strong>{' '}

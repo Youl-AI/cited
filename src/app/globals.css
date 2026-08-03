@@ -625,6 +625,35 @@
     }
   }
 
+  /* 온보딩 단계 진행 — **방금 얻은 칸 하나만** 자란다.
+     ★ 무엇에 걸지 않는가가 핵심이다: 이미 지나온 단계의 칸은 **정지 상태로**
+       그려진다. 매 화면에서 세 칸이 전부 다시 자라면 "1단계를 또 통과했다"고
+       말하는 셈이고, 진행 방향(왼→오)이 아니라 그냥 등장 연출이 된다.
+       현재 칸만 왼쪽 기준으로 펴지므로 화면이 바뀔 때마다 **한 칸씩 전진**하는
+       것이 보인다.
+     ★ 세 화면이 각각 별개 라우트라 마운트가 곧 재생이다 — 상태를 들고 다니거나
+       라우트 전환을 가로챌 필요가 없다(§6: 스크롤·내비게이션 하이재킹 금지).
+     ★ `scaleX`만 움직인다(GPU 합성). width를 애니메이션하면 매 프레임 레이아웃이
+       다시 돈다(soft-skill §6).
+     ★ 지속시간은 --motion-state(240ms)다. --motion-enter(220ms, 요소가 자리에
+       앉는 시간)보다 한 눈금 길다 — 이건 등장이 아니라 **상태가 바뀐 것**이고,
+       같이 등장하는 본문보다 늦게 끝나야 눈이 따라간다.
+     ★ reduced-motion은 base 레이어 킬 스위치가 처리한다(`both`가 마지막 프레임을
+       붙잡아 꽉 찬 칸으로 시작한다). */
+  .step-advance {
+    transform-origin: left;
+    animation: step-advance var(--motion-state) var(--ease-instrument) both;
+  }
+
+  @keyframes step-advance {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
   @media print {
     .instrument-enter {
       animation: none;
@@ -634,6 +663,13 @@
     .chart-draw {
       animation: none;
       stroke-dasharray: none;
+    }
+
+    /* `both`가 시작 전 `scaleX(0)`을 붙잡으므로, 가드가 없으면 종이에서 칸이
+       통째로 사라진다(instrument-enter가 투명하게 찍히는 것과 같은 사고).
+       animation을 끄면 transform이 없는 상태 = scaleX(1)이다. */
+    .step-advance {
+      animation: none;
     }
   }
 

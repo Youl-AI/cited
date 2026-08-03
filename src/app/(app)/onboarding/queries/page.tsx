@@ -10,6 +10,7 @@ import { QUERY_GENERATION_LIMIT } from '@/lib/onboarding/generation'
 import { loadOnboardingGate } from '@/lib/onboarding/gate'
 import { loadPrefill } from '@/lib/onboarding/prefill'
 import { loadEditorQuota } from '@/lib/onboarding/quota'
+import { StepRail } from '../step-rail'
 import { QueryEditor } from './query-editor'
 
 export const metadata = { title: '온보딩 — 질의' }
@@ -68,14 +69,14 @@ export default async function QueriesStepPage({
 
   return (
     <div className="mx-auto max-w-2xl">
-      <p className="font-mono text-xs tracking-[0.14em] text-muted-foreground uppercase">
-        온보딩 2 / 3
-      </p>
-      <h1 className="mt-3 text-2xl font-semibold tracking-tight">측정할 질문</h1>
+      <StepRail step={2} />
+      <h1 className="instrument-enter mt-6 font-heading text-2xl font-semibold tracking-tight [--enter-delay:calc(var(--motion-stagger)*1)]">
+        측정할 질문
+      </h1>
 
       {blocked ? (
-        <>
-          <p className="mt-6 rounded-lg border border-incomplete/40 bg-incomplete/5 px-4 py-3 text-sm leading-relaxed text-incomplete-fg">
+        <div className="instrument-enter [--enter-delay:calc(var(--motion-stagger)*2)]">
+          <p className="mt-6 rounded-xl border border-incomplete/40 bg-incomplete/5 px-4 py-3 text-sm leading-relaxed text-incomplete-fg">
             {blocked}
           </p>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -85,27 +86,37 @@ export default async function QueriesStepPage({
               동결된 브랜드가 이미 있다는 뜻이라(질의 행은 동결 때 생긴다)
               `resolveDashboardEntry`가 여기로 되돌리지 않는다. */}
           <div className="mt-6">
-            <Button asChild>
+            <Button asChild size="lg">
               <Link href="/dashboard">대시보드로</Link>
             </Button>
           </div>
-        </>
+        </div>
       ) : (
         <>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {initial.source === 'frozen'
-              ? '진단에 썼던 질의를 그대로 가져왔습니다. 같은 질의로 재야 진단 리포트와 비교할 수 있습니다.'
-              : `앞의 ${templates.length}개는 업종 공통 질문입니다 — 무료 진단과 같은 질문이라 반드시 포함됩니다. 나머지는 AI 후보로 채우거나 직접 쓰세요.`}
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            질의에는 브랜드명·경쟁사명을 넣지 않습니다 — 이름을 대면 측정이 무효입니다. 우리가
-            재는 것은 이름을 대지 않은 소비자 질문에 AI가 브랜드를 스스로 꺼내는가입니다.
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            확정하면 질의가 동결됩니다. 회차끼리 비교하려면 질의가 같아야 하기 때문입니다 —
-            지금 정한 질문이 구독 내내 측정 대상이 됩니다.
-          </p>
-          <div className="mt-8">
+          <div className="instrument-enter [--enter-delay:calc(var(--motion-stagger)*2)]">
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {initial.source === 'frozen'
+                ? '진단에 썼던 질의를 그대로 가져왔습니다. 같은 질의로 재야 진단 리포트와 비교할 수 있습니다.'
+                : `앞의 ${templates.length}개는 업종 공통 질문입니다 — 무료 진단과 같은 질문이라 반드시 포함됩니다. 나머지는 AI 후보로 채우거나 직접 쓰세요.`}
+            </p>
+            {/* ★ 아래 두 문장은 나머지 설명과 종류가 다르다 — "이 화면이 무엇인가"가
+                아니라 **확정 전에 반드시 읽어야 하는 두 가지 제약**이다. 셋을 같은
+                회색 문단으로 쌓아 두면 훑는 눈에는 길이만 남는다. 왼쪽 규칙선은
+                리포트의 "이 숫자를 어떻게 읽어야 하는가"(result-view.tsx)와 같은
+                어휘다 — 같은 뜻은 화면이 달라도 같은 모양으로 온다. */}
+            <div className="mt-5 space-y-2 border-l-2 border-border pl-5">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                질의에는 브랜드명·경쟁사명을 넣지 않습니다 — 이름을 대면 측정이 무효입니다.
+                우리가 재는 것은 이름을 대지 않은 소비자 질문에 AI가 브랜드를 스스로
+                꺼내는가입니다.
+              </p>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                확정하면 질의가 동결됩니다. 회차끼리 비교하려면 질의가 같아야 하기 때문입니다 —
+                지금 정한 질문이 구독 내내 측정 대상이 됩니다.
+              </p>
+            </div>
+          </div>
+          <div className="instrument-enter mt-8 [--enter-delay:calc(var(--motion-stagger)*3)]">
             <QueryEditor
               brandId={brand.id}
               initial={initial.queries}
@@ -117,9 +128,12 @@ export default async function QueriesStepPage({
             />
           </div>
           {canDefer && (
-            <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
+            <p className="instrument-enter mt-6 border-t border-foreground/[0.07] pt-5 text-xs leading-relaxed text-muted-foreground [--enter-delay:calc(var(--motion-stagger)*4)]">
               지금 정하기 어렵다면{' '}
-              <Link href="/dashboard" className="font-medium underline">
+              <Link
+                href="/dashboard"
+                className="rounded-sm font-medium text-foreground underline underline-offset-2 transition-colors duration-[var(--motion-micro)] ease-instrument hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
                 나중에 하기
               </Link>
               . 확정 전까지 이 브랜드는 측정되지 않습니다.

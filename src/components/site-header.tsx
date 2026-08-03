@@ -76,7 +76,15 @@ export function SiteHeader({ user }: { user?: HeaderUser }) {
     //   붙이는 것이 금지된 것이지 스티키 크롬은 정확히 그 용도다.
     // ★ 투명도를 줄여 달라는 사용자에게는 globals.css의 언레이어 규칙이
     //   `background-color: var(--card)`로 되돌린다 — 그때도 대비는 그대로다.
-    <header className="glass sticky top-0 z-40 border-b border-foreground/[0.07] bg-background/85">
+    // ★ `print:hidden` — 인쇄물에 화면 내비게이션을 찍지 않는다. 공개 화면은
+    //   `SiteShell`이 `contents print:hidden` 래퍼로 이미 숨기고 있었는데,
+    //   로그인 구간(`(app)/layout.tsx`)에는 그 래퍼가 없어서 **회차 상세를
+    //   브라우저에서 인쇄하면 머리글(워드마크·대시보드/설정/결제·로그아웃)이
+    //   첫 장에 찍혔다.** 방어를 머리글 자신에게 옮기면 껍데기가 무엇이든
+    //   같은 결과가 나온다(SiteShell의 래퍼는 푸터도 함께 맡으므로 그대로 둔다 —
+    //   인쇄 규칙은 지우지 않는다).
+    //   `/audit/[id]` PDF 납품물에는 변화가 없다: 거기서는 이미 숨겨져 있었다.
+    <header className="glass sticky top-0 z-40 border-b border-foreground/[0.07] bg-background/85 print:hidden">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6">
         {/* ★ 로그인 상태에서도 `/`로 간다. 원래는 `/dashboard`였는데, 지금
             대시보드는 5단계 전까지 빈 스텁이라 **거기서 나갈 길이 없었다** —
