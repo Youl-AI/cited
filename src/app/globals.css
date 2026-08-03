@@ -93,18 +93,9 @@
   --color-engine-naver: oklch(0.6 0.18 345); /* #c64998 · 4.29:1 */
   --color-engine-google: oklch(0.42 0.06 207); /* #1c565e · 8.11:1 */
 
-  /* ---- elevation 3단 (앱 라이트) ----------------------------------------
-     redesign-skill "Color and Surfaces": 순수 검정 저불투명 그림자는 금지다.
-     배경과 같은 색조(258)로 **틴트한** 그림자를 쓴다 — 그래야 종이 위에
-     떠 있는 것으로 읽히고, 회색 테두리를 덧대는 클리셰를 피할 수 있다.
-     다층이어야 높이가 읽힌다: 1px 윤곽 + 근거리 + (2단부터) 원거리.
-     빛의 방향은 위에서 하나뿐이다(모든 y 오프셋이 양수).
-     쓰는 곳: 1 = 떠 있는 카드·버튼, 2 = 호버 확장·툴팁, 3 = 모달급.
-     ★ 다크 표면에서는 그림자가 거의 보이지 않으므로 .surface-dark가 inset
-       하이라이트를 더한 짝으로 다시 선언한다. */
-  --shadow-elevation-1: 0 0 0 1px oklch(0.2 0.015 258 / 0.03), 0 1px 2px oklch(0.2 0.015 258 / 0.05);
-  --shadow-elevation-2: 0 0 0 1px oklch(0.2 0.015 258 / 0.03), 0 2px 4px -1px oklch(0.2 0.015 258 / 0.05), 0 8px 16px -4px oklch(0.2 0.015 258 / 0.06);
-  --shadow-elevation-3: 0 0 0 1px oklch(0.2 0.015 258 / 0.04), 0 4px 8px -2px oklch(0.2 0.015 258 / 0.06), 0 16px 32px -8px oklch(0.2 0.015 258 / 0.09);
+  /* elevation 3단은 여기 없다 — 아래 @theme inline이 `var(--elev-N)` 별칭으로
+     잡고, 실값은 :root / .surface-dark가 --elev-1/2/3으로 가진다.
+     이유는 §"실측" 주석 참고(요약: 여기 두면 다크에서 안 바뀐다). */
 
   /* ---- 모션 어휘 --------------------------------------------------------
      지속시간과 이징을 컴포넌트마다 새로 고르면 같은 제품 안에서 서로 다른
@@ -196,6 +187,21 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* ---- elevation 3단 -----------------------------------------------------
+     ★ 실측: `@theme`(inline 아님)에 그림자 실값을 두면 **다크 스코프를 타지
+       못한다.** Tailwind v4가 shadow 유틸리티를 만들 때 값을 레이어별로 쪼개
+       빌드 시점에 **인라인**하기 때문이다. 산출물이 이랬다:
+         .shadow-elevation-1{--tw-shadow:0 0 0 1px var(--tw-shadow-color,#12161d08), …}
+       색이 리터럴로 박혀 있으니 .surface-dark가 --shadow-elevation-1을 다시
+       선언해도 유틸리티는 꿈쩍도 하지 않는다(조용히 라이트 그림자가 남는다).
+       그래서 --radius와 **같은 패턴**으로 뒤집는다: 이름은 여기 inline으로 두고
+       실값은 :root / .surface-dark의 --elev-N에 둔다. 그러면 유틸리티가
+       `--tw-shadow: var(--elev-1)`로 나와 스코프를 탄다.
+       대가: 레이어를 쪼개지 못하므로 `shadow-elevation-1/50` 같은
+       **shadow-color 변형은 못 쓴다.** 이 그림자는 색까지가 한 세트라 문제없다. */
+  --shadow-elevation-1: var(--elev-1);
+  --shadow-elevation-2: var(--elev-2);
+  --shadow-elevation-3: var(--elev-3);
   /* inline이라 유틸리티가 `var(--radius)`를 그대로 뱉는다 — 즉 반경 스케일도
      스코프를 탄다. .surface-dark가 --radius를 키우면 마케팅 표면의 rounded-*가
      통째로 부드러워진다. */
@@ -269,6 +275,16 @@
      6px은 그 몫을 하지 못한 채 기성 부트스트랩 톤만 남겼다(taste 스펙 §3.4:
      앱은 12px 단일 규칙). 반경은 이 하나뿐이고 --radius-*가 전부 파생한다. */
   --radius: 0.75rem;
+  /* elevation 실값 (@theme inline의 --shadow-elevation-N이 이걸 가리킨다).
+     redesign-skill "Color and Surfaces": 순수 검정 저불투명 그림자는 금지다.
+     --foreground와 같은 색조(258)로 **틴트했다** — 그래야 종이 위에 떠 있는
+     것으로 읽히고, 회색 테두리를 덧대는 클리셰를 피할 수 있다.
+     다층이어야 높이가 읽힌다: 1px 윤곽 + 근거리 + (2단부터) 원거리.
+     빛의 방향은 위에서 하나뿐이다(모든 y 오프셋이 양수).
+     쓰는 곳: 1 = 떠 있는 카드·버튼, 2 = 호버 확장·툴팁, 3 = 모달급. */
+  --elev-1: 0 0 0 1px oklch(0.2 0.015 258 / 0.03), 0 1px 2px oklch(0.2 0.015 258 / 0.05);
+  --elev-2: 0 0 0 1px oklch(0.2 0.015 258 / 0.03), 0 2px 4px -1px oklch(0.2 0.015 258 / 0.05), 0 8px 16px -4px oklch(0.2 0.015 258 / 0.06);
+  --elev-3: 0 0 0 1px oklch(0.2 0.015 258 / 0.04), 0 4px 8px -2px oklch(0.2 0.015 258 / 0.06), 0 16px 32px -8px oklch(0.2 0.015 258 / 0.09);
   --sidebar: oklch(0.985 0.003 258);
   --sidebar-foreground: oklch(0.205 0.015 258);
   --sidebar-primary: oklch(0.42 0.115 258);
@@ -295,8 +311,15 @@
      래퍼가 짧으면 아래쪽에 흰 띠가 남는다.
 --------------------------------------------------------------------------- */
 .surface-dark {
-  /* 브라우저가 그리는 것들(스크롤바·자동완성·기본 폼 컨트롤·select 팝업)까지
-     다크로 넘긴다. 이게 없으면 어두운 패널 위에 흰 스크롤바가 붙는다. */
+  /* 이 서브트리 안에서 **브라우저가 그리는 것들**을 다크로 넘긴다: 기본 폼
+     컨트롤·자동완성 배경·select 팝업, 그리고 이 안에 있는 스크롤 컨테이너의
+     스크롤바.
+     ★ 다만 **뷰포트(창) 스크롤바는 여기가 정하지 못한다** — 그건 루트 요소의
+       color-scheme이 결정하고, 루트는 :root의 `light`다. 즉 마케팅 페이지를
+       전체 스크롤할 때 창 스크롤바는 밝은 채로 남는다. 래퍼가 아니라 <html>에
+       색 스킴을 걸어야 바뀌는데, 그러면 앱 라우트까지 물린다.
+       Task 3에서 실물로 확인하고, 거슬리면 마케팅 레이아웃이 <html>에
+       색 스킴을 얹는 방식(라우트 그룹 단위)을 따로 검토한다. */
   color-scheme: dark;
 
   --background: oklch(0.155 0.008 258); /* #0a0c10 · 순수 검정 아님 */
@@ -375,15 +398,12 @@
   /* ---- elevation 다크 짝 ------------------------------------------------
      어두운 배경에서는 드롭 그림자가 거의 읽히지 않는다. 깊이를 만드는 것은
      위쪽 모서리의 inset 하이라이트(반사광)와, 배경보다 더 어두운 원거리
-     그림자다. 색은 라이트와 같은 색조(258)의 더 어두운 쪽이다. */
-  --shadow-elevation-1: inset 0 1px 0 oklch(1 0 0 / 0.06), 0 1px 2px oklch(0.05 0.01 258 / 0.5);
-  --shadow-elevation-2: inset 0 1px 0 oklch(1 0 0 / 0.07), 0 2px 6px -1px oklch(0.05 0.01 258 / 0.55), 0 10px 24px -6px oklch(0.05 0.01 258 / 0.6);
-  --shadow-elevation-3: inset 0 1px 0 oklch(1 0 0 / 0.09), 0 6px 12px -3px oklch(0.05 0.01 258 / 0.6), 0 24px 48px -12px oklch(0.05 0.01 258 / 0.7);
-
-  /* 래퍼가 유틸리티 클래스를 잊어도 표면은 칠해져야 한다. 다크 토큰을 선언한
-     바로 그 요소이므로 아래 var()는 위의 다크 값으로 풀린다. */
-  background-color: var(--background);
-  color: var(--foreground);
+     그림자다. 색은 라이트와 같은 색조(258)의 더 어두운 쪽이다.
+     ★ 이름이 --elev-N인 이유는 @theme inline 쪽 주석 참고 — 그림자 실값을
+       @theme에 두면 유틸리티가 값을 인라인해 버려서 이 재선언이 무시된다. */
+  --elev-1: inset 0 1px 0 oklch(1 0 0 / 0.06), 0 1px 2px oklch(0.05 0.01 258 / 0.5);
+  --elev-2: inset 0 1px 0 oklch(1 0 0 / 0.07), 0 2px 6px -1px oklch(0.05 0.01 258 / 0.55), 0 10px 24px -6px oklch(0.05 0.01 258 / 0.6);
+  --elev-3: inset 0 1px 0 oklch(1 0 0 / 0.09), 0 6px 12px -3px oklch(0.05 0.01 258 / 0.6), 0 24px 48px -12px oklch(0.05 0.01 258 / 0.7);
 }
 
 @layer base {
@@ -394,6 +414,19 @@
   html {
     @apply font-sans;
     -webkit-text-size-adjust: 100%;
+  }
+
+  /* 다크 표면의 기본 칠. 래퍼가 유틸리티 클래스를 잊어도 배경이 뚫리지 않게
+     하는 안전망이다(토큰을 선언한 바로 그 요소이므로 var()는 다크 값으로 푼다).
+     ★ base 레이어여야 한다. 언레이어로 두면 같은 특이도(0,1,0)의 유틸리티를
+       **레이어 순서로 이겨 버려서** 래퍼에 붙인 bg-*·text-*가 먹지 않는다
+       (히어로 배경을 그라데이션으로 덮는 것 같은 정상적인 오버라이드가 막힌다).
+       토큰 선언 자체는 언레이어인 :root와 짝을 맞춰 위쪽 .surface-dark 블록에
+       그대로 둔다 — 커스텀 프로퍼티까지 레이어에 넣으면, 누가 <html>에
+       surface-dark를 붙였을 때 언레이어 :root가 다크 토큰을 이겨 버린다. */
+  .surface-dark {
+    background-color: var(--background);
+    color: var(--foreground);
   }
 
   body {

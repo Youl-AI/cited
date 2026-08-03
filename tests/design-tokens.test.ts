@@ -48,6 +48,9 @@ function blockBody(header: RegExp): string {
 // `static`은 별도로 단언한다(아래 "리뉴얼 v3" describe) — 없으면 아무도 안 쓰는
 // 토큰이 빌드 산출물에서 사라진다.
 const themeBlock = blockBody(/@theme\s+static\s*\{/)
+// 값이 아니라 **다른 변수를 가리키는** 별칭들. 여기 있는 이름은 유틸리티가
+// `var(...)`를 그대로 뱉으므로 스코프(=다크 표면)를 탄다.
+const inlineBlock = blockBody(/@theme\s+inline\s*\{/)
 const rootBlock = blockBody(/:root\s*\{/)
 // 마케팅 표면(랜딩·요금제·무료진단 신청)이 감싸는 다크 토큰 스코프.
 const darkBlock = blockBody(/\.surface-dark\s*\{/)
@@ -325,9 +328,22 @@ describe('토큰 구조 계약 — 리뉴얼 v3', () => {
 
   it('elevation 3단이 존재하고 다층이다', () => {
     for (const n of [1, 2, 3]) {
-      const v = readToken(`shadow-elevation-${n}`, themeBlock)
+      const v = readToken(`elev-${n}`, rootBlock)
       expect(v).not.toBeNull()
       expect((v ?? '').split(',').length).toBeGreaterThanOrEqual(2)
+    }
+  })
+
+  it('elevation은 @theme inline의 별칭이다 — 실값을 @theme에 두면 다크에서 안 바뀐다', () => {
+    // Tailwind v4는 shadow 유틸리티를 만들 때 값을 레이어별로 쪼개 빌드 시점에
+    // 인라인한다(산출물 실측:
+    //   .shadow-elevation-1{--tw-shadow:0 0 0 1px var(--tw-shadow-color,#12161d08), …}).
+    // 색이 리터럴로 박히면 .surface-dark의 재선언이 유틸리티에 닿지 못한다.
+    // --radius와 같은 패턴 — 이름은 inline, 실값은 :root / .surface-dark.
+    for (const n of [1, 2, 3]) {
+      expect(readToken(`shadow-elevation-${n}`, inlineBlock)).toBe(`var(--elev-${n})`)
+      // 실값이 @theme(static)에 남아 있으면 다시 인라인된다.
+      expect(readToken(`shadow-elevation-${n}`, themeBlock)).toBeNull()
     }
   })
 })
@@ -406,12 +422,32 @@ describe('마케팅 다크 스코프 — 같은 뜻, 다른 표면', () => {
     expect(band.l).toBeLessThan(darkColor('foreground').l)
   })
 
+  it('엔진 넷은 다크에서도 서로 구분된다', () => {
+    // 라이트와 같은 방식 — 명도를 다시 유도하면서 둘이 붙어 버리기 쉽다
+    // (gemini/naver를 0.66/0.70으로 뒀을 때 ΔE 0.127로 문턱 아래였다).
+    for (let a = 0; a < ENGINE_TOKENS.length; a++) {
+      for (let b = a + 1; b < ENGINE_TOKENS.length; b++) {
+        const [na, nb] = [ENGINE_TOKENS[a], ENGINE_TOKENS[b]]
+        if (na === undefined || nb === undefined) continue
+        expect(deltaE(darkColor(na), darkColor(nb))).toBeGreaterThan(0.15)
+      }
+    }
+  })
+
   it('elevation 3단도 다크에서 다시 선언된다 — 라이트 틴트 그림자는 다크에서 보이지 않는다', () => {
     for (const n of [1, 2, 3]) {
-      const v = readToken(`shadow-elevation-${n}`, darkBlock)
+      const v = readToken(`elev-${n}`, darkBlock)
       expect(v).not.toBeNull()
       expect((v ?? '').split(',').length).toBeGreaterThanOrEqual(2)
     }
+  })
+
+  it('다크 표면의 기본 칠은 base 레이어에 있다 — 유틸리티가 이겨야 한다', () => {
+    // 언레이어로 두면 같은 특이도(0,1,0)의 bg-*·text-*를 레이어 순서로 이겨
+    // 버려서, 래퍼에 붙인 배경 오버라이드가 통째로 죽는다.
+    const base = blockBody(/@layer\s+base\s*\{/)
+    expect(base).toMatch(/\.surface-dark\s*\{[^}]*background-color:\s*var\(--background\)/)
+    expect(base).toMatch(/\.surface-dark\s*\{[^}]*color:\s*var\(--foreground\)/)
   })
 })
 
@@ -421,6 +457,7 @@ describe('모션 토큰 — 값이 컴포넌트에 흩어지면 안 된다', () 
       'motion-micro',
       'motion-enter',
       'motion-state',
+      'motion-draw',
       'motion-reveal',
       'motion-stagger',
       'ease-instrument',
