@@ -567,6 +567,76 @@
     }
   }
 
+  /* 계기판 등장 — **앱(라이트) 표면 전용, JS 없이.**
+     마케팅의 `.enter-rise`(800ms glide · 1.5rem)와 **다른 스케일**인 것이
+     핵심이다. 대시보드는 읽으러 오는 화면이라 등장이 길면 수치를 기다리게
+     된다. 여기는 --motion-enter(220ms) · instrument(감속) · 6px — "떴다"가
+     아니라 "자리에 앉았다"로 읽히는 최소량이다.
+     ★ `Reveal`(Motion whileInView)을 쓰지 않은 이유는 히어로와 같다 —
+       그쪽은 프리렌더 HTML에 인라인 `opacity:0`을 박고 하이드레이션 뒤에야
+       푼다. 대시보드는 서버에서 수치까지 다 그려 보내는 화면이라, 거기에
+       JS 게이트를 다는 것은 계측값의 첫 페인트를 청크 로딩 뒤로 미루는 짓이다.
+       스크롤 진입 판정도 필요 없다(§6: 스크롤 위치가 데이터를 결정하면 안 된다).
+     ★ 순번은 `--enter-delay`로 호출부가 준다 — `[--enter-delay:calc(var(--motion-stagger)*2)]`.
+       읽는 순서(위→아래)를 만드는 것이 목적이므로 그룹마다 0부터 센다.
+     ★ reduced-motion은 base 레이어의 킬 스위치가 처리한다(duration·delay가
+       0.01ms로 눌리고 `both`가 마지막 프레임을 붙잡아 "끝난 상태로 시작"이 된다).
+     ★ 인쇄는 애니메이션을 돌리지 않는 매체다. `both`는 시작 전 `from`을
+       붙잡으므로, 가드가 없으면 종이에서 투명한 채로 찍힐 수 있다
+       (design-language §6의 "초기 상태를 클래스에 박지 말라"와 같은 사고). */
+  .instrument-enter {
+    animation: instrument-enter var(--motion-enter) var(--ease-instrument)
+      var(--enter-delay, 0ms) both;
+  }
+
+  @keyframes instrument-enter {
+    from {
+      opacity: 0;
+      /* transform·opacity만 움직인다(GPU 합성). */
+      transform: translateY(0.375rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* 차트 선 드로우인 — **연결선에만** 건다.
+     ★ 무엇에 걸지 않는가가 더 중요하다: 점(계측값)과 오차 밴드는 첫 프레임부터
+       최종 위치에 있다. design-language §6이 못 박은 순서다 — 점을 먼저 보여
+       주고 밴드를 나중에 붙이면 "확정값처럼 보였다가 흐려지는" 인상이 된다.
+       연결선은 §5.1이 "보조"라고 규정한 요소라 늦게 도착해도 값이 바뀌지 않는다.
+     ★ 길이 정규화는 `pathLength="1"`이 한다 — JS로 `getTotalLength()`를
+       재지 않아도 되므로 서버 컴포넌트(SoV 추이)에서도 그대로 쓴다.
+       `pathLength`는 대시 계산의 단위만 바꾸고 기하는 건드리지 않는다.
+     ★ 스크롤과 무관하게 마운트 시 한 번만 돈다(§6: 스크롤 하이재킹 금지 —
+       드로우인까지 포함해서). */
+  .chart-draw {
+    stroke-dasharray: 1;
+    animation: chart-draw var(--motion-draw) var(--ease-instrument) both;
+  }
+
+  @keyframes chart-draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @media print {
+    .instrument-enter {
+      animation: none;
+    }
+
+    /* 대시가 남으면 종이에서 선이 통째로 사라진다. */
+    .chart-draw {
+      animation: none;
+      stroke-dasharray: none;
+    }
+  }
+
   /* 눌리는 것들의 물리 — 버튼·탭 트리거가 공유한다.
      한 줄에 모은 이유는 **속성별로 이징이 달라야 하기 때문**이다. 색·그림자는
      감속(instrument)이어야 차분하고, 눌림만 스프링(살짝 오버슈트)이어야 손끝

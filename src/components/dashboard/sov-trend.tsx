@@ -112,6 +112,13 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
             <path
               key={`line-${idx[0]}`}
               data-testid="sov-line"
+              // 드로우인은 추이 차트와 같은 CSS 클래스다 — 두 차트가 다른
+              // 속도로 그려지면 같은 화면에서 물리 법칙이 갈린다. 점·밴드는
+              // 첫 프레임부터 제자리이고 **연결선만** 그려진다 (§6).
+              // `pathLength={1}`이 길이를 정규화하므로 이 서버 컴포넌트에
+              // 'use client'를 열지 않아도 된다.
+              className="chart-draw"
+              pathLength={1}
               d={`M ${idx.map((i) => `${x(i)},${y(sov[i]!.interval.point)}`).join(' L ')}`}
               fill="none"
               stroke="var(--primary)"
@@ -133,7 +140,7 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
           </text>
         ))}
       </svg>
-      <p className="mt-2 text-xs text-muted-foreground">
+      <p className="mt-3 max-w-prose text-xs text-muted-foreground">
         분모: 등록 경쟁사({denomRun.competitors.join(', ') || '없음'}) 대비 언급 비중입니다.
         {hasCompetitorBreak &&
           ' 경쟁사 설정이 바뀐 구간은 이전과 비교하지 않습니다 — 분모가 달라지면 점유율은 설정 변경만으로도 움직입니다.'}

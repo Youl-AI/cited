@@ -28,19 +28,27 @@ import { cn } from "@/lib/utils"
  *
  * ## 동심 반경
  *
- *   껍질 반경 = --radius × 1.4  (rounded-xl과 같은 값. 계산식을 드러내려고
- *                                이름을 붙였다)
+ *   껍질 반경 = --radius-xl (= --radius × 1.4, rounded-xl과 같은 값)
  *   내핵 반경 = 껍질 반경 − 베젤(4px)
  *
- * ★ 왜 `var(--radius-xl)`로 참조하지 않는가(그게 더 깔끔해 보이는데도):
- *   `--radius-*`는 `@theme inline`에 있고, **inline은 변수를 발행하지 않는다.**
- *   Tailwind가 유틸리티 안에 값을 펼쳐 넣을 뿐이다. 빌드 산출물로 확인했다 —
- *   `:root`에 `--radius-xl`은 없고, `.rounded-xl`은
- *   `border-radius: calc(var(--radius) * 1.4)`로 나온다.
- *   즉 여기서 `var(--radius-xl)`을 쓰면 **정의되지 않은 변수**를 참조해
- *   반경이 통째로 무너진다(그리고 조용히 무너진다 — 폴백이 없으면 속성이
- *   무효가 될 뿐이라 콘솔에 아무것도 안 뜬다). 계산식을 직접 적는 것이
- *   지금 구조에서 유일하게 옳다.
+ * ★ **정정 (Task 7, 빌드 산출물 재실측).** 여기 있던 "`@theme inline`은 변수를
+ *   발행하지 않으므로 `var(--radius-xl)`은 정의되지 않은 변수다"라는 주석은
+ *   **틀렸다.** 실제 산출 CSS에는 `:root,:host{…--radius-xl:calc(var(--radius) * 1.4)…}`가
+ *   있다. inline이 바꾸는 것은 "유틸리티가 값을 펼쳐 넣는가"이지 "변수를
+ *   발행하는가"가 아니다.
+ *
+ *   다만 발행 조건에 함정이 하나 있고, 그게 원래 오해의 뿌리다:
+ *   **`@theme inline` 변수는 소스에서 그 이름이 참조될 때만 발행된다**
+ *   (`@theme static`과 다른 점 — globals.css 그 블록의 주석 참고). 실측:
+ *   `--radius-sm`·`--radius-md`는 arbitrary 값 안에서 참조돼 발행되고,
+ *   `--radius-2xl`·`--radius-3xl`·`--radius-4xl`은 아무도 안 써서 발행되지
+ *   않는다. 재미있게도 정정 전에도 `--radius-xl`은 발행되고 있었는데,
+ *   **"발행되지 않는다"고 주장하던 이 주석 자체가 그 이름을 문자열로 담고
+ *   있었기 때문이다**(Tailwind의 소스 스캐너는 평문 스캐너다).
+ *
+ *   그래서 지금 아래 줄처럼 `var(--radius-xl)`을 **실제로 참조하는 것**이
+ *   자기 발행 조건을 스스로 만족시키는 쪽이라 안전하다 — 주석을 지우면
+ *   같이 사라지는 우연에 기대지 않는다.
  *
  * 이 뺄셈이 없으면 두 곡선의 중심이 어긋나서, 모서리에서 베젤 폭이 넓어졌다
  * 좁아진다 — 값싸 보이는 이유가 대부분 여기다. 반경이 --radius에서 파생하므로
@@ -63,7 +71,7 @@ function Card({
       data-size={size}
       className={cn(
         "group/card relative isolate flex flex-col gap-(--card-spacing) overflow-hidden text-sm text-card-foreground",
-        "[--card-bezel:--spacing(1)] [--card-radius:calc(var(--radius)*1.4)] [--card-spacing:--spacing(4)] [--card-core-radius:calc(var(--card-radius)-var(--card-bezel))] data-[size=sm]:[--card-spacing:--spacing(3)]",
+        "[--card-bezel:--spacing(1)] [--card-radius:var(--radius-xl)] [--card-spacing:--spacing(4)] [--card-core-radius:calc(var(--card-radius)-var(--card-bezel))] data-[size=sm]:[--card-spacing:--spacing(3)]",
         // 겉껍질
         "rounded-[var(--card-radius)] bg-muted/60 px-(--card-bezel) py-[calc(var(--card-bezel)+var(--card-spacing))] shadow-elevation-1 ring-1 ring-foreground/[0.07]",
         // 내핵

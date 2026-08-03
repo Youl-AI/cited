@@ -97,4 +97,75 @@ describe('TrendChart', () => {
     )
     expect(container.querySelectorAll('[data-testid="trend-point"]')).toHaveLength(2)
   })
+
+  /**
+   * ★ 툴팁은 **`<title>`의 승격**이지 새 정보가 아니다. 둘이 갈라지면 마우스로
+   *   본 값과 스크린리더로 읽은 값이 달라진다 — 여기서 같은 문자열임을 못박는다.
+   *   (`<title>`은 보조기기용으로 그대로 남아야 하므로 그것도 함께 확인한다.)
+   */
+  test('점을 짚으면 <title>과 같은 세 항목을 툴팁으로 올린다 — <title>은 그대로 남는다', () => {
+    const { container } = render(<TrendChart points={[point('r1', 20), point('r2', 25)]} />)
+    const titles = [...container.querySelectorAll('title')].map((t) => t.textContent)
+    expect(titles).toHaveLength(2)
+
+    expect(container.querySelector('[data-testid="trend-tooltip"]')).toBeNull()
+    const hits = container.querySelectorAll('[data-testid="trend-hit"]')
+    expect(hits).toHaveLength(2)
+    fireEvent.mouseOver(hits[1]!)
+
+    const tip = container.querySelector('[data-testid="trend-tooltip"]')
+    expect(tip).not.toBeNull()
+    // 툴팁이 담은 문자열이 그 점의 <title>과 같은 세 항목인지 — 날짜 · 점추정
+    // (구간) · k/n. 공백·구분자만 다르므로 항목별로 확인한다.
+    const title = titles[1]!
+    for (const part of title.split(' · ')) {
+      expect(tip!.textContent).toContain(part.replace(/^\((.*)\)$/, '$1'))
+    }
+    // 보조기기에는 <title>이 이미 읽어 준다 — 툴팁이 또 읽히면 중복이다.
+    expect(tip).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  test('크로스헤어는 짚은 회차에만 서고, 차트를 벗어나면 툴팁이 사라진다', () => {
+    const { container } = render(<TrendChart points={[point('r1', 20), point('r2', 25)]} />)
+    expect(container.querySelector('[data-testid="trend-crosshair"]')).toBeNull()
+
+    fireEvent.mouseOver(container.querySelectorAll('[data-testid="trend-hit"]')[0]!)
+    expect(container.querySelectorAll('[data-testid="trend-crosshair"]')).toHaveLength(1)
+
+    fireEvent.mouseLeave(container.querySelector('svg')!)
+    expect(container.querySelector('[data-testid="trend-crosshair"]')).toBeNull()
+    expect(container.querySelector('[data-testid="trend-tooltip"]')).toBeNull()
+  })
+
+  /**
+   * ★ 엔진을 갈아타면 계열 길이가 달라진다. 짚어 둔 인덱스를 그대로 들고 있으면
+   *   **다른 회차의 값**을 짚은 채로 남거나 범위를 벗어난다 — 어느 쪽이든 화면이
+   *   거짓을 말한다.
+   */
+  test('엔진을 갈아타면 짚어 둔 회차를 놓는다', () => {
+    const { container } = render(<TrendChart points={[point('r1', 20), point('r2', 25)]} />)
+    fireEvent.mouseOver(container.querySelectorAll('[data-testid="trend-hit"]')[1]!)
+    expect(container.querySelector('[data-testid="trend-tooltip"]')).not.toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'ChatGPT' }))
+    expect(container.querySelector('[data-testid="trend-tooltip"]')).toBeNull()
+  })
+
+  /**
+   * ★ 드로우인은 **연결선에만** 붙는다 (design-language §6: 오차 밴드는 점보다
+   *   먼저 또는 같이 나타난다 — 점을 먼저 보여 주고 밴드를 나중에 붙이는 연출은
+   *   "확정값처럼 보였다가 흐려지는" 인상을 준다).
+   */
+  test('드로우인은 연결선에만 걸린다 — 밴드·점은 첫 프레임부터 제자리다', () => {
+    const { container } = render(<TrendChart points={[point('r1', 20), point('r2', 25)]} />)
+    expect(container.querySelector('[data-testid="trend-line"]')).toHaveClass('chart-draw')
+    // SVG 요소의 `className`은 문자열이 아니라 SVGAnimatedString이다 —
+    // 속성으로 직접 읽는다.
+    for (const el of container.querySelectorAll('[data-testid="trend-band"]')) {
+      expect(el.getAttribute('class') ?? '').not.toContain('chart-draw')
+    }
+    for (const el of container.querySelectorAll('[data-testid="trend-point"]')) {
+      expect(el.getAttribute('class') ?? '').not.toContain('chart-draw')
+    }
+  })
 })
