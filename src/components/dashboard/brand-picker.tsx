@@ -27,11 +27,18 @@ export function BrandPicker({
   // ★ `var(--radius-xl)`로 줄여 쓰지 않는다 — 그 변수는 `:root`에서 치환돼
   //   1.05rem으로 굳으므로 표면 스코프(`.surface-dark`의 --radius: 1rem)를
   //   타지 못한다. 계산식은 이 요소에서 치환된다 (card.tsx 주석 참고).
-  // ★ **모든 항목에 `border`가 있다.** 아래 "추가"만 점선 테두리를 두르면
-  //   그 항목만 2px 크고 베이스라인이 어긋난다 — 투명 테두리로 상자를 맞추고
-  //   색만 갈아 끼운다.
+  // ★ **모든 항목이 1px 테두리를 갖는다** — 아래 "추가"만 점선을 두르면 그
+  //   항목만 2px 크고 베이스라인이 어긋난다. 다만 **테두리는 공통 문자열이
+  //   아니라 분기마다 온전히 적는다.**
+  //   여기는 `cn`(twMerge)이 아니라 순수 문자열 연결이라, 공통 쪽에
+  //   `border-transparent`를 두고 분기에서 `border-border`로 덮으려 하면 두
+  //   클래스가 **둘 다 살아남는다.** 그러면 특이도가 같아 승부는 발행 순서가
+  //   가르는데, 실측상 `.border-transparent`(30083)가 `.border-border`(28292)
+  //   보다 **뒤에** 나온다 — 점선이 평상시 투명하고 호버에서만 보이는 결함이
+  //   실제로 그렇게 생겼다. 분기가 자기 색을 온전히 들고 있으면 순서에
+  //   의존할 일이 없다.
   const item =
-    'motion-press rounded-[calc(var(--radius)*1.4-0.25rem)] border border-transparent px-3 py-1.5 text-sm active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
+    'motion-press rounded-[calc(var(--radius)*1.4-0.25rem)] px-3 py-1.5 text-sm active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
   return (
     <nav
       aria-label="브랜드 선택"
@@ -44,8 +51,8 @@ export function BrandPicker({
           aria-current={b.id === selectedId ? 'page' : undefined}
           className={
             b.id === selectedId
-              ? `${item} bg-card font-medium text-foreground shadow-elevation-1`
-              : `${item} text-muted-foreground hover:bg-card/60 hover:text-foreground`
+              ? `${item} border border-transparent bg-card font-medium text-foreground shadow-elevation-1`
+              : `${item} border border-transparent text-muted-foreground hover:bg-card/60 hover:text-foreground`
           }
         >
           {b.name}
@@ -54,11 +61,11 @@ export function BrandPicker({
       {canAdd && (
         // 추가는 브랜드가 아니다 — 같은 트레이에 있되 점선으로 갈라 둔다
         // (회차 목록의 빈 상태와 같은 뜻: "여기에 채워질 자리").
-        // 상자 크기는 `item`의 투명 테두리가 이미 맞춰 놨다 — 여기서는
-        // 스타일과 색만 바꾼다(`border` 폭을 다시 선언하지 않는다).
+        // 폭·스타일·색을 **여기서 전부** 적는다 — 위 주석의 이유로 공통
+        // 문자열에서 테두리를 물려받지 않는다.
         <Link
           href="/onboarding"
-          className={`${item} border-dashed border-border text-muted-foreground hover:border-ring/40 hover:text-foreground`}
+          className={`${item} border border-dashed border-border text-muted-foreground hover:border-ring/40 hover:text-foreground`}
         >
           + 브랜드 추가
         </Link>
