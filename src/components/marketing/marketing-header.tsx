@@ -53,7 +53,12 @@ export function MarketingHeader({
   cta = true,
 }: { cta?: boolean } = {}) {
   return (
-    <header className="fixed inset-x-0 top-0 z-50">
+    // z-40이다. 루트 레이아웃의 "본문으로 건너뛰기" 링크가 `focus:z-50`으로
+    // 뜨는데(app/layout.tsx), 머리글이 z-50이면 **같은 층에서 나중에 그려지는
+    // 쪽**이 이기므로 포커스된 skip 링크가 알약 뒤에 숨었다. 앱 머리글
+    // (site-header.tsx)이 z-40인 것과 같은 값이고, 그래서 두 표면이 같은 규칙을
+    // 따른다: 머리글 40 < skip 링크 50.
+    <header className="fixed inset-x-0 top-0 z-40">
       <div className="mx-auto w-full max-w-6xl px-3 pt-3 sm:px-6 sm:pt-4">
         {/* 오른쪽 여백은 CTA 유무를 따른다. 알약이 자기 안쪽 여백을 가지므로
             있을 때는 `pr-1.5`로 붙이고, 없을 때는 왼쪽과 같은 값으로 맞춘다

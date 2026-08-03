@@ -52,13 +52,14 @@ function SelectTrigger({
         //   실제로 판다), 리터럴을 두 파일에 복사해 두지 않는다.
         //   열려 있는 동안(data-state=open)은 초점 테두리를 유지해서 팝오버와
         //   트리거가 한 덩어리로 읽히게 한다.
-        // ★ 다크 호버 가드는 input.tsx와 **같은 값**이어야 한다 — 근거(3:1
-        //   붕괴)와 계산은 그쪽 주석에 있다. 두 컨트롤이 나란히 놓이는 폼에서
-        //   호버 밝기가 갈리면 그 자체가 결함으로 보인다.
+        // ★ 다크 호버 가드는 input.tsx·button.tsx(outline)와 **같은 값**(흰색
+        //   50%)이어야 한다 — 근거(3:1 붕괴)와 계산은 input.tsx 주석에 있다.
+        //   세 컨트롤이 나란히 놓이는 폼에서 호버 밝기가 갈리면 그 자체가
+        //   결함으로 보인다.
         "flex w-fit items-center justify-between gap-1.5 rounded-lg border border-input bg-background py-2 pr-2 pl-2.5 text-sm whitespace-nowrap outline-none select-none",
         "shadow-(--recess-1)",
         "transition-[color,background-color,border-color,box-shadow] duration-[var(--motion-micro)] ease-instrument",
-        "hover:border-ring/35 hover:bg-muted/40 dark:hover:border-[oklch(1_0_0/45%)] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=open]:border-ring",
+        "hover:border-ring/35 hover:bg-muted/40 dark:hover:border-[oklch(1_0_0/50%)] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=open]:border-ring",
         "disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground",
         "data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className

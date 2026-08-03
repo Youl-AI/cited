@@ -68,7 +68,12 @@ export function CtaLink({
       className={cn(
         'group/cta inline-flex shrink-0 items-center justify-center rounded-full font-semibold whitespace-nowrap',
         // 눌림. 이징은 --ease-spring(오버슈트 4% 이내) — 손끝 반응에만 쓰는 그 값이다.
-        'transition-[transform,background-color,box-shadow] duration-[var(--motion-micro)] ease-spring',
+        // ★ 전이 목록에 `transform`이 아니라 `scale`을 적는다. Tailwind v4는
+        //   `active:scale-[0.98]`을 `transform: scale(...)`이 아니라 **독립
+        //   `scale` 속성**으로 낸다 — `transform`만 적으면 스프링이 걸리지 않고
+        //   눌림이 뚝 끊긴다. `.motion-press`(globals.css)가 같은 이유로 목록에
+        //   `scale`을 명시해 둔 그 선례다.
+        'transition-[scale,background-color,box-shadow] duration-[var(--motion-micro)] ease-spring',
         'active:scale-[0.98]',
         'focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring',
         TONE[tone],

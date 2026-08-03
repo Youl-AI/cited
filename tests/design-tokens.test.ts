@@ -585,13 +585,16 @@ describe('폼 컨트롤의 깊이와 다크 호버 — 계약 지점만 잠근�
     expect(readToken('recess-1', darkBlock)).not.toBe('none')
   })
 
-  it.each(['input', 'select'])(
-    '%s.tsx가 다크 호버 테두리를 따로 잡는다 — 없으면 빈 칸이 호버에서 3:1 아래로 떨어진다',
+  // button은 outline variant가 같은 사고를 안고 있다 — 마케팅 신청 폼에서
+  // 입력·셀렉트와 **나란히** 서는 컨트롤이라 가드가 빠지면 그 줄만 호버에서
+  // 흐려진다. 세 파일이 같은 값(흰색 50%)을 쓰는지까지 여기서 잠근다.
+  it.each(['input', 'select', 'button'])(
+    '%s.tsx가 다크 호버 테두리를 따로 잡는다 — 없으면 호버에서 테두리가 오히려 흐려진다',
     (name) => {
       const source = uiSource(name)
       // 라이트 호버(`hover:border-ring/…`)를 쓰면서 다크 가드가 없으면,
       // 다크 표면에서 그 값이 --input(흰색 36%)을 덮어써서 테두리가
-      // 오히려 흐려진다(실측 1.96:1 — WCAG 1.4.11 미달).
+      // 오히려 흐려진다(빈 입력 실측 1.96:1 — WCAG 1.4.11 미달).
       expect(source).toMatch(/dark:hover:border-\[oklch\(/)
 
       // 그리고 그 값은 다크 기본 테두리보다 **밝아야** 한다. 어두우면 가드가

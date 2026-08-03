@@ -655,6 +655,12 @@
   }
 
   @media print {
+    /* `both`가 시작 전 `from`(opacity:0)을 붙잡으므로, 가드가 없으면 히어로가
+       종이에 투명하게 찍힌다 — instrument-enter와 같은 사고다. */
+    .enter-rise {
+      animation: none;
+    }
+
     .instrument-enter {
       animation: none;
     }

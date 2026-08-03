@@ -84,11 +84,18 @@ const offenders = (re: RegExp): string[] =>
 
 describe('디자인 배터리 — 마케팅 표면 (tasteskill §9 자동화분)', () => {
   it('검사 대상 디렉터리가 실제로 존재한다 — 경로가 죽으면 배터리가 조용히 빈다', () => {
-    // 이 단언이 없으면 라우트 그룹 개편(Task 5의 `(flow)` 분리 같은 것) 뒤에
+    // 라우트 그룹 개편(Task 5의 `(flow)` 분리 같은 것) 뒤에 경로가 죽으면
     // walk가 아무것도 못 걷고 아래 규칙이 전부 초록으로 통과한다. 실제로
     // 브리프에 적힌 `src/app/audit/new` 경로가 그렇게 죽어 있었다.
+    // ★ 실제로 방어하는 것은 **아래 파일 수 단언**이다. existsSync 절은
+    //   도달하지 못한다 — walk는 모듈 로드 시점(위 `marketingFiles`)에 이미
+    //   돌고, 경로가 없으면 거기서 먼저 throw한다. 그래도 남겨 두는 이유는
+    //   실패했을 때 "어느 디렉터리가 죽었는지"를 이름으로 말해 주기 때문이다.
     expect(MARKETING_DIRS.filter((d) => !existsSync(join(root, d)))).toEqual([])
-    expect(marketingFiles.length).toBeGreaterThan(10)
+    // 임계는 현재 실측(17: 라우트 3 · 컴포넌트 11 · 신청 흐름 3)의 바로 아래다.
+    // 10은 `src/components/marketing`(11개)이 통째로 빠져도 통과할 만큼
+    // 느슨했다 — 그러면 배터리가 조용히 절반만 도는 셈이다.
+    expect(marketingFiles.length).toBeGreaterThan(16)
   })
 
   it('em-dash·en-dash 금지 (§9.G — 주석 제외 전체)', () => {

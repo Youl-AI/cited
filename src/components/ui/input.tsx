@@ -19,8 +19,11 @@ import { cn } from "@/lib/utils"
  *   1.96:1로 **떨어진다** — WCAG 1.4.11이 요구하는 3:1 아래다. 다크 기본
  *   테두리는 `--input`(= `--border-interactive`, 흰색 36% · 3.35:1)인데
  *   호버가 그보다 어두운 값으로 덮어써서, 손을 올릴수록 칸이 사라지는
- *   방향이었다. 흰색 45%는 기본값보다 **밝으므로** 대비가 올라가고
+ *   방향이었다. 흰색 50%는 기본값보다 **밝으므로** 대비가 올라가고
  *   어포던스 방향도 맞는다(globals.css의 36% 계약도 그대로 지킨다).
+ *   값이 50%인 것은 button outline의 다크 가드와 **같은 값**이기 때문이다 —
+ *   같은 폼에 나란히 서는 컨트롤(입력·셀렉트·"경쟁사 추가" 버튼)이 서로 다른
+ *   밝기로 반응할 근거가 없다.
  *   이 짝은 tests/design-tokens.test.ts가 잠근다.
  * ★ 높이는 h-8 그대로다. 버튼 기본(h-8)과 짝이고, 이 앱의 폼은 전부 이
  *   스케일 위에 앉아 있다. 여기서 키우면 온보딩·인증의 모든 행이 어긋난다.
@@ -35,7 +38,7 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
         "shadow-(--recess-1)",
         "transition-[color,background-color,border-color,box-shadow] duration-[var(--motion-micro)] ease-instrument",
         "file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground",
-        "hover:border-ring/35 dark:hover:border-[oklch(1_0_0/45%)] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+        "hover:border-ring/35 dark:hover:border-[oklch(1_0_0/50%)] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
         "disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 disabled:shadow-none",
         "aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
         "md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
