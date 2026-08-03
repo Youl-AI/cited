@@ -37,6 +37,8 @@
     "measure": "tsx --conditions=react-server --env-file=.env.local scripts/measure.mts",
     "plan:grant": "tsx --conditions=react-server --env-file=.env.local scripts/plan-grant.mts",
     "plan:revoke": "tsx --conditions=react-server --env-file=.env.local scripts/plan-revoke.mts",
+    "e2e:onboarding:seed": "tsx --conditions=react-server --env-file=.env.local scripts/e2e-onboarding-seed.mts",
+    "e2e:onboarding:cleanup": "tsx --conditions=react-server --env-file=.env.local scripts/e2e-onboarding-cleanup.mts",
     "label:collect": "tsx --conditions=react-server --env-file=.env.local scripts/label-collect.mts",
     "label": "tsx --conditions=react-server scripts/label.mts",
     "test:golden": "vitest run --config vitest.golden.config.ts",
