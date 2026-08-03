@@ -10,12 +10,16 @@ import type { EngineId } from '@/lib/plans'
  * ★ SERP가 LLM보다 낮다. SerpApi는 월 1,000건짜리 쿼터를 쓰는데 동시성을
  *   올려도 총량이 늘지 않고, 대신 잘못된 질의를 대량으로 태울 위험만 커진다.
  *
- * 이 값은 **추측이다.** 4단계에서 실제 주간 수집(Starter 100회)을 돌려보고
- * 429 발생 여부로 조정한다. 조정할 때는 근거를 노트에 남긴다.
+ * ★ 2026-08-03 실측 조정: LLM 4 → 8. 근거 — Vercel Hobby 함수 상한이 300초
+ *   고정인데, 동시성 4로는 브랜드 1개(엔진당 30콜)가 로컬 233초·프로덕션
+ *   300초 초과로 cron 측정이 함수 킬로 죽었다(Task 12 실측, run a13483de).
+ *   8이면 웨이브가 절반이라 ~120-150초. 60콜 규모에서 429는 관찰되지 않았고,
+ *   재발하면 여기서 다시 낮추되 그때는 측정을 호출 여러 번에 나누는 구조
+ *   변경이 필요하다.
  */
 export const ENGINE_QUEUE_CONCURRENCY: Record<EngineId, number> = {
-  chatgpt: 4,
-  gemini: 4,
+  chatgpt: 8,
+  gemini: 8,
   naver: 2,
   google_aio: 2,
 }
