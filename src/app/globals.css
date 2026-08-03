@@ -154,13 +154,14 @@
      그려서, 밝은 페이지 위에 검은 입력창이 얹힌다. */
   color-scheme: light;
 
-  /* 서체 — 라틴·숫자는 IBM Plex(next/font로 self-host), 한글은 시스템 서체.
-     한글 웹폰트는 서브셋을 해도 수 MB다. "부풀리지 않는다"고 말하는 제품이
-     본문 서체로 수 MB를 태우는 것은 앞뒤가 안 맞는다. Plex에는 한글 글리프가
-     없으므로 브라우저가 글자 단위로 뒤쪽 한글 서체까지 내려간다. */
+  /* 서체 — 한글·라틴 모두 SUIT Variable(next/font/local로 self-host, layout.tsx).
+     한글을 시스템 서체에 맡기던 것을 되돌린 이유는 layout.tsx 주석 참고.
+     뒤쪽은 SUIT가 뜨기 전(display:swap 구간)이나 실패했을 때의 폴백이다 —
+     Plex가 라틴·숫자를, 그다음 한글 서체들이 한글을 받는다. Plex에는 한글
+     글리프가 없으므로 브라우저는 글자 단위로 더 뒤까지 내려간다. */
   --font-sans:
-    var(--font-plex-sans), "Pretendard Variable", Pretendard, "Apple SD Gothic Neo",
-    "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+    var(--font-suit), var(--font-plex-sans), "Pretendard Variable", Pretendard,
+    "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
   --font-mono:
     var(--font-plex-mono), ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas,
     "D2Coding", monospace;

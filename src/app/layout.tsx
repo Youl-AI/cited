@@ -1,10 +1,24 @@
 import type { Metadata } from 'next'
 import { IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google'
+import localFont from 'next/font/local'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import './globals.css'
 
-// 라틴 문자와 숫자만 웹폰트로 싣는다. 한글은 시스템 서체로 떨어진다
-// (스택 정의는 globals.css의 --font-sans 주석 참고).
+// 본문 서체. 지금까지 한글은 시스템 서체(기기마다 다른 것)에 맡겨 두었는데,
+// 그러면 같은 화면이 맥·윈도우에서 다른 리듬으로 읽힌다. SUIT는 가변 서체
+// 하나로 100–900을 덮으므로 웨이트별 파일을 따로 싣지 않아도 되고, woff2
+// 압축 후 610KB라 한글 웹폰트치고 가볍다(웨이트 3개짜리 정적 한글 서체보다
+// 작다). --font-sans 체인 맨 앞이므로 라틴·한글 모두 여기서 잡힌다 —
+// 순서와 폴백은 globals.css의 --font-sans 주석 참고.
+const suit = localFont({
+  src: './fonts/SUIT-Variable.woff2',
+  variable: '--font-suit',
+  weight: '100 900',
+  display: 'swap',
+})
+
+// SUIT 뒤의 라틴 폴백. SUIT가 뜨기 전(swap 구간)이나 실패했을 때 라틴·숫자를
+// 받는다.
 const plexSans = IBM_Plex_Sans({
   variable: '--font-plex-sans',
   subsets: ['latin'],
@@ -34,7 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="ko"
       suppressHydrationWarning
-      className={`${plexSans.variable} ${plexMono.variable}`}
+      className={`${suit.variable} ${plexSans.variable} ${plexMono.variable}`}
     >
       {/* Radix Tooltip은 Provider 없이는 던진다. 수치 옆의 "이 숫자는 어떻게
           나왔나" 설명이 앱 전역에서 쓰이므로 루트에서 한 번만 감싼다.
