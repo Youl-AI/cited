@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { QueryProtocol } from '@/components/audit/query-protocol'
 import { RequestForm } from '@/components/audit/request-form'
 import { SPECIMEN } from '@/components/marketing/actuals'
@@ -76,27 +77,33 @@ export default function HomePage() {
                   모바일에서는 폼 위의 머리 블록으로 접힌다(아래 border 방향
                   전환). 레일 바닥의 측정 규격은 폼 안 FlowStrip(순서)과 겹치지
                   않는 정보만 싣는다 — 무엇을 몇 번, 어디에 묻는지. */}
-              <div className="flex flex-col border-b border-border bg-foreground/[0.02] p-6 sm:p-8 lg:border-r lg:border-b-0">
-                <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                  무료 진단 신청
-                </h2>
-                <p className="mt-4 max-w-[34em] text-base leading-relaxed text-muted-foreground">
-                  질의 <span className="font-mono tabular-nums">{PLANS.free.maxQueries}</span>개를{' '}
-                  <span className="font-mono tabular-nums">1</span>회 측정해 메일로 보내드립니다.
-                  결제 정보는 받지 않습니다.
-                </p>
-                {/* 히어로의 표시 규칙 설명이 이어지는 자리다. 경쟁사를 실제로
-                    입력하는 칸 바로 옆이라, 여기서 읽어야 결정에 쓸 수 있다. */}
-                <p className="mt-5 max-w-[34em] text-sm leading-relaxed text-muted-foreground">
-                  우리는 알려주신 브랜드만 셀 수 있습니다. 경쟁사를 적게 넣으면 점유율이 실제보다
-                  높게 보입니다. 리포트에 분모를 항상 함께 적는 이유입니다.
-                </p>
+              <div className="border-b border-border bg-foreground/[0.02] p-6 sm:p-8 lg:border-r lg:border-b-0">
+                {/* ★ 레일 내용은 sticky다. 폼이 안내보다 두 배 넘게 길어서
+                    그냥 두면 레일 아래가 통째로 빈다 — 붙여 두면 긴 폼을
+                    내려가는 동안 안내·규격이 시야에 동행한다(빈 공간을 채우는
+                    장식 대신 행동으로 바꾼 것). `top-24` = 머리글 높이 + 숨.
+                    sticky의 기준이 뷰포트가 되려면 조상에 overflow-hidden이
+                    없어야 한다(specimen-sheet.tsx 주석). */}
+                <div className="lg:sticky lg:top-24">
+                  <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                    무료 진단 신청
+                  </h2>
+                  <p className="mt-4 max-w-[34em] text-base leading-relaxed text-muted-foreground">
+                    질의 <span className="font-mono tabular-nums">{PLANS.free.maxQueries}</span>
+                    개를 <span className="font-mono tabular-nums">1</span>회 측정해 메일로
+                    보내드립니다. 결제 정보는 받지 않습니다.
+                  </p>
+                  {/* 히어로의 표시 규칙 설명이 이어지는 자리다. 경쟁사를 실제로
+                      입력하는 칸 바로 옆이라, 여기서 읽어야 결정에 쓸 수 있다. */}
+                  <p className="mt-5 max-w-[34em] text-sm leading-relaxed text-muted-foreground">
+                    우리는 알려주신 브랜드만 셀 수 있습니다. 경쟁사를 적게 넣으면 점유율이
+                    실제보다 높게 보입니다. 리포트에 분모를 항상 함께 적는 이유입니다.
+                  </p>
 
-                {/* 측정 규격 — 값은 전부 PLANS.free에서 온다(손으로 적은 수치
-                    없음). `mt-auto`로 레일 바닥에 앉아 남는 세로 공간을 구조로
-                    바꾼다. mono는 숫자에만 건다 — 한글을 mono에 넣으면 글자마다
-                    시스템 서체로 떨어진다(히어로 아이브로와 같은 이유). */}
-                <dl className="mt-10 border-t border-border text-sm lg:mt-auto">
+                  {/* 측정 규격 — 값은 전부 PLANS.free에서 온다(손으로 적은 수치
+                      없음). mono는 숫자에만 건다 — 한글을 mono에 넣으면 글자마다
+                      시스템 서체로 떨어진다(히어로 아이브로와 같은 이유). */}
+                  <dl className="mt-10 border-t border-border text-sm">
                   {(
                     [
                       [
@@ -123,7 +130,22 @@ export default function HomePage() {
                       <dd className="text-right text-[0.875rem]">{value}</dd>
                     </div>
                   ))}
-                </dl>
+                  </dl>
+
+                  {/* 처리 기준은 방침 문서가 원본이다 — 여기서 새 약속을 만들지
+                      않고 문서로 보낸다(푸터에도 있지만, 정보를 적는 칸 옆이
+                      실제로 궁금해지는 자리다). */}
+                  <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
+                    적어주신 내용은 진단에만 씁니다. 처리 기준은{' '}
+                    <Link
+                      href="/legal/privacy"
+                      className="underline underline-offset-2 transition-colors duration-[var(--motion-micro)] ease-instrument hover:text-foreground"
+                    >
+                      개인정보처리방침
+                    </Link>
+                    에 있습니다.
+                  </p>
+                </div>
               </div>
 
               <div className="p-6 sm:p-8">
