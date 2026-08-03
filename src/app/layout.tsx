@@ -39,13 +39,25 @@ const plexMono = IBM_Plex_Mono({
   display: 'swap',
 })
 
+/**
+ * ★ 이 두 문자열은 **탭·검색 결과·공유 카드에 그대로 나가는 카피**다. 화면 안의
+ *   문구보다 고치기 쉬운데도 가장 늦게 고쳐진다 — 실제로 그랬다.
+ *
+ * - 제목의 구분자는 `·`다. em-dash는 마케팅 문자열에서 쓰지 않고(tasteskill §9.G),
+ *   아래 `template`이 이미 `·`를 쓰고 있어 구분자 가족도 하나로 유지된다.
+ * - 설명은 **지금 실제로 하는 것만** 적는다. 이전 문구는 "네이버 AI 브리핑 ·
+ *   Google AI Overviews에서 브랜드 언급을 매주 자동 추적"이었는데, 그 두 엔진은
+ *   아직 붙지 않았고 정기 측정도 열리지 않았다. 푸터(`site-footer.tsx`)와
+ *   이용약관은 이미 같은 이유로 정정했고 이 줄만 남아 있었다.
+ *   **푸터와 같은 문장이다 — 유료가 열릴 때 한쪽만 고치지 마라.**
+ */
 export const metadata: Metadata = {
   title: {
-    default: 'Cited — AI 답변에 우리 브랜드가 얼마나 인용되는지',
+    default: 'Cited · AI 답변에 우리 브랜드가 얼마나 인용되는지',
     template: '%s · Cited',
   },
   description:
-    'ChatGPT · Gemini · 네이버 AI 브리핑 · Google AI Overviews에서 브랜드 언급을 매주 자동 추적하는 한국어 GEO 모니터링 도구.',
+    'ChatGPT와 Gemini에 직접 물어보고, 답변에 브랜드가 나왔는지 세어 기록하는 한국어 GEO 모니터링 도구. 지금은 무료 진단을 제공합니다.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

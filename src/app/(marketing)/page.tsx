@@ -1,12 +1,11 @@
-import Link from 'next/link'
 import { AUDIT_FLOW } from '@/components/audit/flow'
 import { QueryProtocol } from '@/components/audit/query-protocol'
 import { RequestForm } from '@/components/audit/request-form'
 import { SPECIMEN } from '@/components/marketing/actuals'
+import { CtaLink } from '@/components/marketing/cta-link'
 import { GlassPanel } from '@/components/marketing/glass-panel'
 import { Hero } from '@/components/marketing/hero'
 import { Reveal } from '@/components/motion/reveal'
-import { Button } from '@/components/ui/button'
 import { PLANS, engineLabels } from '@/lib/plans'
 
 /**
@@ -190,9 +189,14 @@ export default function HomePage() {
               유료 플랜이 하는 일입니다.
             </p>
           </div>
-          <Button variant="outline" className="mt-8" asChild>
-            <Link href="/pricing">요금제 보기</Link>
-          </Button>
+          {/* 히어로의 보조 CTA와 **같은 라벨·같은 모양**이다. 마케팅 표면에서
+              누르는 것은 전부 알약이라는 규칙(리포트 §2.8)을 앱 버튼
+              (`variant="outline"`, 8~12px 반경)이 여기서만 깨고 있었다. */}
+          <div className="mt-8">
+            <CtaLink href="/pricing" tone="ghost" icon={false}>
+              요금제 보기
+            </CtaLink>
+          </div>
         </div>
       </section>
     </>

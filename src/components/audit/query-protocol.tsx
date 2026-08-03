@@ -81,7 +81,11 @@ export function QueryProtocol({
   }
 
   return (
-    <figure className="overflow-hidden rounded-lg border border-border bg-card shadow-[0_1px_2px_oklch(0.2_0.015_258/0.04)]">
+    // 그림자는 토큰만 쓴다. 인라인 `shadow-[...]`는 색이 리터럴로 박혀서
+    // **다크 표면에서 그냥 안 보인다**(라이트 종이용 틴트 그림자였다).
+    // `shadow-elevation-1`은 :root / .surface-dark의 --elev-1을 타므로
+    // 표면마다 알맞은 깊이가 나온다.
+    <figure className="overflow-hidden rounded-lg border border-border bg-card shadow-elevation-1">
       {/* 계측 조건 띠 — AnswerSpecimen과 같은 문법. mono는 기계가 보는 것,
           sans는 사람이 읽는 것. */}
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border bg-muted/50 px-4 py-2.5 font-mono text-xs text-muted-foreground sm:px-5">
