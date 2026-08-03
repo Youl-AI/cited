@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google'
+import { IBM_Plex_Mono } from 'next/font/google'
 import localFont from 'next/font/local'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import './globals.css'
@@ -15,21 +15,19 @@ import './globals.css'
 // `"suit", "suit Fallback"`이고, "suit Fallback"은 local(Arial)에 SUIT의
 // 메트릭(ascent/descent/size-adjust)을 덮어씌운 것이다. 그래서 display:swap
 // 구간의 라틴은 이 조정된 Arial이 받는다(레이아웃 시프트를 줄이려는 것).
+//
+// ★ 2026-08-03 리뉴얼: 라틴 전용으로 함께 싣던 IBM Plex Sans를 걷어냈다.
+//   위 폴백 구조 때문에 --font-sans 체인에서 Plex Sans까지 내려오는 경우가
+//   없었다 — 라틴은 SUIT 아니면 "suit Fallback"(Arial)이 받고, 한글은
+//   Arial에 글리프가 없어 Pretendard 쪽으로 흐른다. 3웨이트를 받아 두고
+//   한 글자도 그리지 않는 죽은 요청이었다.
+//   서브셋은 하지 않는다 — SUIT 610KiB는 웨이트 3개짜리 정적 한글 서체보다
+//   작고, 서브셋 파이프라인의 유지보수 비용(글리프 누락 회귀·재빌드 절차)이
+//   절감분보다 크다. preload 유지.
 const suit = localFont({
   src: './fonts/SUIT-Variable.woff2',
   variable: '--font-suit',
   weight: '100 900',
-  display: 'swap',
-})
-
-// 라틴 전용. SUIT 도입 후로는 --font-sans 체인에서 사실상 도달하지 않는다
-// (앞의 "suit Fallback" = Arial이 라틴을 이미 받으므로). 지금 남겨 두는 것은
-// Task 1에서 본문 라틴을 SUIT로 완전히 넘길지 결정할 때까지의 유예다 —
-// 그때 이 로딩을 지울지 --font-sans 앞쪽으로 되돌릴지 정한다.
-const plexSans = IBM_Plex_Sans({
-  variable: '--font-plex-sans',
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
   display: 'swap',
 })
 
@@ -55,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="ko"
       suppressHydrationWarning
-      className={`${suit.variable} ${plexSans.variable} ${plexMono.variable}`}
+      className={`${suit.variable} ${plexMono.variable}`}
     >
       {/* Radix Tooltip은 Provider 없이는 던진다. 수치 옆의 "이 숫자는 어떻게
           나왔나" 설명이 앱 전역에서 쓰이므로 루트에서 한 번만 감싼다.

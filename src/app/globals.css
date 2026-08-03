@@ -2,7 +2,13 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* 다크는 전역 토글이 아니라 **표면(라우트 그룹) 단위**다. 마케팅 라우트가
+   `.surface-dark` 래퍼를 열고, 그 안에서만 shadcn 컴포넌트의 dark: 변형이
+   깨어난다. `.dark` 클래스는 걷어냈다 — 저장소 어디에도 그걸 붙이는 코드가
+   없었고, 이제 진짜 다크 표면에 이름이 생겼기 때문이다.
+   래퍼 자신도 포함한다(`.surface-dark, .surface-dark *`) — 래퍼 요소에 붙은
+   dark: 유틸리티가 조용히 죽지 않게. */
+@custom-variant dark (&:is(.surface-dark, .surface-dark *));
 
 /* ---------------------------------------------------------------------------
    제품 고유 토큰
@@ -10,16 +16,31 @@
    그래서 지표의 방향과 수집 품질은 아래 다섯 색으로만 말한다. 화면마다
    초록·빨강을 새로 고르기 시작하면 같은 색이 다른 뜻을 갖게 되고, 그 순간
    대시보드는 신뢰를 잃는다.
-   값 자체는 계약이다 — tests/design-tokens.test.ts가 지킨다.
+
+   ★ 2026-08-03 리뉴얼(v3): **값은 더 이상 계약이 아니다.** 값 선택 권한은
+     taste 스킬에 있다. tests/design-tokens.test.ts가 잠그는 것은 구조와 뜻이다
+     — flat은 무채색인가, 상승·하락은 색상환에서 멀리 떨어져 있는가, -fg 짝은
+     실제로 읽히는 대비인가, 다크 표면에도 같은 뜻의 짝이 있는가.
+     아래 대비 수치는 그 테스트가 실제로 계산해서 지킨다.
+
+   ★ `static`이 붙은 이유 (실측 — 이거 없이는 토큰이 조용히 사라진다):
+     Tailwind v4는 기본적으로 **어떤 유틸리티도 참조하지 않는 @theme 변수를
+     출력에서 버린다.** 빌드 산출물로 확인했다 — `--motion-reveal`처럼 아직
+     아무 화면도 쓰지 않는 이름은 `:root`에 아예 나오지 않았고, 반대로
+     `--ease-spring`은 (테스트 파일에 그 문자열이 있어서 유틸리티 후보로
+     잡힌 탓에) 나왔다. 즉 emit 여부가 **문자열 스캐너의 우연**에 달려 있었다.
+     이 블록은 Task 3~8이 소비할 **계약**이므로 그러면 안 된다. GSAP·Motion은
+     `getComputedStyle`로 `var(--motion-*)`를 읽는데, 그때 변수가 없으면
+     기본값도 없이 즉시 끝나 버린다(디버깅이 매우 어렵다).
+     `static`은 이 블록의 변수를 사용 여부와 무관하게 전부 발행한다.
 --------------------------------------------------------------------------- */
-@theme {
+@theme static {
   /* 지표 상태색 — 대시보드 전역에서 이것만 쓴다.
      ★ 이 다섯은 **채우기 전용**이다. 막대·점·신뢰구간 띠·아이콘 배경처럼
        면으로 칠하는 곳에만 쓴다. **텍스트·아이콘(선)에는 아래 `-fg` 변형을
-       쓴다.** 이유는 대비다 — 계획서가 고정한 이 값들의 --background 대비는
+       쓴다.** 이유는 대비다 — 앱 라이트 배경(--background) 대비가
        up 4.48:1 · down 5.21:1 · flat 3.58:1 · incomplete 2.23:1이라
-       flat과 incomplete는 본문 기준(4.5:1)에 미달하고, up도 반올림 경계다.
-       값 자체가 계약이라 바꾸지 않고, 명도만 내린 짝을 따로 둔다. */
+       flat과 incomplete는 본문 기준(4.5:1)에 미달하고, up도 반올림 경계다. */
   --color-metric-up: oklch(0.55 0.12 155);
   --color-metric-down: oklch(0.55 0.18 25);
   /* 회색인 것이 핵심이다. 설계 ③의 "신뢰구간이 겹치면 변화 없음" 규칙을
@@ -41,7 +62,7 @@
      incomplete-fg만 채도를 0.12→0.10으로 낮췄다. 명도 0.52·색상각 70에서
      0.12는 sRGB 게멋 밖이라 브라우저가 임의로 잘라 낸다(잘리면 실제 화면
      색이 계산값과 달라진다).
-     이 대비 수치는 tests/design-tokens.test.ts가 실제로 계산해서 지킨다. */
+     ★ 다크 표면에서는 명도를 **올린** 짝이 따로 있다 — .surface-dark 참고. */
   --color-metric-up-fg: oklch(0.52 0.12 155); /* #187c49 · 5.13:1 */
   --color-metric-down-fg: oklch(0.52 0.18 25); /* #ba2b2e · 5.94:1 */
   --color-metric-flat-fg: oklch(0.52 0.01 90); /* #6b6963 · 5.39:1 */
@@ -49,8 +70,8 @@
 
   /* ---- 엔진 계열색 ------------------------------------------------------
      추적하는 엔진은 넷이다. 계열색을 --chart-1..5 같은 번호 슬롯이 아니라
-     엔진 이름으로 두는 이유: 5단계가 범례·툴팁·표에서 같은 엔진에 같은 색을
-     쓰는지 눈이 아니라 이름으로 확인할 수 있어야 한다.
+     엔진 이름으로 두는 이유: 범례·툴팁·표에서 같은 엔진에 같은 색을 쓰는지
+     눈이 아니라 이름으로 확인할 수 있어야 한다.
 
      색상각은 지표 의미색(155 상승 · 25 하락 · 70 불완전)과 브랜드색(258)에서
      **40도 이상** 떨어뜨렸다. 남는 구간이 청록(195~218)과 보라~자홍(298~345)
@@ -61,8 +82,7 @@
      엔진 브랜드색을 그대로 쓰지 않은 이유: 네이버는 초록(#03C75A)이라
      상승 지표와 충돌하고, 구글·제미나이의 파랑은 브랜드색과 붙는다.
      남은 한계 — gemini와 google은 휘도가 거의 같다(0.011 차). 흑백 출력·
-     완전색맹에서는 이 둘이 붙으므로 5단계는 선 모양(실선/파선)이나 마커도
-     함께 달아야 한다.
+     완전색맹에서는 이 둘이 붙으므로 선 모양(실선/파선)이나 마커도 함께 단다.
 
      ★ 이 넷도 면·선 전용이다. 3:1은 선·범례 기준이지 본문 기준(4.5:1)이
      아니다. chatgpt는 3.27:1이라 `text-engine-chatgpt`로 엔진 이름을 쓰면
@@ -72,6 +92,43 @@
   --color-engine-gemini: oklch(0.47 0.21 298); /* #6d2cbe · 7.49:1 */
   --color-engine-naver: oklch(0.6 0.18 345); /* #c64998 · 4.29:1 */
   --color-engine-google: oklch(0.42 0.06 207); /* #1c565e · 8.11:1 */
+
+  /* ---- elevation 3단 (앱 라이트) ----------------------------------------
+     redesign-skill "Color and Surfaces": 순수 검정 저불투명 그림자는 금지다.
+     배경과 같은 색조(258)로 **틴트한** 그림자를 쓴다 — 그래야 종이 위에
+     떠 있는 것으로 읽히고, 회색 테두리를 덧대는 클리셰를 피할 수 있다.
+     다층이어야 높이가 읽힌다: 1px 윤곽 + 근거리 + (2단부터) 원거리.
+     빛의 방향은 위에서 하나뿐이다(모든 y 오프셋이 양수).
+     쓰는 곳: 1 = 떠 있는 카드·버튼, 2 = 호버 확장·툴팁, 3 = 모달급.
+     ★ 다크 표면에서는 그림자가 거의 보이지 않으므로 .surface-dark가 inset
+       하이라이트를 더한 짝으로 다시 선언한다. */
+  --shadow-elevation-1: 0 0 0 1px oklch(0.2 0.015 258 / 0.03), 0 1px 2px oklch(0.2 0.015 258 / 0.05);
+  --shadow-elevation-2: 0 0 0 1px oklch(0.2 0.015 258 / 0.03), 0 2px 4px -1px oklch(0.2 0.015 258 / 0.05), 0 8px 16px -4px oklch(0.2 0.015 258 / 0.06);
+  --shadow-elevation-3: 0 0 0 1px oklch(0.2 0.015 258 / 0.04), 0 4px 8px -2px oklch(0.2 0.015 258 / 0.06), 0 16px 32px -8px oklch(0.2 0.015 258 / 0.09);
+
+  /* ---- 모션 어휘 --------------------------------------------------------
+     지속시간과 이징을 컴포넌트마다 새로 고르면 같은 제품 안에서 서로 다른
+     물리 법칙이 돈다. 이름은 "얼마나 오래"가 아니라 "무엇이 움직이는가"다.
+
+     앱(계측기)은 굼뜨지 않다 — micro/enter/state는 짧다.
+     마케팅(시네마틱)만 reveal 구간을 길게 쓴다(soft-skill §5: 800ms대 헤비
+     페이드업). 두 스케일을 한 파일에 둔 이유는, 어느 표면에서 어느 값을
+     쓰는지 한눈에 보이지 않으면 결국 섞이기 때문이다.
+
+     이징은 전부 cubic-bezier다. linear·ease-in-out은 soft-skill §2 금지 목록.
+     - instrument: 감속 위주. 앱 전반의 기본값(구 design-language §5 값).
+     - glide: 무거운 질량감. 마케팅 리빌·스크롤텔링(soft-skill §5 규격).
+     - spring: 살짝 오버슈트. 눌림·팝인처럼 **손끝 반응**에만 쓴다. 데이터가
+       움직이는 곳(차트·수치)에는 쓰지 않는다 — 계측값은 튀지 않는다. */
+  --motion-micro: 120ms;
+  --motion-enter: 220ms;
+  --motion-state: 240ms;
+  --motion-draw: 600ms;
+  --motion-reveal: 800ms;
+  --motion-stagger: 60ms;
+  --ease-instrument: cubic-bezier(0.2, 0, 0, 1);
+  --ease-glide: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.4, 1);
 
   /* ---- 한글 조판 스케일 -------------------------------------------------
      Tailwind 기본 행간은 라틴 문자 기준이다. 한글은 같은 크기에서 글자
@@ -119,7 +176,7 @@
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
   /* shadcn 프리셋의 --chart-1..5는 걷어냈다. 번호 슬롯 다섯 개가 남아 있으면
-     5단계가 엔진 계열색 대신 그쪽으로 손을 뻗는다(그리고 원래 값은 명도만
+     화면이 엔진 계열색 대신 그쪽으로 손을 뻗는다(그리고 원래 값은 명도만
      다른 회색 램프여서, 회색이 "변화 없음"이라는 단일 뜻을 잃는다).
      저장소 안에서 --chart-*를 참조하는 컴포넌트는 없다. 계열색은 위
      @theme 블록의 --color-engine-*이다. */
@@ -139,6 +196,9 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* inline이라 유틸리티가 `var(--radius)`를 그대로 뱉는다 — 즉 반경 스케일도
+     스코프를 탄다. .surface-dark가 --radius를 키우면 마케팅 표면의 rounded-*가
+     통째로 부드러워진다. */
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -148,34 +208,36 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ---------------------------------------------------------------------------
+   앱 라이트 표면 — 대시보드·온보딩·회차상세·리포트·auth
+   "정제된 라이트"(Linear·Stripe 계열). 중립색에 아주 옅은 푸른 기를 넣는다.
+   종이는 크림색이 아니라 계측 장비의 흰색에 가깝고, 초록·빨강·호박색 지표가
+   그 위에서 더 또렷하게 읽힌다.
+--------------------------------------------------------------------------- */
 :root {
-  /* 이 앱은 아직 밝은 테마 하나뿐이다(.dark를 붙이는 곳이 없다). 선언하지
-     않으면 OS가 다크인 사용자에게 브라우저가 어두운 스크롤바·자동완성 배경을
-     그려서, 밝은 페이지 위에 검은 입력창이 얹힌다. */
+  /* 문서 기본 표면은 라이트다. 선언하지 않으면 OS가 다크인 사용자에게
+     브라우저가 어두운 스크롤바·자동완성 배경을 그려서, 밝은 페이지 위에
+     검은 입력창이 얹힌다. 다크는 .surface-dark가 스코프로 뒤집는다. */
   color-scheme: light;
 
   /* 서체 — 한글·라틴 모두 SUIT Variable(next/font/local로 self-host, layout.tsx).
-     한글을 시스템 서체에 맡기던 것을 되돌린 이유는 layout.tsx 주석 참고.
-
-     체인이 실제로 어떻게 풀리는지: var(--font-suit)는 한 항목이 아니라
-     `"suit", "suit Fallback"` 둘로 펼쳐진다("suit Fallback" = local(Arial) +
-     SUIT 메트릭 덮어쓰기, next/font가 자동 생성). 그래서 SUIT가 뜨기 전
-     (display:swap 구간)의 라틴·숫자는 그 조정된 Arial이 받고, Plex Sans까지는
-     사실상 내려오지 않는다. Arial에 한글 글리프가 없으므로 한글만 계속
-     아래로 흘러 Pretendard·Apple SD Gothic Neo·Malgun Gothic 순으로 잡힌다
-     (Plex Sans도 한글이 없어 그냥 통과된다).
-     ⇒ 뒤쪽 라틴 항목이 이제 죽은 무게라는 점은 Task 1에서 정리한다. */
+     ★ 2026-08-03: 체인에서 IBM Plex Sans를 걷어냈다. next/font가 발행하는
+       실제 값은 `"suit", "suit Fallback"` 둘이고 "suit Fallback"은 SUIT 메트릭을
+       덮어씌운 local(Arial)이라, 폰트가 뜨기 전 라틴은 이미 그 조정된 Arial이
+       받는다 — Plex Sans까지 내려올 일이 없었다. 3웨이트를 받아 놓고 한 글자도
+       그리지 않는 죽은 무게였다(layout.tsx에서 로딩도 함께 제거).
+       한글은 Arial에 글리프가 없으므로 계속 아래로 흘러 Pretendard ·
+       Apple SD Gothic Neo · Malgun Gothic 순으로 잡힌다.
+     Plex Mono는 유지한다 — 계측값의 정체성이다. */
   --font-sans:
-    var(--font-suit), var(--font-plex-sans), "Pretendard Variable", Pretendard,
-    "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+    var(--font-suit), "Pretendard Variable", Pretendard, "Apple SD Gothic Neo",
+    "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
   --font-mono:
     var(--font-plex-mono), ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas,
     "D2Coding", monospace;
 
-  /* 중립색에 아주 옅은 푸른 기를 넣는다. 종이는 크림색이 아니라 계측 장비의
-     흰색에 가깝고, 초록·빨강·호박색 지표가 그 위에서 더 또렷하게 읽힌다. */
   --background: oklch(0.994 0.002 255);
-  --foreground: oklch(0.205 0.015 258);
+  --foreground: oklch(0.205 0.015 258); /* 종이색 대비 17.64:1 */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.205 0.015 258);
   --popover: oklch(1 0 0);
@@ -184,7 +246,7 @@
   /* 브랜드색은 신뢰구간 띠(--color-ci-band, oklch 0.92 0.02 250)의 진한
      쪽이다. 이 제품의 정체성 색은 "불확실성의 색"이다. 지표 의미색
      (초록·빨강·호박)과 색상환에서 멀리 떨어져 있어 UI 크롬과 데이터를
-     혼동할 일이 없다. */
+     혼동할 일이 없다. 액센트는 이것 하나다(redesign-skill: one accent). */
   --primary: oklch(0.42 0.115 258);
   --primary-foreground: oklch(0.985 0.002 255);
   --secondary: oklch(0.965 0.004 258);
@@ -202,8 +264,11 @@
   --border: oklch(0.905 0.006 258);
   --input: oklch(0.895 0.006 258);
   --ring: oklch(0.42 0.115 258);
-  /* 계측 장비의 인상 — 둥근 모서리를 줄인다. */
-  --radius: 0.375rem;
+  /* 12px. 리뉴얼 전에는 6px("계측 장비의 모서리")이었다. 그 인상을 만드는 것은
+     모서리가 아니라 mono 수치·틴트 그림자·정직한 구간 표기라는 판단이고,
+     6px은 그 몫을 하지 못한 채 기성 부트스트랩 톤만 남겼다(taste 스펙 §3.4:
+     앱은 12px 단일 규칙). 반경은 이 하나뿐이고 --radius-*가 전부 파생한다. */
+  --radius: 0.75rem;
   --sidebar: oklch(0.985 0.003 258);
   --sidebar-foreground: oklch(0.205 0.015 258);
   --sidebar-primary: oklch(0.42 0.115 258);
@@ -214,52 +279,111 @@
   --sidebar-ring: oklch(0.42 0.115 258);
 }
 
-/* 다크 테마는 **켜면 안 된다.** shadcn 컴포넌트의 dark: 변형이 참조하므로
-   아래 정의는 남겨 두지만, 지금 .dark 클래스를 붙이면 화면이 깨진다.
-   이유를 정확히 적어 둔다 — 빌드 산출물(.next/.../*.css)로 확인한 내용이다.
+/* ---------------------------------------------------------------------------
+   마케팅 다크 표면 — 랜딩 · 요금제 · 무료진단 신청
+   soft-skill §3.A "Ethereal Glass": 딥 오프블랙 + 유리 패널 + 흰색 헤어라인.
 
-   1. 전환 수단이 없다. .dark를 붙이는 코드가 저장소 어디에도 없다.
+   순수 #000은 쓰지 않는다(redesign-skill Color 첫 줄). 배경은 브랜드 색조
+   258로 아주 옅게 틴트한 오프블랙 oklch(0.155 0.008 258) = #0a0c10 —
+   회색 계열을 한 가족(cool)으로 통일하는 규칙도 여기서 지켜진다.
+   메시 그라데이션 오브를 쓰는 곳도 이 258 계열만이다(AI-퍼플 금지).
 
-   2. 구조가 다르다. shadcn 토큰은 `:root`/`.dark`에 값을 두고 `@theme inline`이
-      그걸 별칭으로 잡는 2단 구조라, .dark가 --background를 바꾸면 bg-background가
-      따라온다. 반면 지표·엔진 토큰은 위쪽 `@theme` 블록에 **값 리터럴 하나로**
-      들어 있다(유틸리티는 .text-metric-flat-fg{color:var(--color-metric-flat-fg)}로
-      나오고 그 변수는 :root,:host에만 선언된다). 즉 이 토큰들에는 애초에
-      밝은 값/어두운 값의 짝이 없다. 다크를 켜려면 --color-* 이름을 .dark에
-      직접 다시 선언하거나(파일 안에 규칙 두 개가 섞인다) shadcn과 같은 2단
-      구조로 옮겨야 한다. 둘 다 이번 범위 밖이다.
+   ★ 이 블록은 **스코프**다. 라우트 레이아웃이 `<div class="surface-dark">`로
+     감싸면 그 안에서만 다크가 돈다. `.dark` 전역 토글은 여전히 만들지 않는다
+     — 페이지 중간에서 테마가 뒤집히는 것이 아니라 표면 단위로 갈린다.
+   ★ 래퍼는 화면을 채워야 한다(`min-h-dvh`). body는 여전히 라이트 배경이라,
+     래퍼가 짧으면 아래쪽에 흰 띠가 남는다.
+--------------------------------------------------------------------------- */
+.surface-dark {
+  /* 브라우저가 그리는 것들(스크롤바·자동완성·기본 폼 컨트롤·select 팝업)까지
+     다크로 넘긴다. 이게 없으면 어두운 패널 위에 흰 스크롤바가 붙는다. */
+  color-scheme: dark;
 
-   3. 값이 밝은 배경 기준으로만 계산돼 있다. 위 주석의 대비 수치는 전부
-      --background(oklch 0.994)에 대한 것이다. 배경이 어두워지면 -fg 짝은
-      명도를 **내리는 게 아니라 올려야** 하므로 네 값 모두 다시 유도해야 하고,
-      그 전까지 다크에서는 텍스트 대비가 오히려 무너진다. */
-.dark {
-  --background: oklch(0.16 0.012 258);
-  --foreground: oklch(0.985 0.002 255);
-  --card: oklch(0.215 0.014 258);
-  --card-foreground: oklch(0.985 0.002 255);
-  --popover: oklch(0.215 0.014 258);
-  --popover-foreground: oklch(0.985 0.002 255);
-  --primary: oklch(0.72 0.1 258);
-  --primary-foreground: oklch(0.18 0.02 258);
-  --secondary: oklch(0.275 0.014 258);
-  --secondary-foreground: oklch(0.985 0.002 255);
-  --muted: oklch(0.275 0.014 258);
-  --muted-foreground: oklch(0.72 0.012 258);
-  --accent: oklch(0.275 0.014 258);
-  --accent-foreground: oklch(0.985 0.002 255);
-  --destructive: oklch(0.704 0.191 22.216);
+  --background: oklch(0.155 0.008 258); /* #0a0c10 · 순수 검정 아님 */
+  --foreground: oklch(0.97 0.004 258); /* 17.92:1 */
+  /* 유리 패널의 바닥. 배경과 1.06:1로 거의 붙어 있는 것이 의도다 — 카드를
+     가르는 것은 밝기 점프가 아니라 아래 --border의 흰색 헤어라인 + inset
+     하이라이트다(soft-skill §4.A double-bezel). */
+  --card: oklch(0.19 0.011 258);
+  --card-foreground: oklch(0.97 0.004 258); /* 카드 위 16.90:1 */
+  --popover: oklch(0.21 0.012 258);
+  --popover-foreground: oklch(0.97 0.004 258);
+
+  /* 액센트는 라이트와 같은 브랜드 색상각(258)의 밝은 쪽. 어두운 배경에서
+     0.42는 2.29:1로 읽히지 않아 명도를 올렸다.
+     채도는 의도적으로 눌렀다 — HSL 기준 72%로 redesign-skill의 "채도 80%
+     미만" 선 안이다. 0.14까지 올리면 95%가 되어 네온으로 읽힌다. */
+  --primary: oklch(0.72 0.11 258); /* #79a6e9 · 7.87:1 */
+  --primary-foreground: oklch(0.17 0.02 258); /* 액센트 위 7.67:1 */
+  --secondary: oklch(0.25 0.013 258);
+  --secondary-foreground: oklch(0.97 0.004 258);
+  --muted: oklch(0.25 0.013 258);
+  --muted-foreground: oklch(0.72 0.016 258); /* 7.88:1 — 라이트와 같은 여유 */
+  --accent: oklch(0.28 0.015 258);
+  --accent-foreground: oklch(0.97 0.004 258);
+  --destructive: oklch(0.68 0.175 25); /* 6.27:1 */
+  /* 흰색 헤어라인. 색조 있는 회색 보더는 다크에서 탁해 보인다 — 유리 표면의
+     가장자리는 반사광이지 안료가 아니다(soft-skill §3.A "white/10 hairlines"). */
   --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.72 0.1 258);
-  --sidebar: oklch(0.215 0.014 258);
-  --sidebar-foreground: oklch(0.985 0.002 255);
-  --sidebar-primary: oklch(0.72 0.1 258);
-  --sidebar-primary-foreground: oklch(0.18 0.02 258);
-  --sidebar-accent: oklch(0.275 0.014 258);
-  --sidebar-accent-foreground: oklch(0.985 0.002 255);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.72 0.11 258);
+  /* 마케팅 셸은 앱보다 부드럽다(soft-skill §4: 과장된 스퀘어클 반경).
+     --radius-* 스케일이 inline이라 이 한 줄이 표면 전체의 rounded-*를 옮긴다.
+     2rem급 대형 셸은 컴포넌트에서 직접 지정한다. */
+  --radius: 1rem;
+  --sidebar: oklch(0.19 0.011 258);
+  --sidebar-foreground: oklch(0.97 0.004 258);
+  --sidebar-primary: oklch(0.72 0.11 258);
+  --sidebar-primary-foreground: oklch(0.17 0.02 258);
+  --sidebar-accent: oklch(0.28 0.015 258);
+  --sidebar-accent-foreground: oklch(0.97 0.004 258);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.72 0.1 258);
+  --sidebar-ring: oklch(0.72 0.11 258);
+
+  /* ---- 지표·엔진 색의 다크 짝 -------------------------------------------
+     뜻(색상각)은 라이트와 **글자 그대로 같고** 명도만 뒤집었다. 라이트에서는
+     -fg가 채우기보다 어두웠지만, 여기서는 배경이 어두우므로 -fg가 더 밝다.
+     이 짝이 없으면 어두운 배경 위에서 up-fg가 1.9:1로 사라진다 — 리뉴얼 전
+     `.dark` 블록이 켜지면 안 됐던 이유가 정확히 이것이었다.
+     대비는 전부 이 블록의 --background(#0a0c10) 기준이고
+     tests/design-tokens.test.ts가 계산해서 지킨다. */
+  --color-metric-up: oklch(0.66 0.14 155); /* #37ab6b · 6.71:1 */
+  --color-metric-down: oklch(0.66 0.16 25); /* #e3645e · 5.83:1 */
+  --color-metric-flat: oklch(0.6 0.01 90); /* #82807a · 4.96:1 · 무채색 유지 */
+  /* 다크에서 띠는 "배경보다 밝고 본문보다 어두운" 자리에 있어야 한다.
+     라이트의 0.92를 그대로 두면 흰 덩어리가 되어 데이터를 덮는다. */
+  --color-ci-band: oklch(0.34 0.03 250);
+  --color-incomplete: oklch(0.72 0.13 70); /* #d8953d · 7.72:1 */
+
+  /* -fg 넷은 명도 0.76으로 맞췄다 — 상승이 하락보다 무거워 보이지 않게.
+     down-fg의 채도가 up-fg보다 낮은 것은 취향이 아니라 게멋이다: 명도 0.76 ·
+     색상각 25에서 sRGB가 담는 최대 채도가 0.14 언저리라 0.13에서 끊었다. */
+  --color-metric-up-fg: oklch(0.76 0.14 155); /* #5ccb89 · 9.65:1 */
+  --color-metric-down-fg: oklch(0.76 0.13 25); /* #f98f87 · 8.67:1 */
+  --color-metric-flat-fg: oklch(0.76 0.01 90); /* #b3b1aa · 9.12:1 */
+  --color-incomplete-fg: oklch(0.76 0.13 70); /* #e5a14b · 8.88:1 */
+
+  /* 엔진 계열색도 색상각은 그대로다(196 · 298 · 345 · 207). 명도만 어두운
+     배경에 맞게 다시 유도했고, gemini와 naver는 서로 붙지 않도록 명도를
+     0.62 / 0.76으로 벌렸다(Oklab ΔE 0.184 > 0.15).
+     넷 다 3:1 이상 — 선·범례 기준이다. 본문 대비는 아니다. */
+  --color-engine-chatgpt: oklch(0.72 0.1 196); /* #48b8b9 · 8.23:1 */
+  --color-engine-gemini: oklch(0.62 0.15 298); /* #926fd4 · 5.08:1 */
+  --color-engine-naver: oklch(0.76 0.15 345); /* #f387c7 · 8.48:1 */
+  --color-engine-google: oklch(0.52 0.07 207); /* #2f747d · 3.65:1 */
+
+  /* ---- elevation 다크 짝 ------------------------------------------------
+     어두운 배경에서는 드롭 그림자가 거의 읽히지 않는다. 깊이를 만드는 것은
+     위쪽 모서리의 inset 하이라이트(반사광)와, 배경보다 더 어두운 원거리
+     그림자다. 색은 라이트와 같은 색조(258)의 더 어두운 쪽이다. */
+  --shadow-elevation-1: inset 0 1px 0 oklch(1 0 0 / 0.06), 0 1px 2px oklch(0.05 0.01 258 / 0.5);
+  --shadow-elevation-2: inset 0 1px 0 oklch(1 0 0 / 0.07), 0 2px 6px -1px oklch(0.05 0.01 258 / 0.55), 0 10px 24px -6px oklch(0.05 0.01 258 / 0.6);
+  --shadow-elevation-3: inset 0 1px 0 oklch(1 0 0 / 0.09), 0 6px 12px -3px oklch(0.05 0.01 258 / 0.6), 0 24px 48px -12px oklch(0.05 0.01 258 / 0.7);
+
+  /* 래퍼가 유틸리티 클래스를 잊어도 표면은 칠해져야 한다. 다크 토큰을 선언한
+     바로 그 요소이므로 아래 var()는 위의 다크 값으로 풀린다. */
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
 @layer base {
@@ -295,8 +419,11 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* 모션 전역 스위치 — docs/design-language.md §5. 움직임을 줄여 달라는
-     사용자에게는 전부 끈다. 개별 컴포넌트가 각자 기억할 일이 아니다. */
+  /* 모션 전역 킬 스위치. 움직임을 줄여 달라는 사용자에게는 전부 끈다 —
+     개별 컴포넌트(GSAP·Motion 포함)가 각자 기억할 일이 아니다.
+     ★ 지속시간만 줄이면 안 된다. 스태거 등장(--motion-stagger × 순번)과
+       차트 드로우인의 **지연은 그대로 남아**, 요소가 순서대로 숨었다가
+       튀어나온다. "전부 끈다"는 "끝난 상태로 시작한다"는 뜻이다. */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -304,6 +431,8 @@
       transition-duration: 0.01ms !important;
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
+      animation-delay: 0.01ms !important;
+      transition-delay: 0ms !important;
     }
   }
 }
