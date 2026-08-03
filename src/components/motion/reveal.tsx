@@ -7,7 +7,7 @@ import { motion, useReducedMotion } from 'motion/react'
  * 스크롤 진입 리빌 (tasteskill §5.C 골격). **핀·스크럽이 아닌** 단순
  * "뷰포트에 들어오면 나타난다"는 전부 이걸 쓴다 — ScrollTrigger를 켜지 않으므로
  * 가볍고, 같은 트리에 GSAP이 없어 혼용 금지 규칙도 자동으로 지켜진다.
- * 핀·스크럽이 필요하면 `PinScene`/`StickyStack`(GSAP) 쪽이다.
+ * 핀·스크럽이 필요하면 `PinScene`(GSAP) 쪽이다.
  *
  * 동기(Motion Motivated): **순서**다. 한 화면에 여러 항목이 동시에 나타나면
  * 읽는 순서가 사라진다. `index`가 위에서 아래로 60ms씩 밀어 시선의 경로를 만든다.

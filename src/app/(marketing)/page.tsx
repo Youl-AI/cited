@@ -4,11 +4,11 @@ import { SPECIMEN } from '@/components/marketing/actuals'
 import { ClosingCta } from '@/components/marketing/closing-cta'
 import { CtaLink } from '@/components/marketing/cta-link'
 import { DeliverablesBento } from '@/components/marketing/deliverables-bento'
-import { FlowStack } from '@/components/marketing/flow-stack'
+import { FlowSteps } from '@/components/marketing/flow-steps'
 import { GlassPanel } from '@/components/marketing/glass-panel'
 import { Hero } from '@/components/marketing/hero'
 import { ReplayScene } from '@/components/marketing/replay-scene'
-import { SECTION_X, SECTION_Y, Section } from '@/components/marketing/section'
+import { SECTION_X, Section } from '@/components/marketing/section'
 import { Reveal } from '@/components/motion/reveal'
 import { PLANS, engineLabels } from '@/lib/plans'
 
@@ -106,19 +106,17 @@ export default function HomePage() {
         </Reveal>
       </Section>
 
-      {/* ── 순서 — 스티키 스택 ───────────────────────────────
-          세 단계는 동시에 존재하지 않는다. 다음이 오면 이전은 끝난다 —
-          그래서 나열이 아니라 스택이다(`FlowStack` 참고). */}
-      <section className={`${SECTION_Y} relative`}>
-        <div className={SECTION_X}>
-          <Reveal index={0}>
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">신청하면</h2>
-          </Reveal>
-        </div>
+      {/* ── 순서 — 계측 레일 ─────────────────────────────────
+          큰 스크롤 연출은 아래 "실측 재현" 한 곳에만 쓴다. 여기는 노드와
+          헤어라인으로 순서만 조용히 말한다(`FlowSteps` 머리말 참고). */}
+      <Section>
+        <Reveal index={0}>
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">신청하면</h2>
+        </Reveal>
         <div className="mt-12">
-          <FlowStack />
+          <FlowSteps />
         </div>
-      </section>
+      </Section>
 
       {/* ── 검증 — 질의 프로토콜 ──────────────────────────────
           "직접 물어서 확인하실 수 있습니다"라는 약속을 실행 가능하게 만드는
