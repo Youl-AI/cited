@@ -270,11 +270,12 @@
   --border: oklch(0.905 0.006 258);
   --input: oklch(0.895 0.006 258);
   --ring: oklch(0.42 0.115 258);
-  /* 12px. 리뉴얼 전에는 6px("계측 장비의 모서리")이었다. 그 인상을 만드는 것은
-     모서리가 아니라 mono 수치·틴트 그림자·정직한 구간 표기라는 판단이고,
-     6px은 그 몫을 하지 못한 채 기성 부트스트랩 톤만 남겼다(taste 스펙 §3.4:
-     앱은 12px 단일 규칙). 반경은 이 하나뿐이고 --radius-*가 전부 파생한다. */
-  --radius: 0.75rem;
+  /* 0. 마케팅 표면이 각진 계측 시트·각진 컨트롤로 정리되면서(2026-08-04
+     사용자 확정) 앱도 같은 모서리 어휘를 쓴다 — 기계의 몸체와 버튼이 같은
+     모서리를 갖는다. 원형이 의미인 것(상태 점·진행 바·배지)만 rounded-full로
+     남는다. 반경은 이 하나뿐이고 --radius-*가 전부 파생하므로, 이 한 줄이
+     대시보드·온보딩·리포트의 rounded-*를 전부 옮긴다. */
+  --radius: 0rem;
   /* elevation 실값 (@theme inline의 --shadow-elevation-N이 이걸 가리킨다).
      redesign-skill "Color and Surfaces": 순수 검정 저불투명 그림자는 금지다.
      --foreground와 같은 색조(258)로 **틴트했다** — 그래야 종이 위에 떠 있는
@@ -396,10 +397,10 @@
        한다(`ui/input.tsx`의 dark:disabled 채움을 활성보다 어둡게). */
   --input: var(--border-interactive);
   --ring: oklch(0.72 0.11 258);
-  /* 마케팅 셸은 앱보다 부드럽다(soft-skill §4: 과장된 스퀘어클 반경).
-     --radius-* 스케일이 inline이라 이 한 줄이 표면 전체의 rounded-*를 옮긴다.
-     2rem급 대형 셸은 컴포넌트에서 직접 지정한다. */
-  --radius: 1rem;
+  /* 마케팅 표면도 각이다 — 컨트롤·시트가 전부 rounded-none을 직접 쓰지만,
+     rounded-lg 같은 파생 유틸이 남은 자리(재현 장면 판독부 등)도 이 값으로
+     0이 된다. 라이트 앱과 같은 모서리 어휘. */
+  --radius: 0rem;
   --sidebar: oklch(0.19 0.011 258);
   --sidebar-foreground: oklch(0.97 0.004 258);
   --sidebar-primary: oklch(0.72 0.11 258);

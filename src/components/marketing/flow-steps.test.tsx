@@ -67,7 +67,7 @@ describe('마감 CTA', () => {
   it('주 CTA는 라벨도 목적지도 히어로와 같다 (한 의도에 한 라벨)', () => {
     render(<ClosingCta />)
     const cta = screen.getByRole('link', { name: '무료 진단 받기' })
-    expect(cta.getAttribute('href')).toBe('#request')
+    expect(cta.getAttribute('href')).toBe('/audit/new')
   })
 
   it('마감에는 링크가 하나뿐이다 — 마지막 화면은 한 곳만 가리킨다', () => {

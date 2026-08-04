@@ -65,7 +65,7 @@ describe('랜딩 히어로', () => {
   it('전환 경로가 살아 있다 — 주 CTA는 신청 폼, 보조는 요금제', () => {
     render(<Hero />)
     const primary = screen.getByRole('link', { name: '무료 진단 받기' })
-    expect(primary.getAttribute('href')).toBe('#request')
+    expect(primary.getAttribute('href')).toBe('/audit/new')
     const secondary = screen.getByRole('link', { name: '요금제 보기' })
     expect(secondary.getAttribute('href')).toBe('/pricing')
   })

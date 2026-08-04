@@ -175,7 +175,7 @@ export function AnswerSpecimen({
         //
         // ★ **`shadow-elevation-1`이 아니라 `shadow-(--elev-1)`이다 — 실측으로
         //   가른 차이다.** 이 컴포넌트는 호출부가 껍데기를 벗길 수 있어야 한다
-        //   (히어로는 `GlassPanel` 안쪽 알맹이로 쓰면서
+        //   (히어로는 `SpecimenSheet` 안쪽 알맹이로 쓰면서
         //   `className="… shadow-none"`을 넘긴다). 그런데 tailwind-merge는
         //   `shadow-elevation-1`을 **그림자가 아니라 그림자 색**으로 분류해서
         //   `shadow-none`과 충돌시키지 않는다:

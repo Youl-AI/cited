@@ -44,11 +44,10 @@ import { formatInterval, formatPercent } from '@/lib/stats/wilson'
  * 섹션은 `Reveal`이다. 지연은 `--motion-stagger`(60ms) 배수 — 위계 순서가
  * 곧 등장 순서다(제목 → 값 → 보조).
  *
- * ## 폼은 히어로 바로 아래다
+ * ## 폼은 이 페이지에 없다
  *
- * 히어로에 신청 폼까지 넣으면 첫 화면이 700px을 넘어 CTA가 접히는 쪽으로
- * 밀린다. 전환 경로는 히어로 CTA(`#request`)가 잇고, 폼은 스크롤 한 번
- * 아래의 첫 섹션이다.
+ * 신청 폼은 `/audit/new` 단독이다(2026-08-04 사용자 확정 — page.tsx 머리말).
+ * 히어로 CTA는 그 페이지로 간다.
  */
 export function Hero() {
   return (
@@ -76,7 +75,7 @@ export function Hero() {
           {/* 하나의 의도에 하나의 라벨. `무료 진단 받기`는 머리글과 히어로가
               같은 문구를 쓴다(tasteskill §4.5 중복 CTA 금지). */}
           <div className="enter-rise mt-10 flex flex-wrap items-center gap-3 [animation-delay:180ms]">
-            <CtaLink href="#request">무료 진단 받기</CtaLink>
+            <CtaLink href="/audit/new">무료 진단 받기</CtaLink>
             <CtaLink href="/pricing" tone="ghost" icon={false}>
               요금제 보기
             </CtaLink>

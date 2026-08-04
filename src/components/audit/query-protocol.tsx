@@ -58,7 +58,7 @@ export function QueryProtocol({
    */
   specimenQuery,
   /**
-   * 껍데기 조정. 랜딩은 이 카드를 유리 패널(`GlassPanel`) **안쪽 알맹이**로
+   * 껍데기 조정. 랜딩은 이 카드를 계측 시트(`SpecimenSheet`) **안쪽 알맹이**로
    * 쓰므로 자기 테두리·반경·그림자를 벗는다 — 같은 자리에 테두리가 두 겹이면
    * 베젤이 셋이 된다. `audit/new`는 단독으로 쓰므로 기본값 그대로다.
    */

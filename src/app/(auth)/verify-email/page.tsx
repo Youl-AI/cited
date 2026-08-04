@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { SpecimenSheet } from '@/components/marketing/specimen-sheet'
 
 // 문구 주의: 이 화면은 메일이 "도착했다"고 단정하지 않는다.
 // 발송은 가입 요청 뒤에 비동기로 일어나고 실패할 수 있는데(Resend 장애·설정 오류),
@@ -23,17 +24,22 @@ export default function VerifyEmailPage() {
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight">메일함을 확인해 주세요</h1>
       </div>
-      <p className="text-muted-foreground">
-        가입을 마치려면 이메일 확인이 필요합니다. 입력하신 주소로 확인 링크를 보내는 중입니다.
-        링크를 누르면 가입이 완료됩니다.
-      </p>
-      <p className="text-sm text-muted-foreground">
-        몇 분이 지나도 메일이 보이지 않으면 스팸함을 확인해 주세요. 그래도 없다면{' '}
-        <Link href="/sign-in" className="text-foreground underline underline-offset-4">
-          로그인
-        </Link>
-        을 다시 시도하시면 확인 메일이 새로 발송됩니다.
-      </p>
+      {/* 안내도 계측 시트 위에 선다 — sign-in·sign-up과 같은 표면 어휘. */}
+      <SpecimenSheet>
+        <div className="space-y-4 p-6 sm:p-8">
+          <p className="text-muted-foreground">
+            가입을 마치려면 이메일 확인이 필요합니다. 입력하신 주소로 확인 링크를 보내는
+            중입니다. 링크를 누르면 가입이 완료됩니다.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            몇 분이 지나도 메일이 보이지 않으면 스팸함을 확인해 주세요. 그래도 없다면{' '}
+            <Link href="/sign-in" className="text-foreground underline underline-offset-4">
+              로그인
+            </Link>
+            을 다시 시도하시면 확인 메일이 새로 발송됩니다.
+          </p>
+        </div>
+      </SpecimenSheet>
     </main>
   )
 }

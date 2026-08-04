@@ -59,7 +59,7 @@ async function fillRequired(page: import('@playwright/test').Page) {
   await form.getByLabel('이메일').fill(FORM.email)
 }
 
-test('랜딩에서 진단을 신청하면 확인 안내로 이동한다', async ({ page }) => {
+test('랜딩 CTA를 눌러 신청 페이지에서 신청하면 확인 안내로 이동한다', async ({ page }) => {
   let payload: unknown = null
   await page.route('**/api/audit/request', async (route) => {
     payload = route.request().postDataJSON()
@@ -68,6 +68,12 @@ test('랜딩에서 진단을 신청하면 확인 안내로 이동한다', async 
 
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+
+  // 폼은 `/audit/new` 단독이다(2026-08-04 확정). 랜딩의 CTA가 그리로 잇는다.
+  // 같은 라벨이 머리글·히어로·마감 셋에 있으므로 첫 번째를 누른다 — 목적지는
+  // 전부 같고, 그 동일성은 컴포넌트 테스트가 잠근다.
+  await page.getByRole('link', { name: '무료 진단 받기' }).first().click()
+  await expect(page).toHaveURL(/\/audit\/new/)
 
   // 즉시 결과를 약속하지 않는다. 이 문구가 사라지면 확인 메일이 스팸 신고를 받는다.
   await expect(page.getByText(/영업일 1일/).first()).toBeVisible()

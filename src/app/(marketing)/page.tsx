@@ -1,6 +1,4 @@
-import Link from 'next/link'
 import { QueryProtocol } from '@/components/audit/query-protocol'
-import { RequestForm } from '@/components/audit/request-form'
 import { SPECIMEN } from '@/components/marketing/actuals'
 import { ClosingCta } from '@/components/marketing/closing-cta'
 import { CtaLink } from '@/components/marketing/cta-link'
@@ -32,23 +30,22 @@ import { PLANS, engineLabels } from '@/lib/plans'
  * | 단계 | 섹션 | 레이아웃 패밀리 |
  * |---|---|---|
  * | Attention | 히어로 | 비대칭 에디토리얼 분할 |
- * | Action(앞당김) | 신청 폼 | 분할 + 인터랙티브 패널 |
  * | Interest | 리포트에 들어가는 것 | gapless 벤토 |
- * | Interest | 신청하면 3단계 | 스티키 스택(핀) |
+ * | Interest | 신청하면 3단계 | 계측 레일 |
  * | Interest | 무엇을 묻는지 공개합니다 | 전폭 단일 열 + 계측 패널 |
  * | **Desire** | 실측 재현 | 핀 스크럽 스크롤텔링 |
  * | Desire | 알 수 없는 것 | 헤어라인 정의 원장 |
- * | Action(마감) | 마감 CTA | 전폭 고대비 패널 |
+ * | Action(마감) | 마감 대형 타이포 | 헤어라인 사이 무용기 타이포 |
  *
- * 여덟 섹션에 여덟 패밀리다(§4.7 Section-Layout-Repetition). 분할 레이아웃은
- * 히어로와 신청 폼 **둘이 연달아 오고 거기서 끊긴다**(§4.7 지그재그 상한 2).
- * 아이브로는 히어로의 "한국어 GEO 모니터링" 하나뿐이다(상한 ceil(8/3) = 3).
+ * 일곱 섹션에 일곱 패밀리다(§4.7 Section-Layout-Repetition). 아이브로는
+ * 히어로의 "한국어 GEO 모니터링" 하나뿐이다(상한 ceil(7/3) = 3).
  *
- * 신청 폼이 위쪽에 있는 것은 의도다 — 이 페이지의 유일한 전환 지점이고,
- * 스크롤 끝까지 읽어야 신청할 수 있는 페이지는 신청을 읽기의 보상으로 만든다.
- *
- * 핀 섹션 둘(스티키 스택 · 실측 재현)은 **붙여 두지 않는다.** 사이에 질의
- * 공개 섹션이 들어가 스크롤이 한 번 자유로워진다.
+ * ★ 신청 폼은 이 페이지에 없다 — **`/audit/new` 단독안**(2026-08-04 사용자
+ *   확정). 원래 히어로 바로 아래 신청서 시트가 있었는데, 히어로 CTA가 "한
+ *   화면 스크롤" 버튼이 되고 Action이 Interest보다 먼저 오는 어색함이 있었다.
+ *   지금은 CTA 세 개(머리글·히어로·마감)가 전부 `/audit/new`로 가고, AIDA의
+ *   Action은 마감 타이포가 맡는다. 신청서 조판 자체는
+ *   `components/audit/request-sheet.tsx`로 옮겨 살아 있다.
  *
  * 실측 데이터(답변 원문·언급률·인용 출처·언급 횟수)는
  * `components/marketing/actuals.ts` 한 곳에 있다. 히어로·벤토·실측 재현·질의
@@ -58,134 +55,6 @@ export default function HomePage() {
   return (
     <>
       <Hero />
-
-      {/* ── 신청 ─────────────────────────────────────────────
-          히어로 CTA(`#request`)가 여기로 온다. `scroll-mt-24`가 없으면 앵커로
-          점프했을 때 제목이 떠 있는 머리글 밑으로 들어간다.
-          히어로가 자기 아래 여백을 이미 가지므로 위쪽 패딩은 두지 않는다.
-
-          ★ 처음에는 왼쪽에 떠 있는 제목·문단 + 오른쪽 유리 카드였다. 폼이
-            훨씬 길어서 왼쪽 아래가 통째로 빈 여백이 됐고, "제목 왼쪽 + 카드
-            오른쪽"은 그 자체로 템플릿 냄새였다. 지금은 **신청서 한 장**이다 —
-            접수 안내 레일과 기입란이 한 시트 안에서 헤어라인으로 나뉜다.
-            신청서는 기입하는 문서라 유리가 아니라 시트다(specimen-sheet.tsx). */}
-      <section id="request" className={`${SECTION_X} scroll-mt-24 pb-28 md:pb-40`}>
-        <Reveal index={0}>
-          <SpecimenSheet>
-            <div className="grid lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-              {/* ── 접수 안내 레일 ──────────────────────────
-                  모바일에서는 폼 위의 머리 블록으로 접힌다(아래 border 방향
-                  전환). 레일 바닥의 측정 규격은 폼 안 FlowStrip(순서)과 겹치지
-                  않는 정보만 싣는다 — 무엇을 몇 번, 어디에 묻는지. */}
-              {/* ★ 레일은 flex-col이고 내용이 네 클러스터다(소개 · 질의
-                  미리보기 · 규격 · 방침/문의). 폼 열이 더 길어서 생기는 세로
-                  여분은 lg에서 `lg:mt-auto`로 클러스터 **사이에 고르게**
-                  분배된다 — 바닥에 빈 공간이 고이지 않고 호흡이 된다.
-                  모바일(자연 높이)에서는 mt-auto가 0이라 기본 간격이 선다. */}
-              <div className="flex flex-col border-b border-border bg-foreground/[0.02] p-6 sm:p-8 lg:border-r lg:border-b-0">
-                <div>
-                  <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                    무료 진단 신청
-                  </h2>
-                  <p className="mt-4 max-w-[34em] text-base leading-relaxed text-muted-foreground">
-                    질의 <span className="font-mono tabular-nums">{PLANS.free.maxQueries}</span>
-                    개를 <span className="font-mono tabular-nums">1</span>회 측정해 메일로
-                    보내드립니다. 결제 정보는 받지 않습니다.
-                  </p>
-                  {/* 히어로의 표시 규칙 설명이 이어지는 자리다. 경쟁사를 실제로
-                      입력하는 칸 바로 옆이라, 여기서 읽어야 결정에 쓸 수 있다. */}
-                  <p className="mt-5 max-w-[34em] text-sm leading-relaxed text-muted-foreground">
-                    우리는 알려주신 브랜드만 셀 수 있습니다. 경쟁사를 적게 넣으면 점유율이
-                    실제보다 높게 보입니다. 리포트에 분모를 항상 함께 적는 이유입니다.
-                  </p>
-                </div>
-
-                {/* ── 질의 미리보기 ────────────────────────────
-                    오른쪽 "업종" 칸과 직결되는 자리다: 업종 하나로 무슨
-                    질문이 만들어지는지 실물 한 줄로 즉답한다. 질의는
-                    SPECIMEN(2026-07-30 실측)에서 온다 — 아래 "무엇을
-                    묻는지 공개합니다"가 전체 프로토콜이라면 여기는 기입
-                    전 미리보기 한 줄이다. */}
-                <div className="mt-8 border border-border bg-foreground/[0.04] p-5 lg:mt-auto">
-                    <p className="text-xs font-medium tracking-wide text-muted-foreground">
-                      업종을 적으면 질문이 만들어집니다
-                    </p>
-                    <blockquote className="mt-3 border-l-2 border-primary/60 pl-3 text-sm leading-relaxed">
-                      {SPECIMEN.query}
-                    </blockquote>
-                    <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                      업종 &lsquo;패션&rsquo;에 실제로 쓰는 질의 중 하나입니다. 전체 질의는 아래
-                      섹션에 공개되어 있습니다.
-                    </p>
-                  </div>
-
-                {/* 측정 규격 — 값은 전부 PLANS.free에서 온다(손으로 적은 수치
-                    없음). mono는 숫자에만 건다 — 한글을 mono에 넣으면 글자마다
-                    시스템 서체로 떨어진다(히어로 아이브로와 같은 이유). */}
-                <dl className="mt-8 border-t border-border text-sm lg:mt-auto">
-                  {(
-                    [
-                      [
-                        '질의',
-                        <>
-                          <span className="font-mono tabular-nums">{PLANS.free.maxQueries}</span>개
-                          · 업종 고정 템플릿
-                        </>,
-                      ],
-                      [
-                        '측정',
-                        <>
-                          <span className="font-mono tabular-nums">1</span>회
-                        </>,
-                      ],
-                      ['엔진', engineLabels(PLANS.free.engines).join(' · ')],
-                    ] as const
-                  ).map(([term, value]) => (
-                    <div
-                      key={term}
-                      className="flex items-baseline justify-between gap-4 border-b border-border py-3"
-                    >
-                      <dt className="text-muted-foreground">{term}</dt>
-                      <dd className="text-right text-[0.875rem]">{value}</dd>
-                    </div>
-                  ))}
-                  </dl>
-
-                {/* 처리 기준은 방침 문서가 원본이다 — 여기서 새 약속을 만들지
-                    않고 문서로 보낸다(푸터에도 있지만, 정보를 적는 칸 옆이
-                    실제로 궁금해지는 자리다). 문의처도 같다: 푸터에만 있던
-                    주소를 신청을 망설이는 자리 옆에 내놓는다. */}
-                <div className="mt-6 lg:mt-auto">
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    적어주신 내용은 진단에만 씁니다. 처리 기준은{' '}
-                    <Link
-                      href="/legal/privacy"
-                      className="underline underline-offset-2 transition-colors duration-[var(--motion-micro)] ease-instrument hover:text-foreground"
-                    >
-                      개인정보처리방침
-                    </Link>
-                    에 있습니다.
-                  </p>
-                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                    궁금한 점은{' '}
-                    <a
-                      href="mailto:contact@cited.co.kr"
-                      className="underline underline-offset-2 transition-colors duration-[var(--motion-micro)] ease-instrument hover:text-foreground"
-                    >
-                      contact@cited.co.kr
-                    </a>
-                    로 보내주세요.
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-6 sm:p-8">
-                <RequestForm />
-              </div>
-            </div>
-          </SpecimenSheet>
-        </Reveal>
-      </section>
 
       {/* ── 무엇을 받나 — 벤토 ───────────────────────────────
           네 항목의 무게가 서로 다르다. 크기로 그 위계를 말한다. 셀 안의 숫자는

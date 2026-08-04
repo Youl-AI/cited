@@ -1,5 +1,5 @@
 import { CtaLink } from '@/components/marketing/cta-link'
-import { GlassPanel } from '@/components/marketing/glass-panel'
+import { SpecimenSheet } from '@/components/marketing/specimen-sheet'
 import { Reveal } from '@/components/motion/reveal'
 import { PLANS, QUERY_PACK_PRICE_KRW, QUERY_PACK_SIZE, engineLabels } from '@/lib/plans'
 import type { PlanId } from '@/lib/plans'
@@ -221,7 +221,7 @@ export default function PricingPage() {
           무료의 "1회 (단발)"과 "이력 없음"이 유료 열 옆에 붙어 있어야
           차이가 눈으로 보인다. */}
       <Reveal index={0} className="mt-16">
-        <GlassPanel>
+        <SpecimenSheet>
           {/* 좁은 화면: 플랜마다 한 블록. 카드를 세 개 겹쳐 놓지 않는다 —
               패널 안에 또 카드를 넣으면 테두리가 두 겹이 된다. */}
           <div className="divide-y divide-border lg:hidden">
@@ -353,7 +353,7 @@ export default function PricingPage() {
               </tbody>
             </table>
           </div>
-        </GlassPanel>
+        </SpecimenSheet>
       </Reveal>
 
       {/* ── 질의 팩 ──────────────────────────────────────────
@@ -369,21 +369,19 @@ export default function PricingPage() {
       </Reveal>
 
       {/* ── 정직 블록 + 유일한 행동 ──────────────────────────
-          마감 패널은 랜딩과 같은 어휘다(유리 패널 + 평면 브랜드 틴트 + 알약).
-          색면을 반전시키지 않는다 — 다크 페이지 한가운데가 라이트로 뒤집히면
-          Page Theme Lock(§4.11) 위반이다. */}
+          마감은 랜딩과 같은 어휘다: 상자 없이 위아래 헤어라인 사이에 문장과
+          버튼 하나(landing closing-cta.tsx). 색면을 반전시키지 않는다 — 다크
+          페이지 한가운데가 라이트로 뒤집히면 Page Theme Lock(§4.11) 위반이다. */}
       <Reveal index={0} className="mt-14">
-        <GlassPanel className="bg-primary/[0.06]">
-          <div className="px-8 py-12 sm:px-12 sm:py-14">
-            <p className="max-w-[46em] text-base leading-relaxed text-muted-foreground">
-              유료 플랜과 결제는 아직 열리지 않았습니다. 지금 신청할 수 있는 것은 무료 진단입니다.
-              위 조건은 유료 오픈 시점에 그대로 적용됩니다.
-            </p>
-            <div className="mt-8">
-              <CtaLink href="/audit/new">무료 진단 받기</CtaLink>
-            </div>
+        <div className="border-y border-border py-12 sm:py-14">
+          <p className="max-w-[46em] text-base leading-relaxed text-muted-foreground">
+            유료 플랜과 결제는 아직 열리지 않았습니다. 지금 신청할 수 있는 것은 무료 진단입니다.
+            위 조건은 유료 오픈 시점에 그대로 적용됩니다.
+          </p>
+          <div className="mt-8">
+            <CtaLink href="/audit/new">무료 진단 받기</CtaLink>
           </div>
-        </GlassPanel>
+        </div>
       </Reveal>
     </div>
   )

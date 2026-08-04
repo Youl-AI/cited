@@ -17,7 +17,7 @@ import { AUDIT_FLOW } from '@/components/audit/flow'
  *
  * ## 라벨은 하나다
  *
- * "무료 진단 받기"는 머리글·히어로와 **같은 문구·같은 목적지**(`#request`)다.
+ * "무료 진단 받기"는 머리글·히어로와 **같은 문구·같은 목적지**(`/audit/new`)다.
  * 한 의도에 한 라벨이라는 규칙(tasteskill §4.5)은 문구를 바꾸지 말라는 뜻이지
  * 반복하지 말라는 뜻이 아니다. 여기서 "지금 시작하기" 같은 새 문구를 만들면
  * 그 순간 위반이 된다.
@@ -41,7 +41,7 @@ export function ClosingCta() {
         {AUDIT_FLOW[0].short}만 넣으면 됩니다. 카드 정보는 받지 않습니다.
       </p>
       <div className="mt-12 flex justify-center">
-        <CtaLink href="#request">무료 진단 받기</CtaLink>
+        <CtaLink href="/audit/new">무료 진단 받기</CtaLink>
       </div>
     </div>
   )

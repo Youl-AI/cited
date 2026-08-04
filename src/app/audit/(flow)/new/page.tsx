@@ -1,25 +1,21 @@
 import Link from 'next/link'
-import { RequestForm } from '@/components/audit/request-form'
-import { GlassPanel } from '@/components/marketing/glass-panel'
+import { RequestSheet } from '@/components/audit/request-sheet'
 import { PLANS, engineLabels } from '@/lib/plans'
 
 /**
- * 무료 진단 신청 — 독립 페이지.
+ * 무료 진단 신청 — **유일한** 신청 지점.
  *
- * ## 랜딩의 폼을 대체하지 않는다
+ * ## 랜딩의 폼을 대체한다 (2026-08-04 사용자 확정)
  *
- * 랜딩은 히어로에서 실제 AI 답변을 보여주고, 바로 아래 섹션에 폼을 둔다.
- * 답변을 보고 "어 우리 브랜드는?"이 되는 그 순간에 폼이 손 닿는 곳에 있어야
- * 한다. 폼을 여기로 **옮기면** 그 순간과 행동 사이에 클릭이 하나 들어가고,
- * GEO를 모르는 사람일수록 거기서 샌다.
- *
- * 이 페이지가 있는 이유는 **주소가 필요해서**다:
- * - 머리글의 `무료 진단 받기` 버튼이 갈 곳 (랜딩에 있으면 눌러도 제자리다)
+ * 원래 랜딩 히어로 바로 아래에도 같은 폼이 있었다. 히어로 CTA가 "한 화면
+ * 스크롤" 버튼이 되고, 버튼과 폼이 연달아 보여 중복으로 읽혔다. 지금은
+ * 랜딩의 CTA 세 개(머리글·히어로·마감)가 전부 여기로 온다. 여기가:
+ * - 머리글·히어로·마감 `무료 진단 받기` 버튼이 갈 곳
  * - 요금제 화면의 마감 버튼이 갈 곳
  * - 크몽 프로필·광고·메신저에 붙일 수 있는 링크
  *
- * `RequestForm`은 이미 분리된 컴포넌트라 두 곳에 두는 비용이 없다. 순서 안내와
- * "계정을 만들지 않는다"는 폼 **안에** 있으므로 여기서도 자동으로 따라온다.
+ * 조판은 랜딩에서 쓰던 신청서 한 장(`RequestSheet`) 그대로다 — 접수 안내
+ * 레일(경쟁사 분모·질의 미리보기·측정 규격·방침/문의) + 기입란.
  *
  * ## 등장은 `Reveal`이 아니라 `.enter-rise`다
  *
@@ -39,21 +35,18 @@ export const metadata = {
 
 export default function NewAuditPage() {
   return (
-    // `pt-24`는 떠 있는 유리 알약 머리글(72px)의 자리다.
-    <section className="mx-auto w-full max-w-2xl px-6 pt-24 pb-28 md:pb-40">
+    <section className="mx-auto w-full max-w-5xl px-6 pt-24 pb-28 md:pb-40">
       <h1 className="enter-rise text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
         무료 진단 신청
       </h1>
-      <p className="enter-rise mt-6 text-lg leading-relaxed text-muted-foreground [animation-delay:60ms]">
+      <p className="enter-rise mt-6 max-w-[38em] text-lg leading-relaxed text-muted-foreground [animation-delay:60ms]">
         {engineLabels(PLANS.free.engines).join('와 ')}에 소비자가 할 법한 질문{' '}
         <span className="font-mono tabular-nums">{PLANS.free.maxQueries}</span>개를 직접 던지고,
         답변에 브랜드가 나왔는지 세어 메일로 보내드립니다.
       </p>
       {/* ★ 질의에 브랜드명을 넣지 않는다는 것이 이 제품의 핵심이다. 신청
-          화면에서 말해야 "우리 이름을 넣고 물어본 거 아니야?"가 안 나온다.
-          ★ 원래 이 문장은 em-dash로 이어져 있었다(tasteskill §9.G 위반).
-            Task 3의 스윕이 랜딩·요금제만 훑어서 여기가 남아 있었다. */}
-      <p className="enter-rise mt-4 text-sm leading-relaxed text-muted-foreground [animation-delay:120ms]">
+          화면에서 말해야 "우리 이름을 넣고 물어본 거 아니야?"가 안 나온다. */}
+      <p className="enter-rise mt-4 max-w-[38em] text-sm leading-relaxed text-muted-foreground [animation-delay:120ms]">
         질문에는 브랜드명을 넣지 않습니다. 이름을 대고 물으면 AI는 당연히 그 브랜드를 말합니다.
         재는 것은{' '}
         <strong className="font-medium text-foreground">이름을 대지 않았을 때도 불리는가</strong>
@@ -61,11 +54,7 @@ export default function NewAuditPage() {
       </p>
 
       <div className="enter-rise mt-12 [animation-delay:180ms]">
-        <GlassPanel>
-          <div className="p-6 sm:p-8">
-            <RequestForm />
-          </div>
-        </GlassPanel>
+        <RequestSheet />
       </div>
 
       <p className="enter-rise mt-8 text-sm text-muted-foreground [animation-delay:240ms]">
