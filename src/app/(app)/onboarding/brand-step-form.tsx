@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useId, useState, useTransition } from 'react'
+import { CategoryCombobox } from '@/components/audit/category-combobox'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -43,7 +44,6 @@ export function BrandStepForm({
     category: useId(),
     region: useId(),
     siteUrl: useId(),
-    categoryList: useId(),
   }
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -91,19 +91,14 @@ export function BrandStepForm({
         {/* 자유 입력을 막지 않는다 — 목록에 없는 업종이면 그 입력값으로 질의를
             만든다(`generateAuditQueries`). select로 만들면 목록 밖의 업종을 가진
             고객이 온보딩 자체를 못 끝낸다. */}
-        <Input
+        <CategoryCombobox
           id={ids.category}
           value={category}
+          onValueChange={setCategory}
           maxLength={100}
-          list={ids.categoryList}
+          suggestions={KNOWN_CATEGORIES}
           placeholder="목록에서 고르거나 직접 입력"
-          onChange={(e) => setCategory(e.target.value)}
         />
-        <datalist id={ids.categoryList}>
-          {KNOWN_CATEGORIES.map((c) => (
-            <option key={c} value={c} />
-          ))}
-        </datalist>
       </div>
 
       {regional && (

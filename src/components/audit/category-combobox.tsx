@@ -34,12 +34,16 @@ import { cn } from '@/lib/utils'
  */
 interface CategoryComboboxProps {
   id: string
-  name: string
+  /** FormData로 수집하는 폼(무료 진단)만 넘긴다. 컨트롤드 폼(온보딩)은 불필요. */
+  name?: string
   suggestions: readonly string[]
   placeholder?: string
   className?: string
   required?: boolean
   maxLength?: number
+  /** 넘기면 컨트롤드 — 부모가 값을 소유한다(온보딩: 지역형 감지가 이 값에 걸려 있다). */
+  value?: string
+  onValueChange?: (value: string) => void
 }
 
 export function CategoryCombobox({
@@ -50,11 +54,20 @@ export function CategoryCombobox({
   className,
   required,
   maxLength,
+  value: controlledValue,
+  onValueChange,
 }: CategoryComboboxProps) {
   const listboxId = useId()
-  const [value, setValue] = useState('')
+  // 언컨트롤드 폴백 — `value` prop이 없으면 내부 상태가 값을 소유한다.
+  const [innerValue, setInnerValue] = useState('')
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
+
+  const value = controlledValue ?? innerValue
+  function setValue(next: string) {
+    setInnerValue(next)
+    onValueChange?.(next)
+  }
 
   const query = value.trim()
   const filtered = query ? suggestions.filter((s) => s.includes(query)) : suggestions

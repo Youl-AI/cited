@@ -35,14 +35,14 @@ describe('BrandStepForm', () => {
   })
 
   it('자동완성에서 지역형 업종을 빼지 않는다 — 무료 폼과 반대다', () => {
-    const { container } = render(<BrandStepForm maxCompetitors={3} prefill={null} />)
-    const options = [...container.querySelectorAll('datalist option')].map(
-      (o) => (o as HTMLOptionElement).value,
-    )
+    render(<BrandStepForm maxCompetitors={3} prefill={null} />)
+    // 커스텀 콤보박스는 포커스해야 제안 패널이 열린다(빈 입력 = 전체 목록).
+    fireEvent.focus(screen.getByRole('combobox', { name: '업종' }))
+    const options = screen.getAllByRole('option').map((o) => o.textContent)
     for (const category of KNOWN_CATEGORIES) {
       expect(options).toContain(category)
     }
-    expect(options.some((v) => isRegionalCategory(v))).toBe(true)
+    expect(options.some((v) => isRegionalCategory(String(v)))).toBe(true)
   })
 
   // ★ 한도만큼 빈 칸을 미리 깔면 Business(10개)에서 빈 입력이 열 줄 늘어선다.
