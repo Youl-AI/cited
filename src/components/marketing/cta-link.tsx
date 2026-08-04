@@ -1,5 +1,9 @@
-import { ArrowUpRightIcon } from '@phosphor-icons/react/ssr'
+'use client'
+
+import { ArrowUpRightIcon } from '@phosphor-icons/react'
 import Link from 'next/link'
+import { useRef } from 'react'
+import { motion, useMotionValue, useReducedMotion, useSpring } from 'motion/react'
 import { cn } from '@/lib/utils'
 
 /**
@@ -22,6 +26,23 @@ import { cn } from '@/lib/utils'
  * 화살표도 같은 이유로 자기 원(circle chip)을 벗었다 — 원은 알약의
  * 부속이었다. 지금은 맨 화살표가 라벨 옆에 서고, 호버에 가리키는 방향
  * (대각선 위)으로 민다.
+ *
+ * ## 자석 (tasteskill §5 Magnetic Micro-physics)
+ *
+ * 커서가 버튼 위에 있는 동안 버튼이 커서 쪽으로 몇 px 끌려온다(스프링
+ * 복귀). 동기: **전환 버튼 하나에 손을 끌어당기는 피드백**이다 — 이
+ * 페이지에서 누를 것은 사실상 이 버튼뿐이고, 그 하나가 반응하는 물체라는
+ * 감각을 준다. 규칙 준수: `useMotionValue`+`useSpring`으로 React 렌더
+ * 밖에서 움직인다(§3.B — useState로 연속값을 추적하면 프레임마다 트리가
+ * 다시 그려진다). reduced-motion이면 끌림 자체를 만들지 않는다.
+ * 이동은 Motion의 `x`/`y`(transform translate)이고 눌림은 CSS의 독립
+ * `scale` 속성이라 서로를 덮지 않는다(Tailwind v4의 독립 속성 분리를
+ * 그대로 이용).
+ *
+ * ## 클라이언트 컴포넌트가 된 비용
+ *
+ * 자석 물리는 포인터 추적이라 JS가 필요하다. 마케팅 라우트는 이미 Motion을
+ * 싣고 있어 증분은 이 파일 분량이고, CTA는 LCP 요소가 아니다.
  *
  * ## 대비
  *
@@ -49,6 +70,14 @@ const SIZE = {
   sm: { root: 'h-9 gap-2 px-4 text-sm', icon: 14 },
 } as const
 
+/** 자석 세기. 중심에서 벗어난 거리에 곱하고, 아래 한계로 자른다. */
+const PULL = 0.18
+/** 최대 끌림(px). 이보다 크면 버튼이 커서를 쫓아다니는 장난감이 된다. */
+const MAX_PULL_X = 6
+const MAX_PULL_Y = 4
+
+const MotionLink = motion.create(Link)
+
 export function CtaLink({
   href,
   children,
@@ -66,9 +95,31 @@ export function CtaLink({
   className?: string
 }) {
   const s = SIZE[size]
+  const reduce = useReducedMotion()
+  const ref = useRef<HTMLAnchorElement>(null)
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  // 스프링이 복귀를 만든다 — 순간이동 복귀는 끌림이 아니라 버그로 읽힌다.
+  const springX = useSpring(x, { stiffness: 320, damping: 24 })
+  const springY = useSpring(y, { stiffness: 320, damping: 24 })
+
+  const clamp = (v: number, limit: number) => Math.min(limit, Math.max(-limit, v))
+
   return (
-    <Link
+    <MotionLink
+      ref={ref}
       href={href}
+      style={reduce ? undefined : { x: springX, y: springY }}
+      onPointerMove={(e: React.PointerEvent) => {
+        if (reduce || !ref.current) return
+        const r = ref.current.getBoundingClientRect()
+        x.set(clamp((e.clientX - (r.left + r.width / 2)) * PULL, MAX_PULL_X))
+        y.set(clamp((e.clientY - (r.top + r.height / 2)) * PULL, MAX_PULL_Y))
+      }}
+      onPointerLeave={() => {
+        x.set(0)
+        y.set(0)
+      }}
       className={cn(
         'group/cta inline-flex shrink-0 items-center justify-center rounded-none font-semibold whitespace-nowrap',
         // 눌림. 이징은 --ease-spring(오버슈트 4% 이내) — 손끝 반응에만 쓰는 그 값이다.
@@ -95,6 +146,6 @@ export function CtaLink({
           className="shrink-0 transition-transform duration-[var(--motion-micro)] ease-spring group-hover/cta:translate-x-0.5 group-hover/cta:-translate-y-0.5"
         />
       ) : null}
-    </Link>
+    </MotionLink>
   )
 }

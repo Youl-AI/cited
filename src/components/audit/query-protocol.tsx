@@ -124,7 +124,7 @@ export function QueryProtocol({
             // 규칙(Task 3 리포트 §2.8)을 이 탭만 앱 반경(8~12px)으로 깨고 있었다.
             // `audit/new`도 마케팅 표면으로 넘어오므로 두 곳 모두 여기서 맞는다.
             className={cn(
-              'rounded-none border px-3.5 py-1 text-sm transition-colors',
+              'motion-press rounded-none border px-3.5 py-1 text-sm active:scale-[0.97]',
               'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
               category === label
                 ? 'border-foreground/60 bg-foreground text-background'
@@ -158,7 +158,7 @@ export function QueryProtocol({
                 type="button"
                 onClick={() => void copy(query)}
                 className={cn(
-                  'shrink-0 rounded-none border border-border px-3 py-1 text-xs text-muted-foreground transition-colors',
+                  'motion-press shrink-0 rounded-none border border-border px-3 py-1 text-xs text-muted-foreground active:scale-[0.97]',
                   'hover:bg-accent hover:text-foreground',
                   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                 )}
