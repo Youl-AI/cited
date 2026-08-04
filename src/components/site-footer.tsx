@@ -90,6 +90,15 @@ export function SiteFooter() {
           </dl>
         ) : null}
 
+        {/* 상표 면책. 랜딩·표본이 무신사·29CM·ChatGPT 등 실존 브랜드를 측정
+            예시로 언급하므로, 제휴·후원으로 오인될 여지를 여기서 끊는다.
+            모든 공개 페이지에 깔리는 바닥글이 이 한 줄의 자리다. */}
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          본문과 측정 표본에 언급된 브랜드·서비스명(무신사, 29CM, ChatGPT, Gemini 등)은 각
+          소유자의 상표이며, 측정 방식을 설명하기 위한 예시로만 사용했습니다. 해당 기업과의
+          제휴·후원 관계를 의미하지 않습니다.
+        </p>
+
         <p className="font-mono text-xs tracking-wide text-muted-foreground">
           © {COPYRIGHT_YEAR} {B.serviceName}
         </p>

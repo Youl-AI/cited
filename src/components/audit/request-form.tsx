@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
+import { CategoryCombobox } from '@/components/audit/category-combobox'
 import { FlowStrip, NO_ACCOUNT_NOTE } from '@/components/audit/flow'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -70,7 +71,6 @@ export function RequestForm() {
     category: useId(),
     siteUrl: useId(),
     email: useId(),
-    categoryList: useId(),
   }
 
   const [competitors, setCompetitors] = useState<string[]>([''])
@@ -143,21 +143,18 @@ export function RequestForm() {
         <Label htmlFor={ids.category}>업종</Label>
         {/* 자유 입력을 막지 않는다. 목록에 없는 업종이면 그 입력값으로 질의를
             만든다(`generateAuditQueries`). select로 만들면 목록 밖의 업종을
-            가진 고객이 신청 자체를 못 한다. */}
-        <Input
+            가진 고객이 신청 자체를 못 한다. datalist에서 커스텀 콤보박스로
+            바꾼 이유는 category-combobox.tsx 머리말 참고(네이티브 패널은
+            스타일이 닿지 않는다). */}
+        <CategoryCombobox
           id={ids.category}
           name="category"
           required
           maxLength={100}
-          list={ids.categoryList}
+          suggestions={SUGGESTED_CATEGORIES}
           placeholder="패션"
           className={FIELD}
         />
-        <datalist id={ids.categoryList}>
-          {SUGGESTED_CATEGORIES.map((category) => (
-            <option key={category} value={category} />
-          ))}
-        </datalist>
       </div>
 
       <div className="space-y-2">
@@ -168,7 +165,7 @@ export function RequestForm() {
           type="email"
           required
           autoComplete="email"
-          placeholder="you@company.com"
+          placeholder="example@company.com"
           className={FIELD}
         />
         <p className="text-xs text-muted-foreground">
