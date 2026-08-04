@@ -2,6 +2,71 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * 카드 — double-bezel (soft-skill §4.A Doppelrand).
+ *
+ * ## 구조
+ *
+ * 겉껍질(이 `div`)과 내핵(`::before`) 두 겹이다. 껍질은 아주 옅은 트레이색
+ * (`bg-muted/60`)에 헤어라인 하나, 내핵은 카드색(흰색)에 자기 헤어라인 하나 —
+ * 알루미늄 트레이에 유리판이 앉은 모양이다. 배경 위에 흰 판을 그냥 얹는
+ * "테두리 + 그림자 + 흰 배경"은 redesign-skill이 제네릭 카드 룩으로 지목한
+ * 바로 그 조합이다.
+ *
+ * ★ 내핵을 **DOM 자식이 아니라 `::before`로** 만든 이유: 호출부가 넘기는
+ *   `className`(grid, flex-row, col-span…)과 `has-data-[slot=card-footer]`
+ *   같은 선택자가 전부 이 요소 하나를 기준으로 쓰인다. 안쪽에 래퍼를 하나
+ *   끼우면 그 계약이 통째로 어긋난다(그리고 조용히 어긋난다 — 화면은 뜨고
+ *   레이아웃만 틀어진다). 의사요소는 레이아웃에 참여하지 않는다.
+ * ★ 내핵을 콘텐츠 **아래**로 보내는 방법이 `isolate` + `before:-z-10`인 이유:
+ *   `[&>*]:relative`로 자식을 끌어올리는 쪽이 짧지만, 그 선택자는 카드 안에
+ *   `absolute`를 쓴 자식까지 `relative`로 덮어쓴다(둘 다 특이도 (0,1,0)이고
+ *   변형이 붙은 쪽이 나중에 출력되므로 이긴다 — 배지 오버레이 하나가 조용히
+ *   제자리로 돌아온다). `isolate`는 카드를 스태킹 컨텍스트로 만들고, 그 안에서
+ *   음수 z-index는 **자기 배경 위·모든 콘텐츠 아래**에 칠해진다(CSS 페인팅
+ *   순서 2단계). 자식은 손대지 않는다.
+ *
+ * ## 동심 반경
+ *
+ *   껍질 반경 = --radius × 1.4  (rounded-xl과 같은 값. 계산식을 드러내려고
+ *                                이름을 붙였다)
+ *   내핵 반경 = 껍질 반경 − 베젤(4px)
+ *
+ * ★ **왜 `var(--radius-xl)`로 참조하지 않는가 — 정정된 이유 (Task 7 실측).**
+ *   여기 있던 원래 설명("`@theme inline`은 변수를 발행하지 않으므로
+ *   `var(--radius-xl)`은 정의되지 않은 변수다")은 **틀렸다.** 산출 CSS에
+ *   `:root,:host{…--radius-xl:calc(var(--radius) * 1.4)…}`가 실제로 있다.
+ *   그런데 **결론은 그대로 유효하다.** 이유가 둘로 갈린다:
+ *
+ *   1. **발행이 참조 조건부다.** `@theme inline` 변수는 소스에서 그 이름이
+ *      문자열로 잡힐 때만 발행된다(`@theme static`과 다른 점 — globals.css
+ *      그 블록 주석 참고). 실측: `--radius-sm`·`--radius-md`는 arbitrary 값
+ *      안에서 참조돼 발행되고 `--radius-2xl`·`3xl`·`4xl`은 발행되지 않는다.
+ *      정정 전에도 `--radius-xl`이 발행되고 있던 것은 **"발행되지 않는다"고
+ *      주장하던 이 주석이 그 이름을 담고 있었기 때문**이다(스캐너는 평문
+ *      스캐너다). 즉 참조를 지우면 조용히 사라지는 종류의 의존이다.
+ *   2. **더 결정적인 것 — `:root`에서 치환돼 표면 스코프를 잃는다.**
+ *      커스텀 속성의 `var()`는 **선언된 요소에서** 계산 시점에 치환된다.
+ *      `--radius-xl`은 `:root`에 선언되므로 거기서 `--radius`(0.75rem)가
+ *      박혀 **1.05rem으로 굳는다.** 마케팅 다크 표면(`.surface-dark`가
+ *      `--radius: 1rem`으로 올린다)에서도 상속되는 값은 여전히 1.05rem이다.
+ *      반면 `calc(var(--radius)*1.4)`는 **이 카드 요소에서** 치환되므로
+ *      그 표면의 1rem을 타서 1.4rem이 된다. `.rounded-xl` 유틸리티가
+ *      정확히 이 형태로 펼쳐지는 것도(그래서 `inline`인 것도) 같은 이유다.
+ *
+ *   **둘은 등가가 아니다.** 반경 스케일이 표면을 따라가는 것이 `--radius`
+ *   설계의 핵심이므로(globals.css `--radius-*` 주석) 계산식을 직접 적는다.
+ *
+ * 이 뺄셈이 없으면 두 곡선의 중심이 어긋나서, 모서리에서 베젤 폭이 넓어졌다
+ * 좁아진다 — 값싸 보이는 이유가 대부분 여기다. 반경이 --radius에서 파생하므로
+ * 마케팅 다크 표면(--radius: 1rem)에서도 동심이 유지된다.
+ *
+ * ## elevation은 1단이다
+ *
+ * 앱은 계기판이라 카드가 화면을 가득 채운다. 2단·3단을 기본값으로 두면
+ * 그림자끼리 겹쳐서 데이터보다 그림자가 먼저 보인다. 뜨는 것은 상호작용하는
+ * 것(버튼·팝오버·모달)뿐이다.
+ */
 function Card({
   className,
   size = "default",
@@ -12,7 +77,16 @@ function Card({
       data-slot="card"
       data-size={size}
       className={cn(
-        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl bg-card py-(--card-spacing) text-sm text-card-foreground ring-1 ring-foreground/10 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        "group/card relative isolate flex flex-col gap-(--card-spacing) overflow-hidden text-sm text-card-foreground",
+        "[--card-bezel:--spacing(1)] [--card-radius:calc(var(--radius)*1.4)] [--card-spacing:--spacing(4)] [--card-core-radius:calc(var(--card-radius)-var(--card-bezel))] data-[size=sm]:[--card-spacing:--spacing(3)]",
+        // 겉껍질
+        "rounded-[var(--card-radius)] bg-muted/60 px-(--card-bezel) py-[calc(var(--card-bezel)+var(--card-spacing))] shadow-elevation-1 ring-1 ring-foreground/[0.07]",
+        // 내핵
+        "before:pointer-events-none before:absolute before:-z-10 before:inset-(--card-bezel) before:rounded-[var(--card-core-radius)] before:bg-card before:ring-1 before:ring-foreground/[0.05]",
+        // 바닥글·머리 이미지는 내핵의 가장자리에 맞춰 붙는다(껍질이 아니라).
+        // 그래서 남기는 여백은 베젤 폭뿐이다 — 예전 `pb-0`은 껍질이 없다는
+        // 전제였다.
+        "has-data-[slot=card-footer]:pb-(--card-bezel) has-[>img:first-child]:pt-(--card-bezel) *:[img:first-child]:rounded-t-[var(--card-core-radius)] *:[img:last-child]:rounded-b-[var(--card-core-radius)]",
         className
       )}
       {...props}
@@ -25,7 +99,9 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-header"
       className={cn(
-        "group/card-header @container/card-header grid auto-rows-min items-start gap-1 rounded-t-xl px-(--card-spacing) has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-(--card-spacing)",
+        // 반경은 내핵과 같다(껍질이 아니라). 머리글에 배경을 얹는 호출부에서만
+        // 눈에 보이지만, 그때 값이 틀어져 있으면 모서리에 흰 초승달이 남는다.
+        "group/card-header @container/card-header grid auto-rows-min items-start gap-1 rounded-t-[var(--card-core-radius)] px-(--card-spacing) has-data-[slot=card-action]:grid-cols-[1fr_auto] has-data-[slot=card-description]:grid-rows-[auto_auto] [.border-b]:pb-(--card-spacing)",
         className
       )}
       {...props}
@@ -84,7 +160,11 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-footer"
       className={cn(
-        "flex items-center rounded-b-xl border-t bg-muted/50 p-(--card-spacing)",
+        // 바닥글은 내핵 안에서 트레이색으로 돌아간다 — 껍질이 카드 아래쪽으로
+        // 비쳐 보이는 것처럼 읽히게. 경계선은 --border(회색 안료)가 아니라
+        // --foreground 알파다: 라이트에서는 검정 7%, 다크에서는 흰색 7%로
+        // 자동으로 뒤집혀서 유리 헤어라인 어휘와 같은 가족이 된다.
+        "flex items-center rounded-b-[var(--card-core-radius)] border-t border-foreground/[0.07] bg-muted/60 p-(--card-spacing)",
         className
       )}
       {...props}

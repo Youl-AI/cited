@@ -1,6 +1,5 @@
-import Link from 'next/link'
 import { NO_ACCOUNT_NOTE } from '@/components/audit/flow'
-import { Button } from '@/components/ui/button'
+import { CtaLink } from '@/components/marketing/cta-link'
 
 /**
  * 신청 → 인증 → 대기 사이의 안내 화면.
@@ -10,6 +9,13 @@ import { Button } from '@/components/ui/button'
  *
  * ★ `already`를 오류로 보여주지 않는 것이 중요하다. 메일 링크를 두 번 누르는
  *   것은 흔하고, 그게 오류처럼 보이면 사용자는 무언가 잘못됐다고 믿는다.
+ *
+ * ## 여기에 카드를 만들지 않는다
+ *
+ * 이 화면은 제목 하나와 문단 셋이다. 유리 패널에 담으면 "무언가 조작할 것이
+ * 있다"는 신호가 되는데 실제로는 읽고 나가는 화면이다(§14 "Cards omitted in
+ * favor of spacing"). 신청 폼(`/audit/new`, 패널 안)과 레이아웃 계열이 갈리는
+ * 것도 의도다.
  */
 
 export const metadata = { title: '진단 신청' }
@@ -70,15 +76,17 @@ export default async function AuditRequestedPage({
 }) {
   const { state } = await searchParams
   const view = STATES[resolveState(state)]
+  const isError = view.tone === 'error'
 
   return (
-    <section className="mx-auto w-full max-w-xl px-6 py-20 sm:py-28">
+    // `pt-24`는 고정 머리글의 자리다.
+    <section className="mx-auto w-full max-w-2xl px-6 pt-24 pb-28 md:pb-40">
       {/* mono를 쓰지 않는다 — 한글 글리프가 없어서 "단계"만 시스템 서체로
           떨어지고 한 줄 안에서 서체가 갈린다. 숫자만 mono로 감싼다. */}
       <p
         className={[
-          'text-sm font-medium tracking-wide',
-          view.tone === 'error' ? 'text-destructive' : 'text-muted-foreground',
+          'enter-rise text-sm font-medium tracking-wide',
+          isError ? 'text-destructive' : 'text-muted-foreground',
         ].join(' ')}
       >
         {view.step ? (
@@ -90,22 +98,40 @@ export default async function AuditRequestedPage({
         )}
       </p>
 
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">{view.title}</h1>
+      <h1 className="enter-rise mt-4 text-4xl font-semibold tracking-tight text-balance sm:text-5xl [animation-delay:60ms]">
+        {view.title}
+      </h1>
 
-      <p className="mt-5 text-base leading-relaxed text-muted-foreground">{view.body}</p>
+      <p className="enter-rise mt-6 text-lg leading-relaxed text-muted-foreground [animation-delay:120ms]">
+        {view.body}
+      </p>
 
-      <p className="mt-4 border-l-2 border-border pl-4 text-sm text-muted-foreground">
+      {/* 인용 규칙(랜딩의 표본 각주와 같다): 왼쪽 한 줄만 긋는다. 위아래로
+          두르지 않는다(§9.F). 실패 상태에서만 그 선이 색을 갖는다 — 색이
+          붙는 유일한 조건이 실제 상태라는 뜻이다. */}
+      <p
+        className={[
+          'enter-rise mt-8 border-l-2 pl-5 text-sm leading-relaxed text-muted-foreground [animation-delay:180ms]',
+          isError ? 'border-destructive' : 'border-border',
+        ].join(' ')}
+      >
         {view.note}
       </p>
 
       {/* ★ 계정이 없다는 사실을 모든 상태에서 말한다. 머리글에 로그인 버튼이
           있으므로, 안 밝히면 "로그인해야 결과를 보나?"가 남는다. */}
-      <p className="mt-6 text-sm text-muted-foreground">{NO_ACCOUNT_NOTE}</p>
+      <p className="enter-rise mt-8 text-sm text-muted-foreground [animation-delay:240ms]">
+        {NO_ACCOUNT_NOTE}
+      </p>
 
       {view.action && (
-        <Button variant="outline" className="mt-8" asChild>
-          <Link href={view.action.href}>{view.action.label}</Link>
-        </Button>
+        <div className="enter-rise mt-10 [animation-delay:300ms]">
+          {/* 마케팅 표면의 컨트롤은 전부 각이다(cta-link.tsx 모서리 규칙).
+              보조 행동이므로 ghost다 — 이 화면의 주된 일은 기다리는 것이다. */}
+          <CtaLink href={view.action.href} tone="ghost">
+            {view.action.label}
+          </CtaLink>
+        </div>
       )}
     </section>
   )

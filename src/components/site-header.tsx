@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Wordmark } from '@/components/wordmark'
 import { signOut } from '@/lib/auth-client'
 
 /** 로그인 영역의 상단 내비게이션. 순서는 쓰는 빈도 순이다. */
@@ -65,51 +66,67 @@ export function SiteHeader({ user }: { user?: HeaderUser }) {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background">
-      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-6">
+    // 앱 머리글은 **스티키 도구 막대**다. 마케팅처럼 떠 있는 알약으로 만들지
+    // 않는다 — 대시보드는 스크롤하면서 계속 돌아오는 화면이고, 떠 있는 알약은
+    // 그 아래 데이터를 가린다. 대신 가족 언어는 두 가지로 잇는다:
+    //   1) 높이 56px(h-14) — 마케팅 알약과 같은 값.
+    //   2) 유리(`.glass`) — 스크롤하는 콘텐츠가 아래로 흐릿하게 비친다.
+    // ★ `.glass`를 쓸 자격이 있는가: soft-skill §6은 backdrop-filter를 **고정·
+    //   스티키 요소에만** 허용한다. 이 머리글은 sticky다. 스크롤 컨테이너에
+    //   붙이는 것이 금지된 것이지 스티키 크롬은 정확히 그 용도다.
+    // ★ 투명도를 줄여 달라는 사용자에게는 globals.css의 언레이어 규칙이
+    //   `background-color: var(--card)`로 되돌린다 — 그때도 대비는 그대로다.
+    // ★ `print:hidden` — 인쇄물에 화면 내비게이션을 찍지 않는다. 공개 화면은
+    //   `SiteShell`이 `contents print:hidden` 래퍼로 이미 숨기고 있었는데,
+    //   로그인 구간(`(app)/layout.tsx`)에는 그 래퍼가 없어서 **회차 상세를
+    //   브라우저에서 인쇄하면 머리글(워드마크·대시보드/설정/결제·로그아웃)이
+    //   첫 장에 찍혔다.** 방어를 머리글 자신에게 옮기면 껍데기가 무엇이든
+    //   같은 결과가 나온다(SiteShell의 래퍼는 푸터도 함께 맡으므로 그대로 둔다 —
+    //   인쇄 규칙은 지우지 않는다).
+    //   `/audit/[id]` PDF 납품물에는 변화가 없다: 거기서는 이미 숨겨져 있었다.
+    <header className="glass sticky top-0 z-40 border-b border-foreground/[0.07] bg-background/85 print:hidden">
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6">
         {/* ★ 로그인 상태에서도 `/`로 간다. 원래는 `/dashboard`였는데, 지금
             대시보드는 5단계 전까지 빈 스텁이라 **거기서 나갈 길이 없었다** —
             로고를 눌러도 제자리, 설정·결제는 "준비 중". 실제로 그렇게 갇혔다.
-            대시보드가 내용을 갖게 되면 `user ? '/dashboard' : '/'`로 되돌린다. */}
-        <Link
-          href="/"
-          className="group inline-flex items-baseline gap-px rounded-sm text-lg font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-        >
-          Cited
-          {/* 각주 표식. 인용된 문장 뒤에 붙는 바로 그 기호이고, 이 제품이
-              하는 일 자체다. 읽어 줄 내용은 없으므로 보조기기에는 숨긴다. */}
-          <span
-            aria-hidden="true"
-            className="font-mono text-[0.6em] leading-none text-muted-foreground transition-colors group-hover:text-primary"
-          >
-            [1]
-          </span>
-        </Link>
+            대시보드가 내용을 갖게 되면 `user ? '/dashboard' : '/'`로 되돌린다.
+            마케팅 머리글·바닥글과 같은 워드마크를 쓴다(`components/wordmark.tsx`) —
+            세 곳에 따로 적어 두면 각주 표식이 한 곳에서만 사라진다. */}
+        <Wordmark className="text-base sm:text-lg" />
 
         {user ? (
-          <nav className="flex items-center gap-1 text-sm">
-            {APP_NAV.map((item) => {
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
-              // 워드마크와 같은 포커스 링을 쓴다. 링크마다 초점 표시가 다르면
-              // 키보드로 훑을 때 어디에 있는지 놓친다.
-              const focus =
-                'rounded-md px-3 py-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? 'page' : undefined}
-                  className={
-                    active
-                      ? `${focus} font-medium text-foreground`
-                      : `${focus} text-muted-foreground transition-colors hover:bg-accent hover:text-foreground`
-                  }
-                >
-                  {item.label}
-                </Link>
-              )
-            })}
-            <span className="ml-3 hidden max-w-40 truncate text-muted-foreground sm:inline">
+          <nav aria-label="주요" className="flex items-center gap-1 text-sm sm:gap-2">
+            {/* 세그먼트 트레이 — 현재 위치를 **글자 굵기가 아니라 판**으로
+                말한다. 굵기만으로 표시하면 세 항목을 나란히 놓았을 때 어느
+                쪽이 굵은지 비교해야 알 수 있다(redesign-skill: "no indication
+                of current page"). 트레이 안에서 활성 항목만 카드색으로 1단
+                떠오르면 훑는 눈이 바로 잡는다.
+                반경은 카드·탭과 같은 동심 뺄셈이다: 껍질 --radius×1.4,
+                베젤 4px(p-1), 항목 = 껍질 − 베젤. */}
+            <div className="flex items-center gap-0.5 rounded-[calc(var(--radius)*1.4)] bg-muted/70 p-1 ring-1 ring-foreground/[0.06]">
+              {APP_NAV.map((item) => {
+                const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                // 워드마크와 같은 포커스 링을 쓴다. 링크마다 초점 표시가 다르면
+                // 키보드로 훑을 때 어디에 있는지 놓친다.
+                const base =
+                  'rounded-[calc(var(--radius)*1.4-0.25rem)] px-2.5 py-1.5 text-xs transition-[color,background-color,box-shadow] duration-[var(--motion-micro)] ease-instrument focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-3 sm:text-sm'
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    className={
+                      active
+                        ? `${base} bg-card font-medium text-foreground shadow-elevation-1`
+                        : `${base} text-muted-foreground hover:bg-card/60 hover:text-foreground`
+                    }
+                  >
+                    {item.label}
+                  </Link>
+                )
+              })}
+            </div>
+            <span className="ml-1 hidden max-w-40 truncate text-muted-foreground sm:inline">
               {user.name}
             </span>
             <Button variant="ghost" size="sm" onClick={() => void onSignOut()} disabled={signingOut}>
@@ -125,7 +142,7 @@ export function SiteHeader({ user }: { user?: HeaderUser }) {
           //   헷갈리게 만들었다.
           //
           //   유료가 열리면 되돌린다 — 그때는 `시작하기`가 진짜 시작이 된다.
-          <nav className="flex items-center gap-2 text-sm">
+          <nav aria-label="주요" className="flex items-center gap-1.5 text-sm sm:gap-2">
             <Button variant="ghost" size="sm" asChild>
               {/* 로그인 화면이 하단에서 회원가입으로 보낸다. 두 버튼으로 나누면
                   "나는 어느 쪽이지"를 머리글에서 판단하게 만든다. */}
@@ -143,7 +160,7 @@ export function SiteHeader({ user }: { user?: HeaderUser }) {
       {signOutError ? (
         <p
           role="alert"
-          className="border-t border-border bg-destructive/10 px-6 py-2 text-center text-sm text-destructive"
+          className="border-t border-foreground/[0.07] bg-destructive/10 px-4 py-2 text-center text-sm font-medium text-destructive sm:px-6"
         >
           {signOutError}
         </p>

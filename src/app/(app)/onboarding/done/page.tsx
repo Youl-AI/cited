@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { nextMeasurement } from '@/lib/kst'
 import { loadOnboardingGate } from '@/lib/onboarding/gate'
+import { StepRail } from '../step-rail'
 
 export const metadata = { title: '온보딩 — 완료' }
 
@@ -28,21 +30,28 @@ export default async function OnboardingDonePage() {
   const next = nextMeasurement(new Date())
   return (
     <div className="mx-auto max-w-2xl">
-      <p className="font-mono text-xs tracking-[0.14em] text-muted-foreground uppercase">
-        온보딩 3 / 3
-      </p>
-      <h1 className="mt-3 text-2xl font-semibold tracking-tight">측정 예약이 끝났습니다</h1>
-      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-        질의가 동결됐습니다. 다음 측정은{' '}
-        <span className="font-mono text-foreground">{next.weekdayLabel}요일 새벽</span>에 돕니다 —
-        이후 월·수·금 새벽마다 같은 질의로 다시 잽니다.
-      </p>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+      <StepRail step={3} />
+      <h1 className="instrument-enter mt-6 font-heading text-2xl font-semibold tracking-tight [--enter-delay:calc(var(--motion-stagger)*1)]">
+        측정 예약이 끝났습니다
+      </h1>
+      {/* ★ 이 카드가 이 화면의 유일한 물건이다. 아래 문단은 기대치를 맞추는 말이고,
+          여기 담긴 것은 **예약된 사실**이다(언제 무엇이 도는가) — 둘을 같은 회색
+          문단으로 쌓으면 화면을 닫은 뒤 남는 것이 없다. 문구는 그대로다. */}
+      <Card className="instrument-enter mt-5 [--card-spacing:--spacing(5)] [--enter-delay:calc(var(--motion-stagger)*2)]">
+        <CardContent>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            질의가 동결됐습니다. 다음 측정은{' '}
+            <span className="font-mono text-foreground">{next.weekdayLabel}요일 새벽</span>에
+            돕니다 — 이후 월·수·금 새벽마다 같은 질의로 다시 잽니다.
+          </p>
+        </CardContent>
+      </Card>
+      <p className="instrument-enter mt-5 text-sm leading-relaxed text-muted-foreground [--enter-delay:calc(var(--motion-stagger)*3)]">
         첫 회차가 끝나면 대시보드에 점이 하나 찍힙니다. 점 하나로는 변화를 말할 수 없습니다 —
         회차가 쌓일수록 구간이 좁아지고, 그때부터 변화가 실제인지 측정 오차인지 판정합니다.
       </p>
-      <div className="mt-8">
-        <Button asChild>
+      <div className="instrument-enter mt-8 [--enter-delay:calc(var(--motion-stagger)*4)]">
+        <Button asChild size="lg">
           <Link href="/dashboard">대시보드로</Link>
         </Button>
       </div>

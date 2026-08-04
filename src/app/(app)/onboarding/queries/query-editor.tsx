@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useMemo, useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
   checkCustomQueries,
@@ -10,6 +11,7 @@ import {
   type CustomQueryContext,
   type QueryVerdict,
 } from '@/lib/audit/query-rules'
+import { cn } from '@/lib/utils'
 import { freezeQueriesAction, generateQueriesAction } from '../actions'
 
 /**
@@ -276,6 +278,25 @@ export function QueryEditor({
     })
   }
 
+  /**
+   * 지금 이 줄에 AI 결과가 도착하는 중인가 — **파생값이다. 새 상태가 아니다.**
+   *
+   * ★ 두 갈래를 그대로 되짚는다: `regenerateRow`는 `busyRow`에 그 줄 번호를
+   *   넣고, `generateMore`는 `busyRow = -1`로 두고 **빈 칸 앞에서부터
+   *   MAX_PER_CALL개**를 채운다(`blankIndexes.slice(0, MAX_PER_CALL)`).
+   * ★ 요청이 도는 동안 `queries`는 바뀌지 않는다(모든 입력이 `disabled={busy}`).
+   *   그래서 `blankIndexes`도 그대로이고, 클릭 시점의 대상 슬롯을 상태로
+   *   따로 들고 있을 필요가 없다 — 들고 있으면 두 곳이 갈라질 수 있다.
+   * ★ 빈 칸이 없어 **줄을 늘려** 채우는 경우에는 해당하는 줄이 아직 없다.
+   *   그때는 어느 줄도 표시되지 않는 것이 맞다(없는 줄에 도착 표시를 할 수 없다).
+   */
+  const rowIsFilling = (index: number): boolean => {
+    if (busyRow === index) return true
+    if (busyRow !== -1) return false
+    const slot = blankIndexes.indexOf(index)
+    return slot >= 0 && slot < MAX_PER_CALL
+  }
+
   const generateLabel =
     blankIndexes.length > 0
       ? `AI 후보 생성 — 빈 칸 ${Math.min(blankIndexes.length, MAX_PER_CALL)}개 채우기`
@@ -283,8 +304,11 @@ export function QueryEditor({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        {/* 계측값은 mono — sans는 말, mono는 계측값 */}
+      {/* 계측 띠 — 이 화면에서 소진되는 두 자원(질의 자리·생성 크레딧)을 한 줄에
+          모아 둔다. 트레이 배경과 헤어라인은 카드 어휘와 같은 가족이다(회색
+          안료 --border가 아니라 --foreground 알파라 표면을 따라 뒤집힌다).
+          계측값은 mono — sans는 말, mono는 계측값. */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-xl border border-foreground/[0.07] bg-muted/50 px-4 py-2.5">
         <p className="text-sm text-muted-foreground">
           질의{' '}
           <span className="font-mono tabular-nums text-foreground">
@@ -303,8 +327,9 @@ export function QueryEditor({
       <ul className="space-y-2">
         {queries.map((value, i) => {
           const locked = isTemplateRow(value, i)
+          const filling = rowIsFilling(i)
           return (
-            <li key={i} className="flex items-start gap-2">
+            <li key={i} className="flex items-start gap-2" aria-busy={filling || undefined}>
               <span className="mt-2 w-7 shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
                 q{i + 1}
               </span>
@@ -312,16 +337,38 @@ export function QueryEditor({
                 {/* ★ 생성 중에는 입력도 잠근다. 결과가 빈 칸에 들어가므로(`generateMore`),
                     기다리는 동안 그 칸에 친 글자는 결과가 도착하는 순간 말없이 덮인다 —
                     버튼만 막고 입력을 열어 두면 "쓰던 문장이 사라졌다"가 된다. */}
-                <Input
-                  className="h-9"
-                  value={value}
-                  readOnly={locked}
-                  disabled={busy}
-                  aria-label={`질의 ${i + 1}`}
-                  aria-readonly={locked || undefined}
-                  onChange={(e) => setQuery(i, e.target.value)}
-                  placeholder="소비자가 AI에게 묻는 말투로"
-                />
+                <div className="relative">
+                  <Input
+                    className="h-9"
+                    value={value}
+                    readOnly={locked}
+                    disabled={busy}
+                    aria-label={`질의 ${i + 1}`}
+                    aria-readonly={locked || undefined}
+                    onChange={(e) => setQuery(i, e.target.value)}
+                    placeholder="소비자가 AI에게 묻는 말투로"
+                  />
+                  {/* ★ 생성 중 표시는 **결과가 들어올 그 칸 위**에 있다. 화면
+                      어딘가의 스피너가 아니라 "여기에 문장 한 줄이 도착한다"를
+                      칸의 모양 그대로 말한다(redesign-skill Interactivity:
+                      "skeleton loaders that match the layout shape").
+                      셔머가 무한 루프인 것은 생성이 실제 비동기이고 언제 끝날지
+                      모르기 때문이다 — 멈추면 고장난 화면으로 읽힌다
+                      (globals.css `.skeleton` 주석). reduced-motion에서는
+                      전역 킬 스위치가 빛을 즉시 오른쪽 끝으로 보내 무채색 판만
+                      남긴다.
+                      ★ 재생성 줄에서는 **옛 문장을 덮는다.** 그게 사실이다 —
+                        그 문장은 곧 사라진다. 덮지 않으면 도착하는 순간 글자가
+                        말없이 갈린다.
+                      ★ 상태 낭독은 이 판이 아니라 줄의 `aria-busy`가 한다
+                        (`Skeleton` 주석의 분업). 시각 요소는 aria-hidden이다. */}
+                  {filling && (
+                    <span
+                      aria-hidden="true"
+                      className="skeleton pointer-events-none absolute inset-0 rounded-lg"
+                    />
+                  )}
+                </div>
                 {locked && (
                   <p className="font-mono text-[0.7rem] tracking-[0.08em] text-muted-foreground uppercase">
                     업종 공통 · 고정
@@ -389,7 +436,7 @@ export function QueryEditor({
       </div>
 
       {missingTemplates.length > 0 && (
-        <div className="space-y-2 rounded-lg border border-incomplete/40 bg-incomplete/5 px-4 py-3">
+        <div className="instrument-enter space-y-2 rounded-xl border border-incomplete/40 bg-incomplete/5 px-4 py-3">
           <p className="text-sm leading-relaxed text-incomplete-fg">
             업종 공통 질의 {missingTemplates.length}개가 빠져 있습니다. 무료 진단과 같은 질문이라
             반드시 포함해야 합니다.
@@ -412,53 +459,98 @@ export function QueryEditor({
         </div>
       )}
 
-      {/* 실시간 검증 — 서버와 같은 함수의 이유를 그 자리에서 보여준다 */}
+      {/* 실시간 검증 — 서버와 같은 함수의 이유를 그 자리에서 보여준다.
+          ★ 이 판은 **글자마다 다시 마운트되지 않는다.** 통과/실패가 오갈 때
+            사라졌다 나타나면 한 글자 칠 때마다 화면이 깜박인다. 그래서 등장
+            모션이 아니라 **색 전이**로 상태를 바꾼다 — 테두리·배경·글자색이
+            --motion-state(240ms) 동안 건너간다. 지속시간이 --motion-micro가
+            아닌 이유: 이건 손끝 반응(누름)이 아니라 판정이 뒤집힌 사건이다.
+          ★ 앞의 점은 색만으로 상태를 말하지 않기 위한 것이 아니다(문장이 이미
+            말한다). 훑는 눈이 문단 전체를 읽기 전에 통과/실패를 잡게 하는
+            앵커이고, 그래서 `aria-hidden`에 글자가 없다 — 라이브 리전이
+            읽어야 할 것은 문장뿐이다. */}
       <p
         role="status"
-        className={
+        className={cn(
+          'flex items-start gap-2.5 rounded-xl border px-4 py-3 text-sm leading-relaxed',
+          'transition-[color,background-color,border-color] duration-[var(--motion-state)] ease-instrument',
           verdict.ok
-            ? 'rounded-lg border border-metric-up/30 bg-metric-up/5 px-4 py-3 text-sm leading-relaxed text-metric-up-fg'
-            : 'rounded-lg border border-incomplete/40 bg-incomplete/5 px-4 py-3 text-sm leading-relaxed text-incomplete-fg'
-        }
+            ? 'border-metric-up/30 bg-metric-up/5 text-metric-up-fg'
+            : 'border-incomplete/40 bg-incomplete/5 text-incomplete-fg',
+        )}
       >
-        {verdict.ok
-          ? `질의 ${cleaned.length}개가 규칙을 통과했습니다 — 확정할 수 있습니다.`
-          : verdict.reason}
+        <span
+          aria-hidden="true"
+          className={cn(
+            'mt-[0.5em] size-1.5 shrink-0 rounded-full',
+            'transition-colors duration-[var(--motion-state)] ease-instrument',
+            verdict.ok ? 'bg-metric-up' : 'bg-incomplete',
+          )}
+        />
+        <span>
+          {verdict.ok
+            ? `질의 ${cleaned.length}개가 규칙을 통과했습니다 — 확정할 수 있습니다.`
+            : verdict.reason}
+        </span>
       </p>
 
       {actionError && (
         <p
           role="alert"
-          className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm leading-relaxed text-destructive"
+          className="instrument-enter rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm leading-relaxed text-destructive"
         >
           {actionError}
         </p>
       )}
 
       {confirming ? (
-        <div className="space-y-3 rounded-lg border border-border bg-card p-5">
-          <p className="text-sm leading-relaxed">
-            확정하면 질의 <span className="font-mono tabular-nums">{cleaned.length}</span>개가{' '}
-            <strong className="font-semibold">동결</strong>됩니다. 회차끼리 비교할 수 있으려면
-            질의가 같아야 하므로, 동결 후에는 바꾸지 않습니다 — 수정이 꼭 필요하면 운영자에게
-            문의해 주세요.
-          </p>
-          <div className="flex gap-2">
-            <Button type="button" disabled={busy || !verdict.ok} onClick={freeze}>
-              {pending ? '동결 중…' : '확정하고 동결'}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={busy}
-              onClick={() => setConfirming(false)}
-            >
-              더 고치기
-            </Button>
-          </div>
-        </div>
+        /* ── 동결 확인 ────────────────────────────────────────────
+           ★ 이 화면에서 **되돌릴 수 없는 유일한 동작**이다. 그래서 여기만
+             다른 무게로 온다. 무게를 만드는 것은 셋이고, 전부 표면 언어다
+             (문구는 한 글자도 더하지 않는다 — 경고를 글자로 더 쓰면 화면이
+             겁을 주는 것이지 무게가 생기는 것이 아니다):
+             1. **elevation 2단.** 앱의 기본은 1단이고(card.tsx: "뜨는 것은
+                상호작용하는 것뿐이다") 2단은 호버·툴팁 급이다. 확인 패널이
+                뜨는 순간 이 페이지에서 가장 앞에 있는 판이 된다.
+             2. **헤어라인이 브랜드색으로 바뀐다.** design-language §3에서
+                --primary의 자리는 "UI 크롬과 강조"다. 회색 헤어라인 하나만
+                바뀌어도 그 판이 다른 종류라는 것이 읽힌다.
+             3. **등장.** 조건부 마운트라 `.instrument-enter`가 매번 재생된다 —
+                [확정하기]를 누른 것이 화면에서 일어난 사건으로 보인다.
+           ★ 손으로 적던 `rounded-lg border border-border bg-card`는 걷어냈다.
+             그 조합이 redesign-skill이 지목하는 제네릭 카드 룩이고, 이 저장소는
+             이미 `Card`(트레이+유리판)로 통일했다. */
+        <Card className="instrument-enter shadow-elevation-2 ring-primary/25 [--card-spacing:--spacing(5)]">
+          <CardContent className="space-y-3">
+            <p className="text-sm leading-relaxed">
+              확정하면 질의 <span className="font-mono tabular-nums">{cleaned.length}</span>개가{' '}
+              <strong className="font-semibold">동결</strong>됩니다. 회차끼리 비교할 수 있으려면
+              질의가 같아야 하므로, 동결 후에는 바꾸지 않습니다 — 수정이 꼭 필요하면 운영자에게
+              문의해 주세요.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="lg" disabled={busy || !verdict.ok} onClick={freeze}>
+                {pending ? '동결 중…' : '확정하고 동결'}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="lg"
+                disabled={busy}
+                onClick={() => setConfirming(false)}
+              >
+                더 고치기
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
-        <Button type="button" disabled={busy || !verdict.ok} onClick={() => setConfirming(true)}>
+        <Button
+          type="button"
+          size="lg"
+          disabled={busy || !verdict.ok}
+          onClick={() => setConfirming(true)}
+        >
           확정하기
         </Button>
       )}

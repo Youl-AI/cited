@@ -128,6 +128,11 @@ export function BrandStepForm({
           경쟁사 <span className="font-normal text-muted-foreground">(최대 {maxCompetitors}개)</span>
         </span>
         <div className="space-y-2">
+          {/* ★ 질의 에디터처럼 줄 번호(`q1`)를 달지 않는다. 달면 입력 열이
+              24px 밀리는데 그 위 라벨("경쟁사")은 제자리라, 폼 안에 세로선이
+              두 개 생긴다 — 어긋난 세로선 하나가 화면을 가장 비뚤어 보이게
+              한다((app) 레이아웃 주석과 같은 이유). 칸의 이름은 이미
+              `aria-label`이 말한다. */}
           {competitors.map((value, i) => (
             <Input
               key={i}
@@ -173,16 +178,21 @@ export function BrandStepForm({
         </p>
       </div>
 
+      {/* 실패는 조건부 마운트라 `.instrument-enter`가 나타날 때마다 다시 돈다 —
+          같은 자리에 글자만 바뀌면 두 번째 실패를 못 알아챈다. */}
       {error && (
         <p
           role="alert"
-          className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+          className="instrument-enter rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
         >
           {error}
         </p>
       )}
 
-      <Button type="submit" disabled={pending}>
+      {/* ★ 이 단계의 주요 CTA다. `size="lg"`는 버튼 프리미티브가 "이 앱의 주요
+          CTA는 전부 lg"라고 적어 둔 그 스케일이고(button.tsx), 한글 라벨은
+          라틴보다 글자 상자가 꽉 차서 같은 높이에서 더 답답하게 읽힌다. */}
+      <Button type="submit" size="lg" disabled={pending}>
         {pending ? '저장 중…' : '다음 — 질의 만들기'}
       </Button>
     </form>

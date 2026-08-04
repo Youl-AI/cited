@@ -27,7 +27,7 @@ export const AUDIT_FLOW = [
   {
     label: '메일 확인',
     short: '메일함의 확인 링크 클릭',
-    body: '확인 링크를 누르기 전에는 아무것도 실행되지 않습니다. 가입이 아니라 본인 확인입니다 — 권한 없이 남의 주소로 신청하는 것을 막습니다.',
+    body: '확인 링크를 누르기 전에는 아무것도 실행되지 않습니다. 가입이 아니라 본인 확인입니다. 권한 없이 남의 주소로 신청하는 것을 막습니다.',
   },
   {
     label: '리포트 수신',
@@ -37,14 +37,15 @@ export const AUDIT_FLOW = [
 ] as const
 
 /** 계정이 없다는 사실. 여러 화면에서 같은 문장을 써야 한다 */
-export const NO_ACCOUNT_NOTE = '가입이나 로그인은 필요 없습니다 — 리포트는 메일로 갑니다.'
+export const NO_ACCOUNT_NOTE = '가입이나 로그인은 필요 없습니다. 리포트는 메일로 갑니다.'
 
 /**
  * 폼 안에 넣는 압축판. 세 단계를 한 줄씩만 보여준다.
  *
  * ★ 번호를 붙인다. 장식이 아니라 **실제 순서**이고, 읽는 사람이 "지금
  *   어디쯤인가"를 알아야 하는 정보다. (순서가 없는 목록에는 붙이지 않는다 —
- *   랜딩의 `DELIVERABLES`가 그 예다.)
+ *   랜딩의 "리포트에 들어가는 것" 벤토 네 셀이 그 예다. 같은 이유로 이 세
+ *   단계는 랜딩에서도 `<ol>`로 조판된다 — `marketing/flow-steps.tsx`.)
  */
 export function FlowStrip({ className }: { className?: string }) {
   return (

@@ -1,14 +1,33 @@
 import type { Metadata } from 'next'
-import { IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google'
+import { IBM_Plex_Mono } from 'next/font/google'
+import localFont from 'next/font/local'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import './globals.css'
 
-// 라틴 문자와 숫자만 웹폰트로 싣는다. 한글은 시스템 서체로 떨어진다
-// (스택 정의는 globals.css의 --font-sans 주석 참고).
-const plexSans = IBM_Plex_Sans({
-  variable: '--font-plex-sans',
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
+// 본문 서체. 지금까지 한글은 시스템 서체(기기마다 다른 것)에 맡겨 두었는데,
+// 그러면 같은 화면이 맥·윈도우에서 다른 리듬으로 읽힌다. SUIT는 가변 서체
+// 하나로 100–900을 덮으므로 웨이트별 파일을 따로 싣지 않아도 되고, woff2
+// 압축 후 610KB라 한글 웹폰트치고 가볍다(웨이트 3개짜리 정적 한글 서체보다
+// 작다). --font-sans 체인 맨 앞이므로 라틴·한글 모두 여기서 잡힌다.
+// 출처·무결성 해시·라이선스(OFL 1.1)는 ./fonts/README.md 참고.
+//
+// next/font는 variable 값에 폴백을 하나 더 붙인다 — 실제로 발행되는 값은
+// `"suit", "suit Fallback"`이고, "suit Fallback"은 local(Arial)에 SUIT의
+// 메트릭(ascent/descent/size-adjust)을 덮어씌운 것이다. 그래서 display:swap
+// 구간의 라틴은 이 조정된 Arial이 받는다(레이아웃 시프트를 줄이려는 것).
+//
+// ★ 2026-08-03 리뉴얼: 라틴 전용으로 함께 싣던 IBM Plex Sans를 걷어냈다.
+//   위 폴백 구조 때문에 --font-sans 체인에서 Plex Sans까지 내려오는 경우가
+//   없었다 — 라틴은 SUIT 아니면 "suit Fallback"(Arial)이 받고, 한글은
+//   Arial에 글리프가 없어 Pretendard 쪽으로 흐른다. 3웨이트를 받아 두고
+//   한 글자도 그리지 않는 죽은 요청이었다.
+//   서브셋은 하지 않는다 — SUIT 610KiB는 웨이트 3개짜리 정적 한글 서체보다
+//   작고, 서브셋 파이프라인의 유지보수 비용(글리프 누락 회귀·재빌드 절차)이
+//   절감분보다 크다. preload 유지.
+const suit = localFont({
+  src: './fonts/SUIT-Variable.woff2',
+  variable: '--font-suit',
+  weight: '100 900',
   display: 'swap',
 })
 
@@ -20,13 +39,25 @@ const plexMono = IBM_Plex_Mono({
   display: 'swap',
 })
 
+/**
+ * ★ 이 두 문자열은 **탭·검색 결과·공유 카드에 그대로 나가는 카피**다. 화면 안의
+ *   문구보다 고치기 쉬운데도 가장 늦게 고쳐진다 — 실제로 그랬다.
+ *
+ * - 제목의 구분자는 `·`다. em-dash는 마케팅 문자열에서 쓰지 않고(tasteskill §9.G),
+ *   아래 `template`이 이미 `·`를 쓰고 있어 구분자 가족도 하나로 유지된다.
+ * - 설명은 **지금 실제로 하는 것만** 적는다. 이전 문구는 "네이버 AI 브리핑 ·
+ *   Google AI Overviews에서 브랜드 언급을 매주 자동 추적"이었는데, 그 두 엔진은
+ *   아직 붙지 않았고 정기 측정도 열리지 않았다. 푸터(`site-footer.tsx`)와
+ *   이용약관은 이미 같은 이유로 정정했고 이 줄만 남아 있었다.
+ *   **푸터와 같은 문장이다 — 유료가 열릴 때 한쪽만 고치지 마라.**
+ */
 export const metadata: Metadata = {
   title: {
-    default: 'Cited — AI 답변에 우리 브랜드가 얼마나 인용되는지',
+    default: 'Cited · AI 답변에 우리 브랜드가 얼마나 인용되는지',
     template: '%s · Cited',
   },
   description:
-    'ChatGPT · Gemini · 네이버 AI 브리핑 · Google AI Overviews에서 브랜드 언급을 매주 자동 추적하는 한국어 GEO 모니터링 도구.',
+    'ChatGPT와 Gemini에 직접 물어보고, 답변에 브랜드가 나왔는지 세어 기록하는 한국어 GEO 모니터링 도구. 지금은 무료 진단을 제공합니다.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -34,7 +65,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="ko"
       suppressHydrationWarning
-      className={`${plexSans.variable} ${plexMono.variable}`}
+      className={`${suit.variable} ${plexMono.variable}`}
     >
       {/* Radix Tooltip은 Provider 없이는 던진다. 수치 옆의 "이 숫자는 어떻게
           나왔나" 설명이 앱 전역에서 쓰이므로 루트에서 한 번만 감싼다.

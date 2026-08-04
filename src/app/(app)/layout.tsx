@@ -24,18 +24,40 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader user={{ name: user.name, email: user.email }} />
-      {/* id·tabindex는 루트 레이아웃의 "본문으로 건너뛰기" 링크가 쓴다. */}
+      {/* id·tabindex는 루트 레이아웃의 "본문으로 건너뛰기" 링크가 쓴다.
+          ★ 좌우 여백은 머리글(`px-4 sm:px-6`)과 **같은 값이어야 한다.** 다르면
+            워드마크와 첫 카드의 왼쪽 모서리가 어긋나서, 화면 전체가 미묘하게
+            비뚤어 보인다(세로선 하나가 어긋나는 것이 가장 눈에 띈다).
+            `max-w-6xl`도 머리글과 같다.
+          ★ 위아래 여백이 비대칭인 것은 의도다(redesign-skill Layout —
+            "symmetrical vertical padding"). 머리글은 스티키라 늘 화면에 붙어 있어서 위쪽은 이미
+            닫혀 있는 반면, 아래쪽은 푸터까지가 열린 공간이다. 광학적으로
+            같아 보이려면 아래가 더 커야 한다. 실값은 32/48px(sm 40/56,
+            lg 48/64)로, 어느 구간에서든 아래가 위의 1.5배다. */}
       <main
         id="main"
         tabIndex={-1}
-        className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 outline-none"
+        className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-12 outline-none sm:px-6 sm:pt-10 sm:pb-14 lg:pt-12 lg:pb-16"
       >
         {children}
       </main>
       {/* ★ 푸터에는 전자상거래법 제10조가 요구하는 사업자 표시가 들어 있다.
           `SiteShell`(공개 화면)에는 붙어 있는데 여기만 빠져 있었다 — 로그인
-          구간 세 화면에서 그 표시가 통째로 없었다는 뜻이다. */}
-      <SiteFooter />
+          구간 세 화면에서 그 표시가 통째로 없었다는 뜻이다.
+          ★ `contents print:hidden` — 인쇄물에 화면 크롬(내비게이션·푸터 링크)을
+            찍지 않는다. `SiteShell`이 공개 화면에서 쓰는 것과 **같은 래퍼**이고,
+            로그인 구간에는 그것이 없어서 회차 상세를 브라우저에서 인쇄하면
+            푸터가 마지막 장에 따라 나왔다(머리글 쪽 짝은 `site-header.tsx`가
+            자기 자신에게 들고 있다).
+            래퍼가 `contents`인 이유도 `SiteShell`과 같다: 평범한 div로 감싸면
+            바깥 `flex min-h-dvh flex-col`의 항목이 하나 더 생겨 `flex-1`
+            분배가 바뀐다. `display: contents`는 박스를 만들지 않아 화면
+            레이아웃이 그대로고, 인쇄에서는 `print:hidden`이 하위 전체를 숨긴다.
+            사업자 표시 의무는 화면에서 이행된다 — 인쇄물은 그 표시의 게시
+            매체가 아니다(PDF 납품 경로에서도 이미 숨겨져 있었다). */}
+      <div className="contents print:hidden">
+        <SiteFooter />
+      </div>
     </div>
   )
 }

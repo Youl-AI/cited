@@ -57,13 +57,15 @@
 pnpm add gsap @gsap/react motion @phosphor-icons/react
 ```
 
-- [ ] **Step 2: SUIT Variable woff2 확보** — 우선 jsDelivr:
+- [ ] **Step 2: SUIT Variable woff2 확보** — 정본 저장소 `sun-typeface/SUIT`의 태그 고정본:
 
 ```bash
-curl -L -o src/app/fonts/SUIT-Variable.woff2 "https://cdn.jsdelivr.net/gh/sunn-us/SUIT@latest/fonts/variable/woff2/SUIT-Variable.woff2"
+curl -L -o src/app/fonts/SUIT-Variable.woff2 "https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@2.0.5/fonts/variable/woff2/SUIT-Variable.woff2"
 ```
 
-실패 시 GitHub 저장소 `sunn-us/SUIT`의 releases에서 variable woff2 경로를 찾아 받는다. 파일 크기가 1MB 미만이면 손상 의심 — 확인하고 리포트에 출처 URL·크기를 적는다.
+⚠ **`sunn-us/SUIT`는 쓰지 말 것** — 이 계획서 초안이 가리키던 저장소인데, 기본 브랜치가 비워졌고 남은 `fonts/static/woff2/SUIT.css`가 외부 추적 픽셀(`sunnamemicrosystems.free.beeceptor.com`)을 부른다(2026-08-03 실측).
+
+받은 파일은 624,536 B(610 KiB)에 sha256 `aa894a204d5a6fbae259dac6868d350cbd373a390caee0313f92946af741df23`이어야 한다. 610 KiB가 정상 크기다(손상 아님). 검증 기록과 라이선스는 `src/app/fonts/README.md`·`OFL.txt` 참고.
 
 - [ ] **Step 3: layout.tsx에 next/font/local 추가.** 기존 IBM Plex 로딩은 유지하고 SUIT를 추가한다:
 
