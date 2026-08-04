@@ -124,7 +124,9 @@ test('머리글의 무료 진단 버튼이 신청 페이지로 보낸다', async
   //   결제도 안 열려 있어서, 화면에서 가장 강한 버튼이 빈 곳으로 보내면서
   //   실제 제품인 무료 진단과 경쟁했다.
   await page.goto('/pricing')
-  await page.getByRole('link', { name: '무료 진단 받기' }).click()
+  // 요금제에는 같은 라벨이 머리글과 마감 블록 두 곳에 있다(같은 목적지).
+  // 이 테스트의 주장은 "머리글 버튼"이므로 머리글로 범위를 좁힌다.
+  await page.locator('header').getByRole('link', { name: '무료 진단 받기' }).click()
   await expect(page).toHaveURL(/\/audit\/new/)
   await expect(page.getByRole('button', { name: '무료 진단 신청하기' })).toBeVisible()
 })
@@ -146,7 +148,7 @@ test('신청 페이지에서도 신청이 되고, 순서 안내가 함께 보인
 })
 
 test('잘못된 이메일은 제출되지 않는다', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/audit/new')
   await fillRequired(page)
   await page.getByLabel('이메일').fill('not-an-email')
   await page.getByRole('button', { name: '무료 진단 신청하기' }).click()
@@ -159,7 +161,7 @@ test('잘못된 이메일은 제출되지 않는다', async ({ page }) => {
 //   선택임이 이미 증명된다. 여기서는 **알아볼 수 없는 값을 조용히 삼키지
 //   않는지**만 본다 — 조용히 버리면 고객은 넣었다고 믿고 리포트에는 그 줄이 없다.
 test('알아볼 수 없는 사이트 주소는 오류를 보여준다', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/audit/new')
   await fillRequired(page)
   await page.getByLabel('사이트 주소').fill('무신사')
   await page.getByRole('button', { name: '무료 진단 신청하기' }).click()
