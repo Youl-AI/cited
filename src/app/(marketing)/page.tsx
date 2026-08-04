@@ -171,8 +171,8 @@ export default function HomePage() {
             좁아지고, 지난주와 비교해 변화가 실제인지 측정 오차인지 판정할 수 있습니다. 그게
             유료 플랜이 하는 일입니다.
           </p>
-          {/* 히어로의 보조 CTA와 **같은 라벨·같은 모양**이다. 마케팅 표면에서
-              누르는 것은 전부 알약이라는 규칙(Task 3 리포트 §2.8). */}
+          {/* 히어로의 보조 CTA와 **같은 라벨·같은 모양**이다. 마케팅 표면의
+              컨트롤은 전부 각이라는 모서리 규칙(cta-link.tsx). */}
           <div className="mt-8">
             <CtaLink href="/pricing" tone="ghost" icon={false}>
               요금제 보기

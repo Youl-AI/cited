@@ -56,6 +56,10 @@ export function Reveal({
       // 한다). 문턱 떨림은 Motion의 교차 판정이 amount 기준으로 이력을
       // 가져서 실사용 스크롤에서는 나타나지 않는다. `amount: 0.3`은 요소가
       // 30% 보일 때 시작.
+      // 트레이드오프: 화면 밖으로 나간 요소는 initial(투명)로 돌아가므로
+      // 마케팅 페이지를 인쇄하면 뷰포트 밖 섹션이 비어 보일 수 있다. 이
+      // 컴포넌트는 마케팅 라우트 전용이고 인쇄 표면(리포트/PDF)은 Reveal을
+      // 쓰지 않으므로 납품물에는 영향이 없다.
       viewport={{ once: false, amount: 0.3 }}
       transition={{
         duration: REVEAL_DURATION_S,

@@ -70,11 +70,11 @@ export default function SignInPage() {
           백플레이트). 라이트 표면에서도 토큰이 같아 시트가 그대로 선다. */}
       <SpecimenSheet>
         <form action={onSubmit} className="flex flex-col gap-5 p-6 sm:p-8">
-        <div className="space-y-1.5">
+          <div className="space-y-1.5">
           <Label htmlFor="email">이메일</Label>
           <Input id="email" name="email" type="email" required autoComplete="email" />
-        </div>
-        <div className="space-y-1.5">
+          </div>
+          <div className="space-y-1.5">
           <Label htmlFor="password">비밀번호</Label>
           <Input
             id="password"
@@ -83,12 +83,12 @@ export default function SignInPage() {
             required
             autoComplete="current-password"
           />
-        </div>
-        {error ? (
+          </div>
+          {error ? (
           <p role="alert" className="text-sm text-destructive">
             {error}
           </p>
-        ) : null}
+          ) : null}
           <Button type="submit" size="lg" className="w-full" disabled={pending}>
             {pending ? '처리 중…' : '로그인'}
           </Button>

@@ -79,7 +79,7 @@ export default async function AuditRequestedPage({
   const isError = view.tone === 'error'
 
   return (
-    // `pt-24`는 떠 있는 유리 알약 머리글(72px)의 자리다.
+    // `pt-24`는 고정 머리글의 자리다.
     <section className="mx-auto w-full max-w-2xl px-6 pt-24 pb-28 md:pb-40">
       {/* mono를 쓰지 않는다 — 한글 글리프가 없어서 "단계"만 시스템 서체로
           떨어지고 한 줄 안에서 서체가 갈린다. 숫자만 mono로 감싼다. */}
@@ -126,7 +126,7 @@ export default async function AuditRequestedPage({
 
       {view.action && (
         <div className="enter-rise mt-10 [animation-delay:300ms]">
-          {/* 마케팅 표면에서 누르는 것은 전부 알약이다(Task 3 §2.8 모서리 규칙).
+          {/* 마케팅 표면의 컨트롤은 전부 각이다(cta-link.tsx 모서리 규칙).
               보조 행동이므로 ghost다 — 이 화면의 주된 일은 기다리는 것이다. */}
           <CtaLink href={view.action.href} tone="ghost">
             {view.action.label}

@@ -62,15 +62,15 @@ export default function SignUpPage() {
       {/* 폼은 계측 시트 위에 선다 — sign-in과 같은 표면 어휘. */}
       <SpecimenSheet>
         <form action={onSubmit} className="flex flex-col gap-5 p-6 sm:p-8">
-        <div className="space-y-1.5">
+          <div className="space-y-1.5">
           <Label htmlFor="name">이름</Label>
           <Input id="name" name="name" required autoComplete="name" />
-        </div>
-        <div className="space-y-1.5">
+          </div>
+          <div className="space-y-1.5">
           <Label htmlFor="email">이메일</Label>
           <Input id="email" name="email" type="email" required autoComplete="email" />
-        </div>
-        <div className="space-y-1.5">
+          </div>
+          <div className="space-y-1.5">
           <Label htmlFor="password">비밀번호</Label>
           <Input
             id="password"
@@ -84,12 +84,12 @@ export default function SignUpPage() {
           <p id="password-hint" className="text-xs text-muted-foreground">
             {String(MIN_PASSWORD_LENGTH)}자 이상
           </p>
-        </div>
-        {error ? (
+          </div>
+          {error ? (
           <p role="alert" className="text-sm text-destructive">
             {error}
           </p>
-        ) : null}
+          ) : null}
           <Button type="submit" size="lg" className="w-full" disabled={pending}>
             {pending ? '처리 중…' : '가입하기'}
           </Button>

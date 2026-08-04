@@ -120,8 +120,8 @@ export function QueryProtocol({
             type="button"
             aria-pressed={category === label}
             onClick={() => setCategory(label)}
-            // 알약이다. 마케팅 표면에서 **누르는 것은 전부 알약**이라는 모서리
-            // 규칙(Task 3 리포트 §2.8)을 이 탭만 앱 반경(8~12px)으로 깨고 있었다.
+            // 각이다. 마케팅 표면의 컨트롤은 시트와 같은 각이라는 모서리
+            // 규칙(cta-link.tsx)이 탭에도 적용된다.
             // `audit/new`도 마케팅 표면으로 넘어오므로 두 곳 모두 여기서 맞는다.
             className={cn(
               'motion-press rounded-none border px-3.5 py-1 text-sm active:scale-[0.97]',

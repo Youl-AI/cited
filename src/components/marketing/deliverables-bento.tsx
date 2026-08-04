@@ -21,12 +21,9 @@ import { formatInterval, formatPercent } from '@/lib/stats/wilson'
  * 각 한 칸씩이고, 위계는 칸 크기 대신 틴트·콘텐츠 밀도가 말한다. 행 높이는
  * 내용대로 달라 격자가 목록으로 굳지 않는다. `sm` 아래는 단일 열.
  *
- * ★ `grid-flow-dense`는 **지금 이 배치를 성립시키는 조건이 아니다.** 기본
- *   (sparse) 배치도 같은 결과를 낸다 — 원문 셀을 1행 3~4열에 놓은 뒤 커서가
- *   2행 1열로 넘어가는데 그 자리가 비어 있기 때문이다. 그럼에도 다는 이유는
- *   gpt-taste §4가 벤토에 요구하는 안전장치이기 때문이다: 셀을 재정렬하거나
- *   span을 손대는 순간 sparse는 구멍을 남기고 dense는 되메운다. 성립 조건이
- *   아니라 **구멍 방지 장치**로 읽어라.
+ * ★ `grid-flow-dense`는 지금(전 셀 1칸) 무동작이다. 남겨 두는 이유는
+ *   안전장치다: 나중에 어느 셀에 span이 다시 붙으면 sparse는 구멍을 남기고
+ *   dense는 되메운다(gpt-taste §4).
  *
  * ## 배경 다양성 (tasteskill §4.7 Bento Background Diversity)
  *
@@ -108,7 +105,7 @@ export function DeliverablesBento() {
         <p className="text-sm leading-relaxed text-muted-foreground">
           실제 AI가 뭐라고 답했는지 그대로 보여드립니다. 직접 물어서 확인하실 수 있습니다.
         </p>
-        <blockquote className="mt-2 line-clamp-4 border-l-2 border-border pl-4 text-sm leading-[1.9] whitespace-pre-wrap">
+        <blockquote className="mt-2 line-clamp-5 border-l-2 border-border pl-4 text-sm leading-[1.9] whitespace-pre-wrap">
           <SpecimenMarks text={SPECIMEN.text} marks={SPECIMEN.marks} />
         </blockquote>
         <p className="mt-auto pt-4 text-xs text-muted-foreground">

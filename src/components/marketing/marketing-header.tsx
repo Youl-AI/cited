@@ -82,6 +82,10 @@ export function MarketingHeader({
     // 같은 규칙: 머리글 40 < skip 링크 50.
     <motion.header
       className="fixed inset-x-0 top-0 z-40"
+      // 숨은 머리글에 키보드 포커스가 들어오면(Shift+Tab 역주행) 즉시 되살린다.
+      // fixed 요소라 스크롤로는 복구되지 않아, 이게 없으면 보이지 않는 링크에
+      // 포커스가 앉는다 — WCAG 2.2 SC 2.4.11(Focus Not Obscured) 위반.
+      onFocusCapture={() => setHidden(false)}
       initial={false}
       animate={hidden ? 'hidden' : 'shown'}
       variants={{ hidden: { y: '-100%' }, shown: { y: 0 } }}

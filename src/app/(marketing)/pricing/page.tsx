@@ -204,7 +204,7 @@ export default function PricingPage() {
   return (
     // `pt-24`는 여백 취향이 아니라 **떠 있는 머리글의 자리**다. 마케팅 머리글은
     // `fixed`(높이 72px)라 문서 흐름을 차지하지 않는다. 이보다 줄이면 첫 줄이
-    // 유리 알약 밑으로 들어간다.
+    // 떠 있는 머리글 밑으로 들어간다.
     <div className="mx-auto w-full max-w-6xl px-6 pt-24 pb-28 md:pb-40">
       <p className="text-sm font-medium tracking-wide text-muted-foreground">요금제</p>
       <h1 className="mt-4 max-w-2xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">

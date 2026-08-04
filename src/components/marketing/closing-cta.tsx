@@ -28,7 +28,7 @@ import { AUDIT_FLOW } from '@/components/audit/flow'
  * ## 고대비를 색면이 아니라 값으로 만든다
  *
  * 밝은 색 블록을 깔면 다크 페이지 한가운데가 라이트로 뒤집혀 Page Theme Lock
- * (§4.11)에 걸린다. 대비는 흰 대형 활자 + 브랜드색 알약이 만든다. 앰비언트
+ * (§4.11)에 걸린다. 대비는 흰 대형 활자 + 브랜드색 버튼이 만든다. 앰비언트
  * 워시 위에 그라데이션을 한 겹 더 얹지도 않는다(Task 3 인계: 배경은 한 겹).
  */
 export function ClosingCta() {
@@ -37,7 +37,7 @@ export function ClosingCta() {
       <h2 className="mx-auto max-w-[16em] text-4xl font-bold tracking-tighter text-balance sm:text-5xl md:text-6xl">
         우리 브랜드가 불리고 있는지, <span className="text-primary">한 번 재 보세요</span>
       </h2>
-      <p className="mx-auto mt-8 max-w-[32em] px-6 text-lg leading-relaxed text-muted-foreground">
+      <p className="mx-auto mt-8 max-w-[32em] text-lg leading-relaxed text-muted-foreground">
         {AUDIT_FLOW[0].short}만 넣으면 됩니다. 카드 정보는 받지 않습니다.
       </p>
       <div className="mt-12 flex justify-center">

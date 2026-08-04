@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { RequestForm } from '@/components/audit/request-form'
 import { SPECIMEN } from '@/components/marketing/actuals'
 import { SpecimenSheet } from '@/components/marketing/specimen-sheet'
+import { BUSINESS_INFO } from '@/lib/business-info'
 import { PLANS, engineLabels } from '@/lib/plans'
 
 /**
@@ -102,10 +103,10 @@ export function RequestSheet() {
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
               궁금한 점은{' '}
               <a
-                href="mailto:contact@cited.co.kr"
+                href={`mailto:${BUSINESS_INFO.email}`}
                 className="underline underline-offset-2 transition-colors duration-[var(--motion-micro)] ease-instrument hover:text-foreground"
               >
-                contact@cited.co.kr
+                {BUSINESS_INFO.email}
               </a>
               로 보내주세요.
             </p>

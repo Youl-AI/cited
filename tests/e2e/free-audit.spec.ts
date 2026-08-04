@@ -70,9 +70,10 @@ test('랜딩 CTA를 눌러 신청 페이지에서 신청하면 확인 안내로 
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 
   // 폼은 `/audit/new` 단독이다(2026-08-04 확정). 랜딩의 CTA가 그리로 잇는다.
-  // 같은 라벨이 머리글·히어로·마감 셋에 있으므로 첫 번째를 누른다 — 목적지는
-  // 전부 같고, 그 동일성은 컴포넌트 테스트가 잠근다.
-  await page.getByRole('link', { name: '무료 진단 받기' }).first().click()
+  // 머리글 CTA는 아래 별도 테스트가 커버하므로, 여기서는 **본문**(히어로)
+  // CTA를 눌러 랜딩 본문 경로를 검증한다. 목적지 동일성은 컴포넌트 테스트가
+  // 잠근다.
+  await page.locator('main').getByRole('link', { name: '무료 진단 받기' }).first().click()
   await expect(page).toHaveURL(/\/audit\/new/)
 
   // 즉시 결과를 약속하지 않는다. 이 문구가 사라지면 확인 메일이 스팸 신고를 받는다.

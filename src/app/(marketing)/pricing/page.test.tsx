@@ -82,7 +82,7 @@ describe('요금제', () => {
     const links = screen.getAllByRole('link')
     expect(links).toHaveLength(1)
     expect(links[0]).toHaveTextContent('무료 진단 받기')
-    // 머리글·랜딩 마감과 같은 라벨이고, 요금제에는 `#request` 앵커가 없으므로
+    // 머리글·랜딩 마감과 같은 라벨이고, 신청 폼은 `/audit/new` 단독이므로
     // 목적지는 신청 페이지다.
     expect(links[0]?.getAttribute('href')).toBe('/audit/new')
   })
