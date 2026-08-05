@@ -1,0 +1,135 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#555; }
+  .card {
+    width:776px; min-height:620px; position:relative;
+    background:#0A0A0A; color:#fff;
+    font-family:'Pretendard','IBM Plex Sans KR','Malgun Gothic','맑은 고딕',sans-serif;
+    display:flex; flex-direction:column; justify-content:center;
+    padding:56px 58px;
+  }
+  .kicker { font-size:18px; letter-spacing:.14em; font-weight:700; color:#C8FF3D; }
+  .rule { height:3px; width:68px; background:#C8FF3D; margin:22px 0 30px; }
+  h1 { font-size:42px; font-weight:800; letter-spacing:-.035em; line-height:1.22; }
+  p  { font-size:21px; line-height:1.62; color:#B4B4B4; margin-top:22px; }
+  .foot { margin-top:34px; padding-top:20px; border-top:1px solid #262626;
+          font-size:18px; color:#8A8A8A; }
+  .mono { font-family:'Consolas','Cascadia Mono',monospace; }
+
+  .row { display:flex; align-items:flex-start; gap:20px; padding:20px 0;
+         border-bottom:1px solid #1F1F1F; }
+  .row:last-of-type { border-bottom:0; }
+  .tag { flex:0 0 132px; font-size:19px; font-weight:700; color:#C8FF3D; }
+  .txt { font-size:20px; line-height:1.5; color:#E4E4E4; }
+  .txt small { display:block; margin-top:6px; font-size:17px; color:#8A8A8A; }
+
+  .formula { margin-top:34px; padding:24px 26px; background:#141414;
+             border-left:3px solid #C8FF3D; font-size:25px; font-weight:700;
+             letter-spacing:-.01em; }
+  .formula b { color:#C8FF3D; }
+
+  .stats { display:flex; gap:18px; margin-top:6px; }
+  .stat { flex:1; background:#141414; border-top:3px solid #C8FF3D; padding:24px 22px; }
+  .stat .n { font-family:'Consolas','Cascadia Mono',monospace; font-size:52px;
+             font-weight:800; letter-spacing:-.03em; color:#fff; line-height:1; }
+  .stat .n span { font-size:26px; margin-left:2px; }
+  .stat .l { margin-top:14px; font-size:17px; line-height:1.45; color:#A8A8A8; }
+</style>
+
+<!-- 1. 문제 제기 -->
+<div class="card" id="s1">
+  <div class="kicker">지금 벌어지는 일</div>
+  <div class="rule"></div>
+  <h1>AI는 링크 목록이 아니라<br>문장으로 답합니다</h1>
+  <p>검색 순위처럼 조회할 곳도 없습니다.<br>내가 그 답변에 나오는지 확인할 방법이 없는 겁니다.</p>
+  <div class="foot">지금 이 순간에도 AI는 누군가에게 브랜드를 추천하고 있습니다.<br>그게 우리인지 경쟁사인지 모르고 계실 뿐입니다.</div>
+</div>
+
+<!-- 2. 측정 구조 -->
+<div class="card" id="s2">
+  <div class="kicker">왜 반복해서 묻는가</div>
+  <div class="rule"></div>
+  <div class="row">
+    <div class="tag">1번 물으면</div>
+    <div class="txt">나왔다 또는 안 나왔다<small>오차 범위를 계산할 근거가 없습니다</small></div>
+  </div>
+  <div class="row">
+    <div class="tag">3번 물으면</div>
+    <div class="txt">3번 중 2번<small>비율과 오차 범위가 나옵니다</small></div>
+  </div>
+  <div class="formula mono">질문 <b>10</b>개 &times; <b>3</b>회 반복 &times; <b>2</b>개 엔진 = 답변 <b>60</b>개</div>
+  <div class="foot">엔진을 아무리 추가해도 질문마다 한 번씩만 물으면 이 문제는 그대로 남습니다.</div>
+</div>
+
+<!-- 3. 0%여도 남는 것 -->
+<div class="card" id="s3">
+  <div class="kicker">언급률이 0%로 나와도</div>
+  <div class="rule"></div>
+  <div class="row">
+    <div class="tag">출처 지도</div>
+    <div class="txt">AI가 인용한 사이트<small>우리 브랜드가 0%여도 이건 그대로 나옵니다</small></div>
+  </div>
+  <div class="row">
+    <div class="tag">질문별 공백</div>
+    <div class="txt">어떤 질문이 추천을 유발하는지<small>어떤 유형은 추천이 아예 안 나오는지</small></div>
+  </div>
+  <div class="row">
+    <div class="tag">자리 주인</div>
+    <div class="txt">답변을 채운 브랜드 목록<small>누가 그 자리를 차지했는지</small></div>
+  </div>
+  <div class="foot">구매 전 무료 진단에서 0%가 확인되면 그대로 알려드립니다.<br>그때는 측정보다 콘텐츠가 먼저라고 말씀드립니다.</div>
+</div>
+
+<!-- 4. 출처 지도 -->
+<div class="card" id="s4">
+  <div class="kicker">AI가 읽는 출처</div>
+  <div class="rule"></div>
+  <h1 style="font-size:34px;">AI가 무엇을 읽고 답했는지<br>도메인 단위로 집계합니다</h1>
+  <div class="stats" style="margin-top:34px;">
+    <div class="stat"><div class="n">58<span>/60</span></div><div class="l">출처 인용이 있던<br>답변 수</div></div>
+    <div class="stat"><div class="n">65<span>개</span></div><div class="l">인용된<br>도메인 수</div></div>
+    <div class="stat"><div class="n">15<span>개</span></div><div class="l">우리 사이트가<br>인용된 답변</div></div>
+  </div>
+  <div class="foot">실제 측정 사례의 값입니다. 우리 브랜드 언급률이 0%여도 이 집계는 그대로 나옵니다.</div>
+</div>
+
+<!-- 5. 답변 원문 발췌 -->
+<div class="card" id="s5">
+  <div class="kicker">무엇을 근거로 판정했는가</div>
+  <div class="rule"></div>
+  <div class="row">
+    <div class="tag">답변 60개</div>
+    <div class="txt">전부 판정과 집계에 사용<small>하나도 빼지 않습니다</small></div>
+  </div>
+  <div class="row">
+    <div class="tag">발췌 6건</div>
+    <div class="txt">대표 답변 원문을 리포트에 수록<small>AI가 실제로 뭐라고 답했는지 눈으로 확인하실 수 있습니다</small></div>
+  </div>
+  <div class="row">
+    <div class="tag">질문 10개</div>
+    <div class="txt">던진 문장 전문을 그대로 수록<small>복사해서 직접 물어보셔도 됩니다</small></div>
+  </div>
+  <div class="foot">숫자만 드리고 근거를 감추지 않습니다.</div>
+</div>
+
+<!-- 6. 개선 가이드 -->
+<div class="card" id="s6">
+  <div class="kicker">DELUXE 이상</div>
+  <div class="rule"></div>
+  <h1 style="font-size:34px;">무엇부터 손댈지<br>순서를 정리해 드립니다</h1>
+  <div class="row" style="margin-top:26px;">
+    <div class="tag">출발점</div>
+    <div class="txt">측정에서 비어 있던 질문<small>감이 아니라 이번 측정 결과에서 시작합니다</small></div>
+  </div>
+  <div class="row">
+    <div class="tag">결과물</div>
+    <div class="txt">먼저 할 것과 나중 할 것<small>우선순위가 붙은 실행 항목</small></div>
+  </div>
+  <div class="row">
+    <div class="tag">범위 밖</div>
+    <div class="txt">대행 작업은 하지 않습니다<small>백링크, 사이트 수정, 콘텐츠 제작</small></div>
+  </div>
+  <div class="foot">측정과 작업을 한 곳이 하면 성적표를 스스로 매기는 셈입니다.</div>
+</div>

@@ -1,0 +1,67 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#555; }
+  .card {
+    width:652px; height:488px; position:relative; overflow:hidden;
+    font-family:'Pretendard','IBM Plex Sans KR','Malgun Gothic','맑은 고딕',sans-serif;
+    display:flex; flex-direction:column; justify-content:center;
+    padding:48px 52px;
+  }
+  .kicker { font-size:19px; letter-spacing:.14em; font-weight:600; }
+  .huge { font-weight:800; letter-spacing:-.035em; line-height:.92; }
+  .num { font-size:150px; }
+  .unit { font-size:66px; margin-left:4px; letter-spacing:-.02em; }
+  .lead { font-size:66px; margin-right:16px; letter-spacing:-.02em; }
+  .formula { font-size:26px; font-weight:600; letter-spacing:-.01em; }
+  .rule { height:3px; width:74px; margin:26px 0 22px; }
+  .foot { position:absolute; left:52px; right:52px; bottom:38px;
+          display:flex; justify-content:space-between; align-items:baseline; font-size:19px; }
+  .mono { font-family:'Consolas','Cascadia Mono',monospace; }
+
+  /* A — 잉크 네이비 */
+  #a { background:#0B1220; color:#fff; }
+  #a .kicker { color:#7CA8FF; }
+  #a .rule { background:#7CA8FF; }
+  #a .sub { color:#9AA6BF; }
+  #a .foot { color:#8593AE; border-top:1px solid #1E2A44; padding-top:16px; }
+
+  /* B — 블랙 + 라임 */
+  #b { background:#0A0A0A; color:#fff; }
+  #b .kicker { color:#C8FF3D; }
+  #b .rule { background:#C8FF3D; }
+  #b .sub { color:#A0A0A0; }
+  #b .foot { color:#8A8A8A; border-top:1px solid #262626; padding-top:16px; }
+
+  /* C — 딥그린 + 오프화이트 */
+  #c { background:#0E2B24; color:#F2F5F1; }
+  #c .kicker { color:#6FE3B0; }
+  #c .rule { background:#6FE3B0; }
+  #c .sub { color:#9CBBB0; }
+  #c .foot { color:#89A79C; border-top:1px solid #1C4438; padding-top:16px; }
+</style>
+
+<div class="card" id="a">
+  <div class="kicker">AI 언급률 실측</div>
+  <div class="rule"></div>
+  <div class="huge"><span class="lead">답변</span><span class="num mono">60</span><span class="unit">개</span></div>
+  <div class="formula sub" style="margin-top:18px;">질문 10개 &times; 3회 반복 &times; 2개 엔진</div>
+  <div class="foot"><span>ChatGPT &middot; 제미나이</span><span class="mono">예시 27% (17~39%)</span></div>
+</div>
+
+<div class="card" id="b">
+  <div class="kicker">AI 언급률 실측</div>
+  <div class="rule"></div>
+  <div class="huge"><span class="lead">답변</span><span class="num mono">60</span><span class="unit">개</span></div>
+  <div class="formula sub" style="margin-top:18px;">질문 10개 &times; 3회 반복 &times; 2개 엔진</div>
+  <div class="foot"><span>ChatGPT &middot; 제미나이</span><span class="mono">예시 27% (17~39%)</span></div>
+</div>
+
+<div class="card" id="c">
+  <div class="kicker">AI 언급률 실측</div>
+  <div class="rule"></div>
+  <div class="huge"><span class="lead">답변</span><span class="num mono">60</span><span class="unit">개</span></div>
+  <div class="formula sub" style="margin-top:18px;">질문 10개 &times; 3회 반복 &times; 2개 엔진</div>
+  <div class="foot"><span>ChatGPT &middot; 제미나이</span><span class="mono">예시 27% (17~39%)</span></div>
+</div>

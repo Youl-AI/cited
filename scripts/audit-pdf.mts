@@ -111,5 +111,9 @@ try {
   await browser.close()
 }
 console.log(`PDF 생성: ${out}`)
-console.log('크몽 메시지에 파일을 첨부하고 웹 링크도 함께 보내세요:')
-console.log(`  ${url}`)
+// ★ 크몽 납품물은 PDF 하나뿐이다. 웹 리포트 링크를 크몽 고객에게 보내지
+//   않는다 — 사이트의 요금제·구독 화면에 노출되면 직거래 유도 정책 위반
+//   소지가 있다(계정 제재 리스크). 아래 URL은 운영자가 발송 전 눈으로
+//   확인하는 용도다. 정책은 docs/kmong/context.md "납품 정책" 참고.
+console.log('크몽 메시지에 이 PDF만 첨부하세요. 웹 링크는 보내지 않습니다.')
+console.log(`  (운영자 확인용) ${url}`)
