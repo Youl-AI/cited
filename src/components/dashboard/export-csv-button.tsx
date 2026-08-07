@@ -17,7 +17,10 @@ export function ExportCsvButton({ csv, filename }: { csv: string; filename: stri
     <Button
       type="button"
       variant="outline"
-      size="sm"
+      // 같은 줄의 트레이(RangePicker: p-1 + py-1.5 + text-sm = 42px)와 키를
+      // 맞춘다 — size="sm"(32px)은 옆에 서면 눌린 것처럼 보였다(실측 피드백).
+      // 반경도 트레이 껍질과 같은 동심 계산식이다.
+      className="h-auto rounded-[calc(var(--radius)*1.4)] px-4 py-2.5 text-sm"
       onClick={() => {
         const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
         const url = URL.createObjectURL(blob)

@@ -7,8 +7,11 @@ import {
   resolveView,
   type DashboardView,
 } from '@/components/dashboard/dashboard-nav'
+import { ExportCsvButton } from '@/components/dashboard/export-csv-button'
 import { HeadlineCard } from '@/components/dashboard/headline-card'
 import { KpiRow } from '@/components/dashboard/kpi-row'
+import { MeasurementStatus } from '@/components/dashboard/measurement-status'
+import { PeriodCompareCard } from '@/components/dashboard/period-compare-card'
 import { QueryHeatmap } from '@/components/dashboard/query-heatmap'
 import {
   DEFAULT_RANGE,
@@ -21,9 +24,12 @@ import { RunListSection } from '@/components/dashboard/run-list'
 import { SourceChanges } from '@/components/dashboard/source-changes'
 import { SovTrend } from '@/components/dashboard/sov-trend'
 import { TrendChart } from '@/components/dashboard/trend-chart'
+import { WeakQueriesCard } from '@/components/dashboard/weak-queries-card'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { buildDashboardCsv, csvFilename } from '@/lib/dashboard/export-csv'
 import { loadDashboard } from '@/lib/dashboard/load'
+import { nextMeasurementAfter } from '@/lib/dashboard/next-measurement'
 import { queriesStepPath } from '@/lib/onboarding/editor'
 import { loadOnboardingGate } from '@/lib/onboarding/gate'
 import { resolveDashboardEntry } from '@/lib/onboarding/state'
@@ -53,6 +59,11 @@ const ENTER_DELAY = [
   '[--enter-delay:calc(var(--motion-stagger)*3)]',
   '[--enter-delay:calc(var(--motion-stagger)*4)]',
   '[--enter-delay:calc(var(--motion-stagger)*5)]',
+  '[--enter-delay:calc(var(--motion-stagger)*6)]',
+  // ★ 길이는 실제로 쌓이는 블록 수 이상 — 짧으면 `?? ''`로 지연 0이 되어
+  //   마지막 블록만 다른 박자로 튀어나온다. 지금 최대: 머리글 + 셸 + 개요
+  //   블록 6(추이·헤드라인·순위·KPI·기간·약한 질문) = 8.
+  '[--enter-delay:calc(var(--motion-stagger)*7)]',
 ] as const
 
 /**
@@ -176,8 +187,8 @@ export default async function DashboardPage({
         </p>
       )}
 
-      {/* 머리글 — 브랜드 이름이 이 화면의 주어다. 두 컨트롤은 같은 트레이
-          어휘로 같은 줄에 선다("무엇을 보는가" · "얼마나 보는가"). */}
+      {/* 머리글 — 브랜드 이름이 이 화면의 주어다. 컨트롤들은 같은 트레이
+          어휘로 같은 줄에 선다("무엇을 보는가" · "얼마나 보는가" · 내보내기). */}
       <div className="instrument-enter flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div>
           <p className="font-mono text-xs tracking-[0.14em] text-muted-foreground uppercase">
@@ -186,6 +197,14 @@ export default async function DashboardPage({
           <h1 className="mt-2 font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
             {data.selected.name}
           </h1>
+          {/* 신선도 — 이 화면 전체의 시제. 해지 계정(no-plan)은 스케줄 계산을
+              하지 않고 '다음 측정 없음'을 명시한다(measurement-status.tsx). */}
+          <div className="mt-2">
+            <MeasurementStatus
+              last={data.points[data.points.length - 1]?.measuredAt ?? null}
+              next={gate.state === 'no-plan' ? null : nextMeasurementAfter(new Date().toISOString())}
+            />
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <RangePicker
@@ -195,6 +214,14 @@ export default async function DashboardPage({
             view={view}
           />
           <BrandPicker brands={data.brands} selectedId={data.selected.id} canAdd={canAdd} />
+          {/* 내보내기 — 플랜 게이트(PLANS.csvExport, 현재 Business 전용).
+              보고 있는 범위 그대로 나간다 — 화면과 파일이 같은 회차 집합. */}
+          {gate.limits?.csvExport && hasPoints && (
+            <ExportCsvButton
+              csv={buildDashboardCsv(points)}
+              filename={csvFilename(data.selected.name, points)}
+            />
+          )}
         </div>
       </div>
 
@@ -224,20 +251,34 @@ export default async function DashboardPage({
                   <div className={`instrument-enter ${ENTER_DELAY[5]}`}>
                     <KpiRow points={points} />
                   </div>
+                  <Panel
+                    title="기간 비교"
+                    lede="최근 회차 묶음과 그 직전 묶음을 합쳐 비교합니다 — 회차 하나의 출렁임을 줄입니다."
+                    index={6}
+                  >
+                    <PeriodCompareCard points={points} />
+                  </Panel>
                 </div>
                 <div className="flex flex-col gap-4 xl:col-span-4">
                   <div className={`instrument-enter ${ENTER_DELAY[3]}`}>
                     <HeadlineCard points={points} compact />
                   </div>
-                  {/* 순위가 남는 높이를 채운다 — 왼쪽 기둥과 바닥을 맞춘다. */}
+                  <Panel title="언급 순위" lede="최신 회차에서 브랜드별 언급 수입니다." index={4}>
+                    <RankingCard points={points} />
+                  </Panel>
+                  {/* 실행 카드가 남는 높이를 채운다 — "무엇을 고칠까"가 개요의
+                      마지막 문장이 되게, 왼쪽 기둥과 바닥을 맞춘다. */}
                   <div className="min-h-0 flex-1">
                     <Panel
-                      title="언급 순위"
-                      lede="최신 회차에서 브랜드별 언급 수입니다."
-                      index={4}
+                      title="언급이 약한 질문"
+                      lede="최신 회차에서 언급률이 가장 낮은 질문 셋 — 콘텐츠를 실을 자리입니다."
+                      index={7}
                       fill
                     >
-                      <RankingCard points={points} />
+                      <WeakQueriesCard
+                        points={points}
+                        queriesHref={`/dashboard?brand=${data.selected.id}&range=${selectedRange}&view=queries`}
+                      />
                     </Panel>
                   </div>
                 </div>
