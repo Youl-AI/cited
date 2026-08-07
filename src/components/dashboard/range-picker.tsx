@@ -70,13 +70,18 @@ export function RangePicker({
   brandId,
   totalRuns,
   hrefBase = '/dashboard',
+  view,
 }: {
   selected: string
   brandId: string
   totalRuns: number
   /** 링크가 걸리는 경로. 기본은 대시보드 — 디자인 프리뷰만 다르게 준다. */
   hrefBase?: string
+  /** 현재 보기(`?view=`). 넘기면 범위를 갈아타도 보고 있던 탭이 유지된다 —
+   *  히트맵을 보다가 범위를 바꿨는데 개요로 튕기면 그건 이동이지 조정이 아니다. */
+  view?: string
 }) {
+  const viewQuery = view ? `&view=${view}` : ''
   // 유일하게 숨기는 경우: 고를 수 있는 것이 '전체'뿐이고 지금도 '전체'다.
   // (좁혀 놓은 상태라면 되돌아갈 길이 필요하므로 무조건 그린다.)
   const anyUsable = RANGE_OPTIONS.some((o) => o.runs !== null && isRangeUsable(o.runs, totalRuns))
@@ -109,7 +114,7 @@ export function RangePicker({
         return (
           <Link
             key={option.value}
-            href={`${hrefBase}?brand=${brandId}&range=${option.value}`}
+            href={`${hrefBase}?brand=${brandId}&range=${option.value}${viewQuery}`}
             aria-current={active ? 'page' : undefined}
             className={
               active

@@ -28,12 +28,19 @@ import { formatInterval } from '@/lib/stats/wilson'
  * **모름**이다. 0%로 그리면 "한 번도 인용되지 않았다"는 없는 사실이 된다
  * (`kpi.ts` 머리말). 이 자리는 그래서 안내 문구 + 무채색이다.
  */
-export function KpiRow({ points }: { points: RunPoint[] }) {
+export function KpiRow({
+  points,
+  direction = 'row',
+}: {
+  points: RunPoint[]
+  /** 'row' = 가로 3열(전폭 자리), 'column' = 세로 스택(커맨드센터 오른쪽 기둥). */
+  direction?: 'row' | 'column'
+}) {
   const kpis = buildKpis(points)
   if (kpis.length === 0) return null
 
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
+    <div className={direction === 'row' ? 'grid gap-4 sm:grid-cols-3' : 'grid gap-4'}>
       {kpis.map((kpi) => (
         <Card key={kpi.id}>
           <CardContent className="flex h-full flex-col">

@@ -55,49 +55,47 @@ function mmdd(iso: string): string {
 }
 
 /**
- * gemini/google은 휘도가 붙는다 — 색과 함께 마커 모양으로 가른다 (§2).
+ * 계측점 — 작은 원 하나(반경 2.5px), 모든 엔진 공통.
  *
- * ★ **점은 작다(반경 3px).** 계측값의 자리 표시지 그림의 주인공이 아니다 —
- *   주인공은 선과 그 아래 면이다. 굵은 도넛 마커를 실제로 그려 봤는데 화면이
- *   프레젠테이션 클립아트처럼 무거워졌다(사용자 피드백). 표면색 1.5px 링은
- *   남긴다 — 선·밴드 위에서 점의 윤곽을 지키는 최소 잉크다.
+ * ★ **모양 마커(네모·마름모·삼각형)를 접었다.** 원래는 gemini/google의 휘도
+ *   근접을 모양으로 가르려던 규격인데, 반경 2.5px에서 모양은 읽히지도 않고
+ *   눈에는 "찌그러진 점"만 남았다(사용자 피드백). 계열 정체는 색 + 범례 +
+ *   툴팁 문자열(엔진 이름을 글자로 든다) 셋이 지고, 색만으로 못 가르는
+ *   독자에게는 범례·툴팁의 **글자**가 정보를 전달한다.
+ *
+ * ★ 점은 계측값의 자리 표시지 그림의 주인공이 아니다 — 주인공은 선과 그 아래
+ *   면이다. 표면색 1.5px 링은 선·밴드 위에서 점의 윤곽을 지키는 최소 잉크다.
+ *   (차트가 카드 안에 앉으므로 링 색은 `--card`다.)
  *
  * ★ `delay`는 앉는 순번이다(왼→오). 값이 아니라 **회차 수**에서 나오므로
  *   인라인 style로 내보낸다 — Tailwind 임의값 클래스는 평문 스캐너가 못 본다
  *   (dashboard/page.tsx의 `ENTER_DELAY` 주석과 같은 이유).
  */
 function Marker({
-  engine,
   cx,
   cy,
   color,
   delay,
 }: {
-  engine: string
   cx: number
   cy: number
   color: string
   delay: number
 }) {
-  const common = {
-    fill: color,
-    stroke: 'var(--background)',
-    strokeWidth: 1.5,
-    paintOrder: 'stroke' as const,
-    className: 'chart-pop',
-    style: { animationDelay: `${delay}ms` },
-    'data-testid': 'trend-point',
-  } as const
-  switch (engine) {
-    case 'gemini':
-      return <rect {...common} x={cx - 2.5} y={cy - 2.5} width={5} height={5} rx={1} />
-    case 'naver':
-      return <rect {...common} x={cx - 3} y={cy - 3} width={6} height={6} rx={1} transform={`rotate(45 ${cx} ${cy})`} />
-    case 'google_aio':
-      return <polygon {...common} strokeLinejoin="round" points={`${cx},${cy - 3.5} ${cx + 3.5},${cy + 3} ${cx - 3.5},${cy + 3}`} />
-    default:
-      return <circle {...common} cx={cx} cy={cy} r={2.5} />
-  }
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={2.5}
+      fill={color}
+      stroke="var(--card)"
+      strokeWidth={1.5}
+      paintOrder="stroke"
+      className="chart-pop"
+      style={{ animationDelay: `${delay}ms` }}
+      data-testid="trend-point"
+    />
+  )
 }
 
 /** 축 위의 한 점 — 계열 인덱스가 아니라 **회차 축 위치**를 들고 다닌다. */
@@ -416,11 +414,11 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
                     const pos = posOfRun.get(p.runId) ?? 0
                     return (
                       <g key={`${e.id}-pt-${p.runId}`}>
-                        <Marker engine={e.id} cx={x(pos)} cy={y(p.interval.point)} color={c} delay={Math.min(pos * POP_STEP, POP_MAX)} />
+                        <Marker cx={x(pos)} cy={y(p.interval.point)} color={c} delay={Math.min(pos * POP_STEP, POP_MAX)} />
                         {/* 짚은 회차의 점은 흰 속 링으로 커진다 — 계열색 테두리 +
                             표면색 속. 다른 점을 흐리지 않고 그 점만 세운다. */}
                         {hoverIndex === pos && (
-                          <circle cx={x(pos)} cy={y(p.interval.point)} r={4.5} fill="var(--background)" stroke={c} strokeWidth={2} />
+                          <circle cx={x(pos)} cy={y(p.interval.point)} r={4.5} fill="var(--card)" stroke={c} strokeWidth={2} />
                         )}
                         <title>{`${engineLabel(e.id)} · ${mmdd(p.measuredAt)} · ${formatPercent(p.interval.point)} (${formatInterval(p.interval)}) · ${p.interval.k}/${p.interval.n}`}</title>
                       </g>
@@ -511,11 +509,11 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
                       opacity={0.5}
                     />
                   )}
-                  <Marker engine={mode === 'all' ? 'all' : mode} cx={x(i)} cy={y(p.interval.point)} color={color} delay={Math.min(i * POP_STEP, POP_MAX)} />
+                  <Marker cx={x(i)} cy={y(p.interval.point)} color={color} delay={Math.min(i * POP_STEP, POP_MAX)} />
                   {/* 짚은 점만 흰 속 링으로 커진다 — 나머지 점을 흐리지 않는다.
                       값을 강조하려고 다른 값을 지우는 것은 조작이다. */}
                   {hoverIndex === i && (
-                    <circle cx={x(i)} cy={y(p.interval.point)} r={4.5} fill="var(--background)" stroke={color} strokeWidth={2} />
+                    <circle cx={x(i)} cy={y(p.interval.point)} r={4.5} fill="var(--card)" stroke={color} strokeWidth={2} />
                   )}
                   <title>{`${mmdd(p.measuredAt)} · ${formatPercent(p.interval.point)} (${formatInterval(p.interval)}) · ${p.interval.k}/${p.interval.n}`}</title>
                 </g>
