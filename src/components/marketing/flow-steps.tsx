@@ -70,6 +70,7 @@ export function FlowSteps() {
   const reduce = useReducedMotion()
   const items = useRef<(HTMLLIElement | null)[]>([])
   const nodes = useRef<(HTMLSpanElement | null)[]>([])
+  const fills = useRef<(HTMLSpanElement | null)[]>([])
 
   const apply = useCallback((p: number) => {
     const count = AUDIT_FLOW.length
@@ -92,10 +93,23 @@ export function FlowSteps() {
         item.style.translate = `0 ${(1 - enter) * 16 - exit * 12}px`
       }
 
-      // 노드 레일 — 지나간 단계는 밝은 채로 남는다(재현 장면 단계 표시와
-      // 같은 규칙). 창을 통과하는 동안 0.35 → 1로 차오른다.
+      // ── 레일 — 선이 자막과 같은 속도로 뻗는다 (2026-08-05 사용자 요청).
+      // 연결선 index(노드 index → index+1)는 단계 index의 창을 그대로 탄다:
+      // 자막 1이 도는 동안 01→02 선이 자라고, 선이 도착해야(창의 마지막 12%)
+      // 다음 노드가 나타난다. "선이 뻗어나가면서 2가 생기고"를 그대로 옮긴 것.
+      // scaleX(GPU 합성)이고, 트랙은 반투명 가이드로 깔려 있어 어디까지 갈지는
+      // 미리 보인다.
+      const fill = fills.current[index]
+      if (fill && !last) fill.style.transform = `scaleX(${t})`
+
       const node = nodes.current[index]
-      if (node) node.style.opacity = String(0.35 + t * 0.65)
+      if (node) {
+        // 노드 0은 장면 시작부터 서 있다. 나머지는 앞 연결선이 도착할 때
+        // 나타나서(앞 창의 88%~100% 구간), 지나간 뒤에도 밝게 남는다.
+        const prev = span(p, (index - 1) / count, index / count)
+        const appeared = index === 0 ? 1 : span(prev, 0.88, 1)
+        node.style.opacity = String(appeared)
+      }
     })
   }, [])
 
@@ -131,7 +145,11 @@ export function FlowSteps() {
       <div className="mx-auto flex min-h-[100dvh] w-full max-w-6xl flex-col justify-center px-6 py-16 sm:py-24">
         <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">신청하면</h2>
 
-        {/* 노드 레일 — 진행 표시. 시맨틱 순서는 아래 ol이 말하므로 장식이다. */}
+        {/* 노드 레일 — 진행 표시. 시맨틱 순서는 아래 ol이 말하므로 장식이다.
+            초기 상태(인라인): 01만 서 있고 선은 0으로 접혀 있다 — 자막 스택의
+            "1번만 보인다"와 같은 상태에서 출발해야 레일과 자막이 한 장면으로
+            읽힌다. JS가 죽으면 01 + 가이드 트랙만 남는다(자막도 1번만 남는
+            것과 같은 트레이드오프). */}
         <div aria-hidden className="mt-12 flex items-center gap-4">
           {AUDIT_FLOW.map((step, index) => (
             <span key={step.label} className="contents">
@@ -139,11 +157,22 @@ export function FlowSteps() {
                 ref={(el) => {
                   nodes.current[index] = el
                 }}
-                className="flex size-8 shrink-0 items-center justify-center rounded-none border border-border font-mono text-xs tabular-nums text-foreground opacity-35"
+                className="flex size-8 shrink-0 items-center justify-center rounded-none border border-border font-mono text-xs tabular-nums text-foreground"
+                style={{ opacity: index === 0 ? 1 : 0 }}
               >
                 {String(index + 1).padStart(2, '0')}
               </span>
-              {index < AUDIT_FLOW.length - 1 && <span className="h-px flex-1 bg-border" />}
+              {index < AUDIT_FLOW.length - 1 && (
+                <span className="relative h-px flex-1 overflow-hidden bg-border/40">
+                  <span
+                    ref={(el) => {
+                      fills.current[index] = el
+                    }}
+                    className="absolute inset-0 origin-left bg-foreground/70"
+                    style={{ transform: 'scaleX(0)' }}
+                  />
+                </span>
+              )}
             </span>
           ))}
         </div>
