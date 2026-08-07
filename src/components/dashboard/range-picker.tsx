@@ -71,7 +71,6 @@ export function RangePicker({
   totalRuns,
   hrefBase = '/dashboard',
   view,
-  engine,
 }: {
   selected: string
   brandId: string
@@ -81,10 +80,8 @@ export function RangePicker({
   /** 현재 보기(`?view=`). 넘기면 범위를 갈아타도 보고 있던 탭이 유지된다 —
    *  히트맵을 보다가 범위를 바꿨는데 개요로 튕기면 그건 이동이지 조정이 아니다. */
   view?: string
-  /** 현재 엔진 필터(`?engine=`) — 같은 이유로 보존한다. */
-  engine?: string
 }) {
-  const viewQuery = (view ? `&view=${view}` : '') + (engine ? `&engine=${engine}` : '')
+  const viewQuery = view ? `&view=${view}` : ''
   // 유일하게 숨기는 경우: 고를 수 있는 것이 '전체'뿐이고 지금도 '전체'다.
   // (좁혀 놓은 상태라면 되돌아갈 길이 필요하므로 무조건 그린다.)
   const anyUsable = RANGE_OPTIONS.some((o) => o.runs !== null && isRangeUsable(o.runs, totalRuns))

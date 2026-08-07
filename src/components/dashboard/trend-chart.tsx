@@ -125,24 +125,11 @@ function splitSegments(
   return segments
 }
 
-export function TrendChart({
-  points,
-  initialEngine = 'all',
-}: {
-  points: RunPoint[]
-  /**
-   * 전역 엔진 필터(`?engine=`)가 정한 시작 모드. 이후의 토글은 이 차트가
-   * 소유한다 — 호출부는 `key={engine}`으로 필터 변경 시 차트를 다시 세워
-   * 상태를 리셋한다(두 컨트롤이 같은 상태를 놓고 싸우지 않게).
-   */
-  initialEngine?: string
-}) {
+export function TrendChart({ points }: { points: RunPoint[] }) {
   const engines = engineIdsIn(points)
   // 비교 모드는 엔진이 둘 이상일 때만 뜻이 있다 — 하나짜리 "비교"는 전체와 같다.
   const canCompare = engines.length >= 2
-  const [mode, setMode] = useState<'all' | 'compare' | string>(
-    initialEngine !== 'all' && engines.includes(initialEngine) ? initialEngine : 'all',
-  )
+  const [mode, setMode] = useState<'all' | 'compare' | string>('all')
   // 커서가 짚은 회차. 모드를 갈아타면 축 길이가 달라지므로 같이 비운다.
   const [hover, setHover] = useState<number | null>(null)
   const gradientId = useId()
