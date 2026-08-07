@@ -101,18 +101,21 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
         role="img"
         aria-label={`언급 점유율 추이 — 최신 ${formatPercent(last.interval.point)} (${formatInterval(last.interval)})`}
       >
-        {/* 플롯 패널 + 눈금 — 추이 차트와 **같은 문법**이다(그쪽 주석): 패널이
-            좌표계의 경계를 면으로 만들고, 바닥(0%)만 실선, 나머지는 점선이다.
+        {/* 그라디언트 — 추이 차트와 같은 두 개(그쪽 defs 주석). 서버 컴포넌트라
+            useId가 없지만 이 컴포넌트는 페이지에 하나뿐이라 고정 id로 충분하다. */}
+        <defs>
+          <linearGradient id="sov-grad-line" gradientUnits="userSpaceOnUse" x1={PAD.left} x2={W - PAD.right} y1="0" y2="0">
+            <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.45} />
+            <stop offset="75%" stopColor="var(--primary)" stopOpacity={0.9} />
+            <stop offset="100%" stopColor="var(--primary)" stopOpacity={1} />
+          </linearGradient>
+          <linearGradient id="sov-grad-area" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1={PAD.top} y2={PAD.top + IH}>
+            <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.14} />
+            <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        {/* 눈금 — 추이 차트와 **같은 문법**(헤어라인 다섯, 25·75는 반 농도).
             같은 화면의 두 차트가 다른 문법을 쓰면 하나가 고장으로 읽힌다. */}
-        <rect
-          x={PAD.left - 6}
-          y={PAD.top - 8}
-          width={IW + 18}
-          height={IH + 16}
-          rx={12}
-          fill="var(--muted)"
-          opacity={0.45}
-        />
         {[0, 0.25, 0.5, 0.75, 1].map((tick) => (
           <g key={tick}>
             <line
@@ -120,14 +123,12 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
               x2={W - PAD.right}
               y1={y(tick)}
               y2={y(tick)}
-              stroke="var(--foreground)"
-              strokeOpacity={tick === 0 ? 0.18 : 0.09}
+              stroke="var(--border)"
               strokeWidth={1}
-              strokeDasharray={tick === 0 ? undefined : '2 5'}
-              strokeLinecap="round"
+              opacity={tick === 0 || tick === 0.5 || tick === 1 ? 0.9 : 0.4}
             />
             {tick !== 0.25 && tick !== 0.75 && (
-              <text x={PAD.left - 8} y={y(tick) + 4} textAnchor="end" className="fill-muted-foreground font-mono" fontSize={11}>
+              <text x={PAD.left - 8} y={y(tick) + 3} textAnchor="end" className="fill-muted-foreground font-mono" fontSize={10}>
                 {Math.round(tick * 100)}%
               </text>
             )}
@@ -136,44 +137,56 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
         {/* ★ 계열 전체를 잇는 폴리라인 하나가 아니다. 조건이 바뀌었거나
             (`comparableWithPrev === false`) 그 사이 회차가 빠진
             (`runsSkippedBefore > 0`) 자리에서는 선분이 없다. */}
-        {segments.map((idx) =>
-          idx.length > 1 ? (
-            <path
-              key={`line-${idx[0]}`}
-              data-testid="sov-line"
-              // 드로우인은 추이 차트와 같은 CSS 클래스다 — 두 차트가 다른
-              // 속도로 그려지면 같은 화면에서 물리 법칙이 갈린다. 점·밴드는
-              // 첫 프레임부터 제자리이고 **연결선만** 그려진다 (§6).
-              // `pathLength={1}`이 길이를 정규화하므로 이 서버 컴포넌트에
-              // 'use client'를 열지 않아도 된다.
-              className="chart-draw"
-              pathLength={1}
-              d={`M ${idx.map((i) => `${x(i)},${y(sov[i]!.interval.point)}`).join(' L ')}`}
-              fill="none"
-              stroke="var(--primary)"
-              strokeWidth={2}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-          ) : null,
-        )}
+        {segments.map((idx) => {
+          if (idx.length <= 1) return null
+          const linePts = idx.map((i) => `${x(i)},${y(sov[i]!.interval.point)}`).join(' L ')
+          const firstI = idx[0]!
+          const lastI = idx[idx.length - 1]!
+          return (
+            <g key={`line-${firstI}`}>
+              {/* 선 아래 면 — 추이 차트와 같은 규칙(값이 아니라 무게추). */}
+              <path
+                d={`M ${linePts} L ${x(lastI)},${y(0)} L ${x(firstI)},${y(0)} Z`}
+                fill="url(#sov-grad-area)"
+              />
+              <path
+                data-testid="sov-line"
+                // 드로우인은 추이 차트와 같은 CSS 클래스다 — 두 차트가 다른
+                // 속도로 그려지면 같은 화면에서 물리 법칙이 갈린다. 점·밴드는
+                // 첫 프레임부터 제자리이고 **연결선만** 그려진다 (§6).
+                // `pathLength={1}`이 길이를 정규화하므로 이 서버 컴포넌트에
+                // 'use client'를 열지 않아도 된다.
+                className="chart-draw"
+                pathLength={1}
+                d={`M ${linePts}`}
+                fill="none"
+                stroke="url(#sov-grad-line)"
+                strokeWidth={2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            </g>
+          )
+        })}
         {sov.map((p, i) => (
           <g key={p.runId}>
             {/* 구간 띠는 캡슐이다 — 모서리를 둥글려 "위아래로 뻗은 범위"로
                 읽히게 한다(직각이면 막대그래프 값으로 오독된다). */}
             <rect data-testid="sov-band" x={x(i) - 4} y={y(p.interval.upper)} width={8} rx={4} height={Math.max(y(p.interval.lower) - y(p.interval.upper), 1)} fill="var(--primary)" opacity={isolated.has(i) ? 0.25 : 0.14} />
-            {/* 도넛 마커 — 추이 차트 Marker와 같은 규격이다(그쪽 주석 참고).
-                앉는 순번(`.chart-pop`)도 같다 — 두 차트가 같은 화면에서 다른
-                물리로 등장하면 하나가 고장 난 것처럼 보인다. */}
+            {/* 작은 점 + 최신 점 링 — 추이 차트 Marker와 같은 규격이다(그쪽
+                주석 참고). 앉는 순번(`.chart-pop`)도 같다 — 두 차트가 같은
+                화면에서 다른 물리로 등장하면 하나가 고장 난 것처럼 보인다. */}
             {i === n - 1 && (
               <circle
                 className="chart-pop"
                 style={{ animationDelay: `${Math.min(i * 32, 420)}ms` }}
                 cx={x(i)}
                 cy={y(p.interval.point)}
-                r={10}
-                fill="var(--primary)"
-                opacity={0.12}
+                r={6}
+                fill="none"
+                stroke="var(--primary)"
+                strokeWidth={1.25}
+                opacity={0.5}
               />
             )}
             <circle
@@ -182,10 +195,11 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
               style={{ animationDelay: `${Math.min(i * 32, 420)}ms` }}
               cx={x(i)}
               cy={y(p.interval.point)}
-              r={4.5}
-              fill="var(--background)"
-              stroke="var(--primary)"
-              strokeWidth={2.5}
+              r={3}
+              fill="var(--primary)"
+              stroke="var(--background)"
+              strokeWidth={1.5}
+              paintOrder="stroke"
             />
             <title>{`${p.measuredAt.slice(5, 7)}.${p.measuredAt.slice(8, 10)} · ${formatPercent(p.interval.point)} (${formatInterval(p.interval)}) · ${p.interval.k}/${p.interval.n}`}</title>
           </g>
@@ -200,28 +214,18 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
           ) : null,
         )}
 
-        {/* 선 끝의 값 — 최신 하나뿐이고, 추이 차트와 같은 알약 배지다. */}
-        {(() => {
-          const text = formatPercent(last.interval.point)
-          const pw = text.length * 6.8 + 14
-          const py = Math.max(y(last.interval.point), PAD.top + 10)
-          return (
-            <g>
-              <rect x={x(n - 1) + 9} y={py - 10} width={pw} height={20} rx={10} fill="var(--primary)" />
-              <text
-                data-testid="sov-end-label"
-                x={x(n - 1) + 9 + pw / 2}
-                y={py + 4}
-                textAnchor="middle"
-                fill="var(--background)"
-                className="font-mono font-medium"
-                fontSize={11}
-              >
-                {text}
-              </text>
-            </g>
-          )
-        })()}
+        {/* 선 끝의 값 — 최신 하나뿐이고, 추이 차트와 같은 계열색 글자다
+            (알약 배지는 그림 위의 스티커처럼 겉돌아 접었다 — 그쪽 주석). */}
+        <text
+          data-testid="sov-end-label"
+          x={x(n - 1) + 11}
+          y={y(last.interval.point) + 4}
+          fill="var(--primary)"
+          className="font-mono font-semibold"
+          fontSize={12}
+        >
+          {formatPercent(last.interval.point)}
+        </text>
       </svg>
       <p className="mt-3 max-w-prose text-xs text-muted-foreground">
         분모: 등록 경쟁사({denomRun.competitors.join(', ') || '없음'}) 대비 언급 비중입니다.

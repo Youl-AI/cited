@@ -69,15 +69,17 @@ export function Sparkline({
         </linearGradient>
       </defs>
       <path d={`M ${d} L ${lastX},${H} L ${PAD},${H} Z`} fill={`url(#spark-${id})`} />
-      {/* 드로우인은 큰 차트와 같은 클래스다 — 같은 화면의 선들이 같은 속도로
-          그려져야 한다(§6). `pathLength={1}`이라 서버 컴포넌트에서도 CSS만으로 돈다. */}
+      {/* ★ 드로우인(`.chart-draw`)을 걸지 않는다 — 실제로 걸었다가 선이
+          군데군데 사라졌다. 이 상자는 비균등 스케일(`preserveAspectRatio=
+          "none"`)이고 선은 `non-scaling-stroke`인데, 이 조합에서 대시가 화면
+          좌표로 계산되어 `pathLength` 정규화가 깨진다 — 대시 한 조각이 선
+          전체를 덮지 못하고 "그림–공백–그림"이 반복된다. 큰 차트는 균등
+          스케일이라 안전하다. */}
       <path
-        className="chart-draw"
-        pathLength={1}
         d={`M ${d}`}
         fill="none"
         stroke="var(--primary)"
-        strokeOpacity={0.85}
+        strokeOpacity={0.9}
         strokeWidth={1.5}
         strokeLinejoin="round"
         strokeLinecap="round"
