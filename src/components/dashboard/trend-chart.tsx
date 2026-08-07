@@ -32,7 +32,9 @@ const ENGINE_COLOR: Record<string, string> = {
 
 const W = 640
 const H = 220
-const PAD = { top: 12, right: 12, bottom: 26, left: 44 }
+// ★ `right`는 여백 취향이 아니라 **끝 라벨의 자리**다. 12px일 때 마지막 회차의
+//   X축 라벨(`08.03`)이 실제로 잘렸다(실측). 선 끝의 값 라벨도 여기 앉는다.
+const PAD = { top: 14, right: 52, bottom: 26, left: 44 }
 const IW = W - PAD.left - PAD.right
 const IH = H - PAD.top - PAD.bottom
 
@@ -40,18 +42,32 @@ function mmdd(iso: string): string {
   return `${iso.slice(5, 7)}.${iso.slice(8, 10)}`
 }
 
-/** gemini/google은 휘도가 붙는다 — 색과 함께 마커 모양으로 가른다 (§2). */
+/**
+ * gemini/google은 휘도가 붙는다 — 색과 함께 마커 모양으로 가른다 (§2).
+ *
+ * ★ **표면 링**을 두른다(dataviz "surface ring"): 마커가 연결선·오차 밴드와
+ *   겹치는 자리에서 형태가 뭉개지지 않게, 표면색 2px를 마커 둘레에 두른다.
+ *   테두리를 그려 떼어 놓는 것과 다르다 — 링은 표면색이라 새 잉크가 아니라
+ *   **비어 있는 자리**다(같은 이유로 밴드를 어둡게 덧칠하지 않는다).
+ *   차트는 카드가 아니라 페이지 바닥에 앉으므로 색은 `--background`다.
+ */
 function Marker({ engine, cx, cy, color }: { engine: string; cx: number; cy: number; color: string }) {
-  const common = { fill: color, 'data-testid': 'trend-point' } as const
+  const common = {
+    fill: color,
+    stroke: 'var(--background)',
+    strokeWidth: 2,
+    paintOrder: 'stroke' as const,
+    'data-testid': 'trend-point',
+  } as const
   switch (engine) {
     case 'gemini':
-      return <rect {...common} x={cx - 3.5} y={cy - 3.5} width={7} height={7} />
+      return <rect {...common} x={cx - 4} y={cy - 4} width={8} height={8} />
     case 'naver':
-      return <rect {...common} x={cx - 4} y={cy - 4} width={8} height={8} transform={`rotate(45 ${cx} ${cy})`} />
+      return <rect {...common} x={cx - 4.5} y={cy - 4.5} width={9} height={9} transform={`rotate(45 ${cx} ${cy})`} />
     case 'google_aio':
-      return <polygon {...common} points={`${cx},${cy - 4.5} ${cx + 4.5},${cy + 4} ${cx - 4.5},${cy + 4}`} />
+      return <polygon {...common} points={`${cx},${cy - 5} ${cx + 5},${cy + 4.5} ${cx - 5},${cy + 4.5}`} />
     default:
-      return <circle {...common} cx={cx} cy={cy} r={4} />
+      return <circle {...common} cx={cx} cy={cy} r={4.5} />
   }
 }
 
@@ -93,6 +109,10 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
   const x = (i: number) => PAD.left + (n <= 1 ? IW / 2 : (i * IW) / (n - 1))
   const y = (v: number) => PAD.top + (1 - v) * IH
   const latest = series[n - 1]
+
+  // 라벨 간격 — 640px 폭에 11px mono 라벨(약 34px)이 겹치지 않으려면 회차당
+  // 최소 40px이 필요하다. 그보다 촘촘해지면 그 배수만큼 건너뛴다.
+  const labelStep = Math.max(1, Math.ceil(n / Math.floor(IW / 40)))
 
   const segments = splitSegments(series)
   const conditionBreak = series.some((p, i) => i > 0 && !p.comparableWithPrev)
@@ -189,9 +209,8 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
               y1={PAD.top}
               y2={PAD.top + IH}
               stroke="var(--foreground)"
-              strokeOpacity={0.22}
+              strokeOpacity={0.18}
               strokeWidth={1}
-              strokeDasharray="2 3"
             />
           )}
 
@@ -233,7 +252,9 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
                   d={`M ${seg.pts.map((p, j) => `${x(seg.startIndex + j)},${y(p.interval.point)}`).join(' L ')}`}
                   fill="none"
                   stroke={color}
-                  strokeWidth={1.5}
+                  strokeWidth={2}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
                 />
               </g>
             )
@@ -251,11 +272,32 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
             </g>
           ))}
 
-          {series.map((p, i) => (
-            <text key={p.runId} x={x(i)} y={H - 8} textAnchor="middle" className="fill-muted-foreground font-mono" fontSize={11}>
-              {mmdd(p.measuredAt)}
+          {/* X축 라벨 — 회차가 쌓이면 솎는다. 라벨이 서로 붙어 읽히지 않는
+              것보다 몇 개를 비우는 편이 낫고, **마지막 회차는 언제나 남긴다**
+              (지금이 언제인지가 이 차트에서 가장 자주 찾는 값이다). */}
+          {series.map((p, i) =>
+            i % labelStep === 0 || i === n - 1 ? (
+              <text key={p.runId} x={x(i)} y={H - 8} textAnchor="middle" className="fill-muted-foreground font-mono" fontSize={11}>
+                {mmdd(p.measuredAt)}
+              </text>
+            ) : null,
+          )}
+
+          {/* 선 끝의 값 — 호버 없이도 "지금 몇 퍼센트인가"가 읽혀야 한다
+              (dataviz: 선은 끝에 직접 라벨). 라벨은 **최신 하나뿐**이다 —
+              점마다 숫자를 붙이면 그건 차트가 아니라 표다(안티패턴).
+              커서가 그 점을 짚고 있으면 툴팁과 같은 값이 두 번 보이므로 숨긴다. */}
+          {latest && hoverIndex !== n - 1 && (
+            <text
+              data-testid="trend-end-label"
+              x={x(n - 1) + 10}
+              y={y(latest.interval.point) + 4}
+              className="fill-foreground font-mono font-medium"
+              fontSize={12}
+            >
+              {formatPercent(latest.interval.point)}
             </text>
-          ))}
+          )}
 
           {/* 히트 영역 — 점은 반경 4px라 그것만 노리게 하면 사실상 못 짚는다.
               회차마다 이웃과의 중점까지를 자기 띠로 갖는다(마지막에 그려 위에 얹는다).

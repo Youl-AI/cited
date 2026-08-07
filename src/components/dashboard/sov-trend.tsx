@@ -25,7 +25,8 @@ import { formatInterval, formatPercent } from '@/lib/stats/wilson'
  */
 const W = 640
 const H = 150
-const PAD = { top: 10, right: 12, bottom: 24, left: 44 }
+// 오른쪽은 끝 라벨의 자리다 — 추이 차트와 같은 이유(그쪽 PAD 주석).
+const PAD = { top: 12, right: 52, bottom: 24, left: 44 }
 const IW = W - PAD.left - PAD.right
 const IH = H - PAD.top - PAD.bottom
 
@@ -60,6 +61,8 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
   const x = (i: number) => PAD.left + (n <= 1 ? IW / 2 : (i * IW) / (n - 1))
   const y = (v: number) => PAD.top + (1 - v) * IH
   const last = sov[n - 1]!
+  // 라벨 솎기 — 추이 차트와 같은 계산(그쪽 주석 참고).
+  const labelStep = Math.max(1, Math.ceil(n / Math.floor(IW / 40)))
   const segments = segmentsOf(sov)
   // 밴드 불투명도는 TrendChart와 같은 값이다 (§4.1): 이어지는 세그먼트 안의
   // 점은 0.14, 혼자 남은 점은 0.25 — "구간이 넓다"가 정직한 첫인상이어야 한다.
@@ -122,23 +125,49 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
               d={`M ${idx.map((i) => `${x(i)},${y(sov[i]!.interval.point)}`).join(' L ')}`}
               fill="none"
               stroke="var(--primary)"
-              strokeWidth={1.5}
+              strokeWidth={2}
+              strokeLinejoin="round"
+              strokeLinecap="round"
             />
           ) : null,
         )}
         {sov.map((p, i) => (
           <g key={p.runId}>
             <rect x={x(i) - 4} y={y(p.interval.upper)} width={8} height={Math.max(y(p.interval.lower) - y(p.interval.upper), 1)} fill="var(--primary)" opacity={isolated.has(i) ? 0.25 : 0.14} />
-            <circle data-testid="sov-point" cx={x(i)} cy={y(p.interval.point)} r={4} fill="var(--primary)" />
+            {/* 표면 링 — 추이 차트 Marker와 같은 규격이다(그쪽 주석 참고). */}
+            <circle
+              data-testid="sov-point"
+              cx={x(i)}
+              cy={y(p.interval.point)}
+              r={4.5}
+              fill="var(--primary)"
+              stroke="var(--background)"
+              strokeWidth={2}
+              paintOrder="stroke"
+            />
             <title>{`${p.measuredAt.slice(5, 7)}.${p.measuredAt.slice(8, 10)} · ${formatPercent(p.interval.point)} (${formatInterval(p.interval)}) · ${p.interval.k}/${p.interval.n}`}</title>
           </g>
         ))}
-        {/* X축 라벨 — 추이 차트와 같은 문법 (§4.1: 회차 날짜 MM.DD, mono). */}
-        {sov.map((p, i) => (
-          <text key={`x-${p.runId}`} x={x(i)} y={H - 6} textAnchor="middle" className="fill-muted-foreground font-mono" fontSize={11}>
-            {`${p.measuredAt.slice(5, 7)}.${p.measuredAt.slice(8, 10)}`}
-          </text>
-        ))}
+        {/* X축 라벨 — 추이 차트와 같은 문법 (§4.1: 회차 날짜 MM.DD, mono).
+            솎는 규칙도 같다 — 마지막 회차는 언제나 남긴다. */}
+        {sov.map((p, i) =>
+          i % labelStep === 0 || i === n - 1 ? (
+            <text key={`x-${p.runId}`} x={x(i)} y={H - 6} textAnchor="middle" className="fill-muted-foreground font-mono" fontSize={11}>
+              {`${p.measuredAt.slice(5, 7)}.${p.measuredAt.slice(8, 10)}`}
+            </text>
+          ) : null,
+        )}
+
+        {/* 선 끝의 값 — 최신 하나뿐이다(추이 차트와 같은 규칙). */}
+        <text
+          data-testid="sov-end-label"
+          x={x(n - 1) + 10}
+          y={y(last.interval.point) + 4}
+          className="fill-foreground font-mono font-medium"
+          fontSize={12}
+        >
+          {formatPercent(last.interval.point)}
+        </text>
       </svg>
       <p className="mt-3 max-w-prose text-xs text-muted-foreground">
         분모: 등록 경쟁사({denomRun.competitors.join(', ') || '없음'}) 대비 언급 비중입니다.
