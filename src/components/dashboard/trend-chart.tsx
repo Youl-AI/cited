@@ -57,11 +57,12 @@ function mmdd(iso: string): string {
 /**
  * gemini/google은 휘도가 붙는다 — 색과 함께 마커 모양으로 가른다 (§2).
  *
- * ★ **표면 링**을 두른다(dataviz "surface ring"): 마커가 연결선·오차 밴드와
- *   겹치는 자리에서 형태가 뭉개지지 않게, 표면색 2px를 마커 둘레에 두른다.
- *   테두리를 그려 떼어 놓는 것과 다르다 — 링은 표면색이라 새 잉크가 아니라
- *   **비어 있는 자리**다(같은 이유로 밴드를 어둡게 덧칠하지 않는다).
- *   차트는 카드가 아니라 페이지 바닥에 앉으므로 색은 `--background`다.
+ * ★ **도넛 마커다** — 속은 표면색(`--background`), 테두리가 계열색이다.
+ *   꽉 찬 점을 흰 링으로 두르던 이전 규격을 뒤집었다. 얻는 것이 둘이다:
+ *   - 선·밴드 위에 앉아도 속이 비어 있어 마커가 **뚫려 보인다** — 겹침 자리에서
+ *     형태가 뭉개지지 않는다(dataviz surface ring과 같은 목적, 반대 방향).
+ *   - 계열이 겹치는 비교 모드에서 잉크량이 절반이라 화면이 덜 시끄럽다.
+ *   차트는 카드가 아니라 페이지 바닥에 앉으므로 속은 `--background`다.
  *
  * ★ `delay`는 앉는 순번이다(왼→오). 값이 아니라 **회차 수**에서 나오므로
  *   인라인 style로 내보낸다 — Tailwind 임의값 클래스는 평문 스캐너가 못 본다
@@ -81,21 +82,20 @@ function Marker({
   delay: number
 }) {
   const common = {
-    fill: color,
-    stroke: 'var(--background)',
-    strokeWidth: 2,
-    paintOrder: 'stroke' as const,
+    fill: 'var(--background)',
+    stroke: color,
+    strokeWidth: 2.5,
     className: 'chart-pop',
     style: { animationDelay: `${delay}ms` },
     'data-testid': 'trend-point',
   } as const
   switch (engine) {
     case 'gemini':
-      return <rect {...common} x={cx - 4} y={cy - 4} width={8} height={8} />
+      return <rect {...common} x={cx - 4} y={cy - 4} width={8} height={8} rx={2} />
     case 'naver':
-      return <rect {...common} x={cx - 4.5} y={cy - 4.5} width={9} height={9} transform={`rotate(45 ${cx} ${cy})`} />
+      return <rect {...common} x={cx - 4.5} y={cy - 4.5} width={9} height={9} rx={2} transform={`rotate(45 ${cx} ${cy})`} />
     case 'google_aio':
-      return <polygon {...common} points={`${cx},${cy - 5} ${cx + 5},${cy + 4.5} ${cx - 5},${cy + 4.5}`} />
+      return <polygon {...common} strokeLinejoin="round" points={`${cx},${cy - 5} ${cx + 5},${cy + 4.5} ${cx - 5},${cy + 4.5}`} />
     default:
       return <circle {...common} cx={cx} cy={cy} r={4.5} />
   }
@@ -321,12 +321,39 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
             ))}
           </defs>
 
-          {/* 눈금 넷 — 0/50/100 셋만으로는 점이 어느 대역에 있는지 눈으로 재기
-              어려웠다. 25% 간격이면 선의 높이를 눈금 사이에서 읽을 수 있다.
-              선은 여전히 헤어라인 실선이고 배경보다 한 단만 진하다. */}
+          {/* 플롯 패널 — 그림이 앉는 자리를 종이에서 한 단 눌러 판다. 페이지
+              배경 위에 선만 떠 있으면 "어디부터 어디까지가 좌표계인가"를 눈금이
+              혼자 다 말해야 한다. 패널이 그 경계를 면으로 만들고, 눈금은 그
+              안에서 높이만 잰다. 데이터 잉크가 아니므로 무채색(--muted)이다. */}
+          {/* (왼쪽 여유는 6px뿐이다 — y축 라벨이 PAD.left-8에서 끝나므로 그보다
+              더 내밀면 라벨이 패널 위에 앉는다.) */}
+          <rect
+            x={PAD.left - 6}
+            y={PAD.top - 8}
+            width={IW + 18}
+            height={IH + 16}
+            rx={12}
+            fill="var(--muted)"
+            opacity={0.45}
+          />
+
+          {/* 눈금 — 0%(바닥)만 실선이고 나머지는 **점선**이다. 바닥은 좌표계의
+              기준이라 앵커로 남기고, 위쪽 눈금은 높이를 재는 자일 뿐이라 실선
+              네 개를 긋면 표처럼 무거워진다. 25% 간격의 근거는 이전과 같다 —
+              셋만으로는 점이 어느 대역에 있는지 눈으로 재기 어려웠다. */}
           {[0, 0.25, 0.5, 0.75, 1].map((tick) => (
             <g key={tick}>
-              <line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} stroke="var(--border)" strokeWidth={1} opacity={tick === 0 || tick === 0.5 || tick === 1 ? 1 : 0.55} />
+              <line
+                x1={PAD.left}
+                x2={W - PAD.right}
+                y1={y(tick)}
+                y2={y(tick)}
+                stroke="var(--foreground)"
+                strokeOpacity={tick === 0 ? 0.18 : 0.09}
+                strokeWidth={1}
+                strokeDasharray={tick === 0 ? undefined : '2 5'}
+                strokeLinecap="round"
+              />
               {/* 라벨은 0·50·100만 — 다섯 개면 축이 시끄럽다. 사이 눈금은
                   선만 남아 높이를 재는 자로 쓰인다. */}
               {(tick === 0 || tick === 0.5 || tick === 1) && (
@@ -417,6 +444,7 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
                       x={x(first.pos) - 5}
                       y={y(first.p.interval.upper)}
                       width={10}
+                      rx={5}
                       height={Math.max(y(first.p.interval.lower) - y(first.p.interval.upper), 1)}
                       fill={color}
                       opacity={0.25}
@@ -428,9 +456,16 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
                   .reverse()
                   .map((s) => `${x(s.pos)},${y(s.p.interval.lower)}`)
                   .join(' L ')
+                const lowerFwd = seg.map((s) => `${x(s.pos)},${y(s.p.interval.lower)}`).join(' L ')
                 return (
                   <g key={first.p.runId}>
-                    <path d={`M ${upper} L ${lower} Z`} fill={color} opacity={0.14} data-testid="trend-band" />
+                    <path d={`M ${upper} L ${lower} Z`} fill={color} opacity={0.1} data-testid="trend-band" />
+                    {/* 밴드 윤곽 — 구간의 **경계**가 값이다(위 = upper, 아래 =
+                        lower). 면만 있으면 경계가 흐릿해 구간의 폭을 눈으로 재기
+                        어렵다. 그라디언트로 흐리는 것은 금지지만(경계를 지운다)
+                        경계를 선으로 세우는 것은 반대 방향이다. */}
+                    <path d={`M ${upper}`} fill="none" stroke={color} strokeOpacity={0.3} strokeWidth={1} />
+                    <path d={`M ${lowerFwd}`} fill="none" stroke={color} strokeOpacity={0.3} strokeWidth={1} />
                     {/* 드로우인은 **연결선에만** 건다. 밴드는 첫 프레임부터 제자리다
                         (§6: 점을 먼저 보여 주고 밴드를 나중에 붙이는 연출 금지).
                         `pathLength={1}`이 길이를 정규화해 CSS만으로 그려진다. */}
@@ -456,6 +491,20 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
                   {hoverIndex === i && (
                     <circle cx={x(i)} cy={y(p.interval.point)} r={8} fill="none" stroke={color} strokeWidth={1} opacity={0.45} />
                   )}
+                  {/* 최신 점만 옅은 후광 — "현재 회차"는 액센트를 가질 수 있는
+                      유일한 점이다(dataviz: current period in the accent).
+                      점이 앉는 것과 같은 박자로 나타난다. */}
+                  {i === series.length - 1 && (
+                    <circle
+                      className="chart-pop"
+                      style={{ animationDelay: `${Math.min(i * POP_STEP, POP_MAX)}ms` }}
+                      cx={x(i)}
+                      cy={y(p.interval.point)}
+                      r={10}
+                      fill={color}
+                      opacity={0.12}
+                    />
+                  )}
                   <Marker engine={mode === 'all' ? 'all' : mode} cx={x(i)} cy={y(p.interval.point)} color={color} delay={Math.min(i * POP_STEP, POP_MAX)} />
                   <title>{`${mmdd(p.measuredAt)} · ${formatPercent(p.interval.point)} (${formatInterval(p.interval)}) · ${p.interval.k}/${p.interval.n}`}</title>
                 </g>
@@ -480,17 +529,30 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
               커서가 그 점을 짚고 있으면 툴팁과 같은 값이 두 번 보이므로 숨긴다.
               ★ 비교 모드에는 붙이지 않는다 — 끝값 둘이 세로로 겹치면 어느 쪽
               숫자인지가 색으로만 갈린다. 그쪽은 아래 범례가 값을 말한다. */}
-          {!comparing && latest && hoverIndex !== n - 1 && (
-            <text
-              data-testid="trend-end-label"
-              x={x(n - 1) + 10}
-              y={y(latest.interval.point) + 4}
-              className="fill-foreground font-mono font-medium"
-              fontSize={12}
-            >
-              {formatPercent(latest.interval.point)}
-            </text>
-          )}
+          {!comparing && latest && hoverIndex !== n - 1 && (() => {
+            // 알약 라벨 — 맨눈에 "지금 값"이 배지로 잡힌다. 검정 글자만 띄우면
+            // 축 라벨과 같은 잉크라 값이 아니라 눈금으로 읽혔다(실제 피드백:
+            // "뭐가 바뀐 건지 모르겠다"). 폭은 mono 11px 실측 근사치다.
+            const text = formatPercent(latest.interval.point)
+            const pw = text.length * 6.8 + 14
+            const py = Math.max(y(latest.interval.point), PAD.top + 10)
+            return (
+              <g>
+                <rect x={x(n - 1) + 9} y={py - 10} width={pw} height={20} rx={10} fill={color} />
+                <text
+                  data-testid="trend-end-label"
+                  x={x(n - 1) + 9 + pw / 2}
+                  y={py + 4}
+                  textAnchor="middle"
+                  fill="var(--background)"
+                  className="font-mono font-medium"
+                  fontSize={11}
+                >
+                  {text}
+                </text>
+              </g>
+            )
+          })()}
 
           {/* 히트 영역 — 점은 반경 4px라 그것만 노리게 하면 사실상 못 짚는다.
               회차마다 이웃과의 중점까지를 자기 띠로 갖는다(마지막에 그려 위에 얹는다).

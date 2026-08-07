@@ -101,12 +101,31 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
         role="img"
         aria-label={`언급 점유율 추이 — 최신 ${formatPercent(last.interval.point)} (${formatInterval(last.interval)})`}
       >
-        {/* 눈금은 추이 차트와 같은 다섯 — 라벨은 0·50·100만 달고 25·75는 선만
-            남긴다(그쪽 주석). 같은 화면에 선 두 개가 다른 눈금을 쓰면 눈이
-            높이를 옮겨 재지 못한다. */}
+        {/* 플롯 패널 + 눈금 — 추이 차트와 **같은 문법**이다(그쪽 주석): 패널이
+            좌표계의 경계를 면으로 만들고, 바닥(0%)만 실선, 나머지는 점선이다.
+            같은 화면의 두 차트가 다른 문법을 쓰면 하나가 고장으로 읽힌다. */}
+        <rect
+          x={PAD.left - 6}
+          y={PAD.top - 8}
+          width={IW + 18}
+          height={IH + 16}
+          rx={12}
+          fill="var(--muted)"
+          opacity={0.45}
+        />
         {[0, 0.25, 0.5, 0.75, 1].map((tick) => (
           <g key={tick}>
-            <line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} stroke="var(--border)" strokeWidth={1} opacity={tick === 0.25 || tick === 0.75 ? 0.55 : 1} />
+            <line
+              x1={PAD.left}
+              x2={W - PAD.right}
+              y1={y(tick)}
+              y2={y(tick)}
+              stroke="var(--foreground)"
+              strokeOpacity={tick === 0 ? 0.18 : 0.09}
+              strokeWidth={1}
+              strokeDasharray={tick === 0 ? undefined : '2 5'}
+              strokeLinecap="round"
+            />
             {tick !== 0.25 && tick !== 0.75 && (
               <text x={PAD.left - 8} y={y(tick) + 4} textAnchor="end" className="fill-muted-foreground font-mono" fontSize={11}>
                 {Math.round(tick * 100)}%
@@ -140,10 +159,23 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
         )}
         {sov.map((p, i) => (
           <g key={p.runId}>
-            <rect x={x(i) - 4} y={y(p.interval.upper)} width={8} height={Math.max(y(p.interval.lower) - y(p.interval.upper), 1)} fill="var(--primary)" opacity={isolated.has(i) ? 0.25 : 0.14} />
-            {/* 표면 링 — 추이 차트 Marker와 같은 규격이다(그쪽 주석 참고).
+            {/* 구간 띠는 캡슐이다 — 모서리를 둥글려 "위아래로 뻗은 범위"로
+                읽히게 한다(직각이면 막대그래프 값으로 오독된다). */}
+            <rect data-testid="sov-band" x={x(i) - 4} y={y(p.interval.upper)} width={8} rx={4} height={Math.max(y(p.interval.lower) - y(p.interval.upper), 1)} fill="var(--primary)" opacity={isolated.has(i) ? 0.25 : 0.14} />
+            {/* 도넛 마커 — 추이 차트 Marker와 같은 규격이다(그쪽 주석 참고).
                 앉는 순번(`.chart-pop`)도 같다 — 두 차트가 같은 화면에서 다른
                 물리로 등장하면 하나가 고장 난 것처럼 보인다. */}
+            {i === n - 1 && (
+              <circle
+                className="chart-pop"
+                style={{ animationDelay: `${Math.min(i * 32, 420)}ms` }}
+                cx={x(i)}
+                cy={y(p.interval.point)}
+                r={10}
+                fill="var(--primary)"
+                opacity={0.12}
+              />
+            )}
             <circle
               data-testid="sov-point"
               className="chart-pop"
@@ -151,10 +183,9 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
               cx={x(i)}
               cy={y(p.interval.point)}
               r={4.5}
-              fill="var(--primary)"
-              stroke="var(--background)"
-              strokeWidth={2}
-              paintOrder="stroke"
+              fill="var(--background)"
+              stroke="var(--primary)"
+              strokeWidth={2.5}
             />
             <title>{`${p.measuredAt.slice(5, 7)}.${p.measuredAt.slice(8, 10)} · ${formatPercent(p.interval.point)} (${formatInterval(p.interval)}) · ${p.interval.k}/${p.interval.n}`}</title>
           </g>
@@ -169,16 +200,28 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
           ) : null,
         )}
 
-        {/* 선 끝의 값 — 최신 하나뿐이다(추이 차트와 같은 규칙). */}
-        <text
-          data-testid="sov-end-label"
-          x={x(n - 1) + 10}
-          y={y(last.interval.point) + 4}
-          className="fill-foreground font-mono font-medium"
-          fontSize={12}
-        >
-          {formatPercent(last.interval.point)}
-        </text>
+        {/* 선 끝의 값 — 최신 하나뿐이고, 추이 차트와 같은 알약 배지다. */}
+        {(() => {
+          const text = formatPercent(last.interval.point)
+          const pw = text.length * 6.8 + 14
+          const py = Math.max(y(last.interval.point), PAD.top + 10)
+          return (
+            <g>
+              <rect x={x(n - 1) + 9} y={py - 10} width={pw} height={20} rx={10} fill="var(--primary)" />
+              <text
+                data-testid="sov-end-label"
+                x={x(n - 1) + 9 + pw / 2}
+                y={py + 4}
+                textAnchor="middle"
+                fill="var(--background)"
+                className="font-mono font-medium"
+                fontSize={11}
+              >
+                {text}
+              </text>
+            </g>
+          )
+        })()}
       </svg>
       <p className="mt-3 max-w-prose text-xs text-muted-foreground">
         분모: 등록 경쟁사({denomRun.competitors.join(', ') || '없음'}) 대비 언급 비중입니다.
