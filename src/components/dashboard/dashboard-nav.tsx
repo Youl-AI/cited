@@ -19,6 +19,10 @@ import Link from 'next/link'
 
 export const DASHBOARD_VIEWS = [
   { value: 'overview', label: '개요' },
+  // 점유율은 개요가 아니라 자기 탭이다 — 개요의 주인공은 언급률(헤드라인
+  // 77%와 같은 지표) 하나여야 하고, 점유율은 경쟁사를 등록해야만 정의되는
+  // 파생 지표라 첫 화면의 두 번째 대형 차트가 되면 주장이 갈라진다.
+  { value: 'sov', label: '점유율' },
   { value: 'queries', label: '질문별' },
   { value: 'sources', label: '출처' },
   { value: 'runs', label: '측정 회차' },

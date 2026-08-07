@@ -64,15 +64,18 @@ function Panel({
   title,
   lede,
   index,
+  fill = false,
   children,
 }: {
   title: string
   lede?: string
   index: number
+  /** 부모 flex 기둥의 남는 높이를 채운다 — 기둥 바닥을 이웃 기둥과 맞출 때. */
+  fill?: boolean
   children: ReactNode
 }) {
   return (
-    <Card className={`instrument-enter ${ENTER_DELAY[index] ?? ''}`}>
+    <Card className={`instrument-enter ${fill ? 'h-full' : ''} ${ENTER_DELAY[index] ?? ''}`}>
       <CardContent className="flex h-full flex-col">
         <h2 className="font-heading text-base font-semibold tracking-tight">{title}</h2>
         {lede && <p className="mt-1 max-w-prose text-xs leading-relaxed text-muted-foreground">{lede}</p>}
@@ -196,43 +199,42 @@ export default async function DashboardPage({
         <div className="min-w-0 flex-1">
           {view === 'overview' &&
             (hasPoints ? (
-              <div className="space-y-4">
-                {/* 윗단 — 독립한 두 기둥(한 그리드의 행으로 묶지 않는다: 행
-                    높이가 좌우로 묶이면 짧은 쪽 카드 안에 빈 공간이 생긴다). */}
-                <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-12">
-                  {/* 왼쪽 — 이 화면의 무대(큰 차트). */}
-                  <div className="xl:col-span-8">
-                    <Panel
-                      title="언급률 추이"
-                      lede="회차별 언급률과 95% 신뢰구간입니다. 엔진을 골라 따로 볼 수 있습니다."
-                      index={2}
-                    >
-                      <TrendChart points={points} />
-                    </Panel>
+              // ★ 개요는 한 화면 두 기둥이다. 왼쪽 = 무대(언급률 차트 + KPI
+              //   타일 줄), 오른쪽 = 지표(히어로·순위). 점유율 추이는 자기
+              //   탭(sov)으로 갔다 — 개요의 주장은 언급률 하나다(nav 주석).
+              //   `items-stretch`(기본값) + 오른쪽 순위 카드 `fill`로 두 기둥의
+              //   바닥을 맞춘다 — 짧은 쪽 옆에 빈 마당이 남지 않게(실측 피드백).
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+                <div className="flex flex-col gap-4 xl:col-span-8">
+                  <Panel
+                    title="언급률 추이"
+                    lede="회차별 언급률과 95% 신뢰구간입니다. 엔진을 골라 따로 볼 수 있습니다."
+                    index={2}
+                  >
+                    <TrendChart points={points} />
+                  </Panel>
+                  {/* 보조 수치 셋 — 가로 한 줄. 세로 스택은 위계가 목록으로
+                      읽힌다(사용자 피드백). */}
+                  <div className={`instrument-enter ${ENTER_DELAY[5]}`}>
+                    <KpiRow points={points} />
                   </div>
-                  {/* 오른쪽 — 무대를 읽는 지표(히어로 숫자·순위). */}
-                  <div className="space-y-4 xl:col-span-4">
-                    <div className={`instrument-enter ${ENTER_DELAY[3]}`}>
-                      <HeadlineCard points={points} compact />
-                    </div>
-                    <Panel title="언급 순위" lede="최신 회차에서 브랜드별 언급 수입니다." index={4}>
+                </div>
+                <div className="flex flex-col gap-4 xl:col-span-4">
+                  <div className={`instrument-enter ${ENTER_DELAY[3]}`}>
+                    <HeadlineCard points={points} compact />
+                  </div>
+                  {/* 순위가 남는 높이를 채운다 — 왼쪽 기둥과 바닥을 맞춘다. */}
+                  <div className="min-h-0 flex-1">
+                    <Panel
+                      title="언급 순위"
+                      lede="최신 회차에서 브랜드별 언급 수입니다."
+                      index={4}
+                      fill
+                    >
                       <RankingCard points={points} />
                     </Panel>
                   </div>
                 </div>
-                {/* 중간단 — 보조 수치 셋은 가로 한 줄이다. 세로로 쌓으면 위계가
-                    "목록"으로 읽힌다(사용자 피드백) — 이 셋은 같은 급의 타일이다. */}
-                <div className={`instrument-enter ${ENTER_DELAY[5]}`}>
-                  <KpiRow points={points} />
-                </div>
-                {/* 아랫단 — 브랜드별 점유율 경쟁 그림, 전폭. */}
-                <Panel
-                  title="언급 점유율 추이"
-                  lede="브랜드별 언급 몫의 추이입니다. 경쟁사를 더 등록하면 분모가 달라집니다."
-                  index={5}
-                >
-                  <SovTrend points={points} />
-                </Panel>
               </div>
             ) : (
               <div className="space-y-4">
@@ -242,6 +244,20 @@ export default async function DashboardPage({
                 </Panel>
               </div>
             ))}
+
+          {view === 'sov' && (
+            <Panel
+              title="언급 점유율 추이"
+              lede="브랜드별 언급 몫의 추이입니다. 경쟁사를 더 등록하면 분모가 달라집니다."
+              index={2}
+            >
+              {hasPoints ? (
+                <SovTrend points={points} />
+              ) : (
+                <p className="text-sm text-muted-foreground">아직 표시할 회차가 없습니다.</p>
+              )}
+            </Panel>
+          )}
 
           {view === 'queries' && (
             <Panel
