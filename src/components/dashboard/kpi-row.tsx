@@ -46,7 +46,12 @@ export function KpiRow({
           <CardContent className="flex h-full flex-col">
             <p className="text-sm text-muted-foreground">{kpi.label}</p>
 
-            <div className="mt-2 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+            {/* 값 줄과 델타 줄을 **구조로 가른다.** 예전에는 한 flex-wrap 줄에
+                값·구간·델타를 다 넣었는데, 타일 폭에 따라 델타가 첫 줄에 남기도
+                둘째 줄로 밀리기도 해서 세 타일의 베이스라인이 우연히 갈렸다
+                (실측 — 셋 중 둘만 줄바꿈). 줄 수가 폭의 우연이 아니라 구조면
+                어느 폭에서든 세 타일이 같은 모양이다. */}
+            <div className="mt-2 flex items-baseline gap-x-2.5">
               <span
                 className={
                   kpi.unavailable
@@ -61,9 +66,11 @@ export function KpiRow({
                   {formatInterval(kpi.interval)}
                 </span>
               )}
-              {kpi.delta && (
-                <DeltaBadge delta={kpi.delta} unit={kpi.interval ? '%p' : '개'} />
-              )}
+            </div>
+            {/* 델타 줄 — 없는 타일(첫 회차·값 없음)도 자리를 지켜 세 타일의
+                스파크라인 시작 높이가 맞는다. */}
+            <div className="mt-2 min-h-5">
+              {kpi.delta && <DeltaBadge delta={kpi.delta} unit={kpi.interval ? '%p' : '개'} />}
             </div>
 
             {/* 추세 조각 — 값이 아니라 **모양**만 말한다(sparkline.tsx).

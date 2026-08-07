@@ -30,7 +30,11 @@ export function RankingCard({ points }: { points: RunPoint[] }) {
   const max = Math.max(...ranking.map((r) => r.mentions), 1)
 
   return (
-    <ol className="space-y-2.5" data-testid="ranking-rows">
+    // ★ `justify-evenly` + h-full — 이 카드는 오른쪽 기둥의 남는 높이를 채우는
+    //   자리(`Panel fill`)라, 행을 위에 몰면 바닥이 죽은 공간이 된다. 행 사이를
+    //   고르게 벌리면 채움이 의도로 읽힌다. 행이 넘치게 많아지면(경쟁사 한도상
+    //   없다) gap-2.5가 하한이다.
+    <ol className="flex h-full flex-col justify-evenly gap-2.5" data-testid="ranking-rows">
       {ranking.map((row, i) => (
         <li key={row.name}>
           <div className="flex items-baseline gap-2">
