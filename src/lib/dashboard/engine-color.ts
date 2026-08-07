@@ -23,3 +23,23 @@ export const ENGINE_COLOR: Record<string, string> = {
 export function engineColor(id: string): string {
   return ENGINE_COLOR[id] ?? 'var(--primary)'
 }
+
+/**
+ * 경쟁사 계열색 — 점유율 추이의 브랜드별 선.
+ *
+ * ★ 인덱스는 **등록 경쟁사 목록의 저장 순서**다(스냅샷의 `competitors`는
+ *   정렬돼 저장된다 — data.ts). 순위 순서로 주면 순위가 뒤집힐 때 색이
+ *   브랜드를 갈아탄다(dataviz: 색은 엔티티를 따른다, 순위를 따르지 않는다).
+ * ★ 다섯째 경쟁사부터는 색을 만들어 내지 않고 순환한다 — 현 플랜 한도에서
+ *   실제로 닿지 않는 자리다. 한도를 올리면 토큰을 먼저 늘려라.
+ */
+const COMPETITOR_COLORS = [
+  'var(--color-competitor-1)',
+  'var(--color-competitor-2)',
+  'var(--color-competitor-3)',
+  'var(--color-competitor-4)',
+] as const
+
+export function competitorColor(index: number): string {
+  return COMPETITOR_COLORS[index % COMPETITOR_COLORS.length]!
+}

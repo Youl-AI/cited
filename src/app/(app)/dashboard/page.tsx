@@ -196,39 +196,43 @@ export default async function DashboardPage({
         <div className="min-w-0 flex-1">
           {view === 'overview' &&
             (hasPoints ? (
-              // ★ 그리드가 아니라 **독립한 두 기둥**이다. 한 그리드에 넣으면
-              //   행 높이가 좌우로 묶여, 오른쪽 기둥이 길어질 때 왼쪽 차트
-              //   카드가 따라 늘어나며 카드 안에 빈 공간이 생긴다(실측).
-              <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-12">
-                {/* 왼쪽 기둥 — 이 화면의 무대(큰 차트들). */}
-                <div className="space-y-4 xl:col-span-8">
-                  <Panel
-                    title="언급률 추이"
-                    lede="회차별 언급률과 95% 신뢰구간입니다. 엔진을 골라 따로 볼 수 있습니다."
-                    index={2}
-                  >
-                    <TrendChart points={points} />
-                  </Panel>
-                  <Panel
-                    title="언급 점유율 추이"
-                    lede="등록한 경쟁사 대비 언급 비중입니다. 경쟁사를 더 등록하면 이 값은 달라집니다."
-                    index={4}
-                  >
-                    <SovTrend points={points} />
-                  </Panel>
-                </div>
-                {/* 오른쪽 기둥 — 무대를 읽는 지표들(히어로 숫자·순위·보조 수치). */}
-                <div className="space-y-4 xl:col-span-4">
-                  <div className={`instrument-enter ${ENTER_DELAY[3]}`}>
-                    <HeadlineCard points={points} compact />
+              <div className="space-y-4">
+                {/* 윗단 — 독립한 두 기둥(한 그리드의 행으로 묶지 않는다: 행
+                    높이가 좌우로 묶이면 짧은 쪽 카드 안에 빈 공간이 생긴다). */}
+                <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-12">
+                  {/* 왼쪽 — 이 화면의 무대(큰 차트). */}
+                  <div className="xl:col-span-8">
+                    <Panel
+                      title="언급률 추이"
+                      lede="회차별 언급률과 95% 신뢰구간입니다. 엔진을 골라 따로 볼 수 있습니다."
+                      index={2}
+                    >
+                      <TrendChart points={points} />
+                    </Panel>
                   </div>
-                  <Panel title="언급 순위" lede="최신 회차에서 브랜드별 언급 수입니다." index={4}>
-                    <RankingCard points={points} />
-                  </Panel>
-                  <div className={`instrument-enter ${ENTER_DELAY[5]}`}>
-                    <KpiRow points={points} direction="column" />
+                  {/* 오른쪽 — 무대를 읽는 지표(히어로 숫자·순위). */}
+                  <div className="space-y-4 xl:col-span-4">
+                    <div className={`instrument-enter ${ENTER_DELAY[3]}`}>
+                      <HeadlineCard points={points} compact />
+                    </div>
+                    <Panel title="언급 순위" lede="최신 회차에서 브랜드별 언급 수입니다." index={4}>
+                      <RankingCard points={points} />
+                    </Panel>
                   </div>
                 </div>
+                {/* 중간단 — 보조 수치 셋은 가로 한 줄이다. 세로로 쌓으면 위계가
+                    "목록"으로 읽힌다(사용자 피드백) — 이 셋은 같은 급의 타일이다. */}
+                <div className={`instrument-enter ${ENTER_DELAY[5]}`}>
+                  <KpiRow points={points} />
+                </div>
+                {/* 아랫단 — 브랜드별 점유율 경쟁 그림, 전폭. */}
+                <Panel
+                  title="언급 점유율 추이"
+                  lede="브랜드별 언급 몫의 추이입니다. 경쟁사를 더 등록하면 분모가 달라집니다."
+                  index={5}
+                >
+                  <SovTrend points={points} />
+                </Panel>
               </div>
             ) : (
               <div className="space-y-4">

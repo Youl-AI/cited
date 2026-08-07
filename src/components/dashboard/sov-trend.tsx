@@ -1,39 +1,45 @@
 import { buildSovTrend, type RunPoint, type SovPoint } from '@/lib/dashboard/data'
+import { competitorColor } from '@/lib/dashboard/engine-color'
 import { formatInterval, formatPercent } from '@/lib/stats/wilson'
 
 /**
- * 점유율 추이 (디자인 언어 §4.3). 추이 차트와 같은 점+밴드 문법의 소형판.
+ * 점유율 추이 (디자인 언어 §4.3) — **브랜드별 선을 한 축에 겹쳐 그린다.**
+ *
+ * 같은 카테고리 제품들(Peec·Otterly)의 기본 화면이 정확히 이 그림이다:
+ * 우리와 경쟁사가 각자의 색으로 한 좌표계에 서고, "누가 치고 올라오는가"가
+ * 선의 교차로 읽힌다. 우리 계열은 --primary, 경쟁사는 등록 순서로 고정된
+ * 계열색(`competitorColor`)이다.
+ *
+ * ## 값의 정의
+ *
+ * 회차의 브랜드별 언급 수(`ranking`)를 그 회차 전체 언급 수로 나눈 몫이다.
+ * 우리 계열은 스냅샷의 `shareOfVoice`(같은 분모로 계산된 Wilson 구간)를
+ * 그대로 쓴다 — 캡슐 띠(95% 신뢰구간)도 **우리 계열에만** 두른다. 경쟁사
+ * 선에는 구간을 그리지 않는다: 겹치는 반투명 띠 넷은 겹침의 농도가 없는
+ * 값을 만든다(추이 차트 엔진 비교 모드와 같은 결정).
  *
  * ★ **선을 끊어야 하는 자리가 둘 있다 — `trend-chart.tsx`와 같은 규칙이다.**
  *   같은 서수 축을 쓰는 이상 같은 거짓말이 가능하다.
  *     - `comparableWithPrev === false` — 경쟁사 집합·엔진 구성·질의 집합·판정기
  *       버전이 바뀌었다. 분모가 달라지면 점유율은 설정 변경만으로도 움직인다.
- *     - `runsSkippedBefore > 0` — 그 사이에 잴 값이 없던 회차가 있다. 조건은
- *       같아서 비교는 가능하지만, 등간격 축이 2주를 1주로 보이게 한다.
- *       원인 중 하나가 **경쟁사 미등록**이다 — 경쟁사가 없으면 SoV는 정의되지
- *       않아 그 회차가 통째로 빠진다. 나중에 경쟁사를 등록한 고객에게 실제로
- *       일어나는 일이고, 그 자리를 감추면 "쭉 재고 있었다"가 된다.
- *   두 경우 모두 선분을 잇지 않고, 왜 끊겼는지를 캡션에 쓴다.
+ *     - `runsSkippedBefore > 0` — 그 사이에 잴 값이 없던 회차가 있다.
+ *   끊는 위치는 회차 속성이므로 **모든 브랜드 선이 같은 자리에서 끊긴다.**
+ *   그 회차 순위에 없는 브랜드는 그 자리만 비운다(0이 아니라 측정 없음).
  *
- * ★ 경쟁사 집합이 바뀐 구간의 캡션은 §4.3의 **고정 문구 그대로**다 —
- *   "경쟁사 설정이 바뀐 구간은 이전과 비교하지 않습니다 — 분모가 달라지면
- *   점유율은 설정 변경만으로도 움직입니다." 다른 조건(엔진·질의·판정기)만 바뀐
- *   구간은 추이 차트와 같은 일반 문구를 쓴다.
- *
- * 오차 밴드는 원래부터 점마다 따로 그린다(사각형) — 이어지는 띠가 없으므로
- * 추이 차트처럼 밴드를 구간별로 자를 필요가 없다.
+ * ★ 경쟁사 집합이 바뀐 구간의 캡션은 §4.3의 **고정 문구 그대로**다.
+ * ★ 경쟁사가 없으면(순위가 우리뿐) 예전 단일 계열 그림으로 떨어진다.
  */
 const W = 640
-// 추이 차트와 같은 이유로 키운다(그쪽 H 주석). 이 차트는 계열이 하나뿐이라
-// 추이 차트만큼은 필요 없다.
-const H = 190
+// 추이 차트와 같은 이유로 키운다(그쪽 H 주석). 계열이 여럿이라 단일 시절보다
+// 세로 여유를 조금 더 준다.
+const H = 210
 // 오른쪽은 끝 라벨의 자리다 — 추이 차트와 같은 이유(그쪽 PAD 주석).
 const PAD = { top: 12, right: 52, bottom: 24, left: 44 }
 const IW = W - PAD.left - PAD.right
 const IH = H - PAD.top - PAD.bottom
 
 /**
- * 이을 수 있는 구간으로 자른다 — Task 9 `trend-chart.tsx`의 `splitSegments`와
+ * 이을 수 있는 구간으로 자른다 — `trend-chart.tsx`의 `splitSegments`와
  * 같은 규칙·같은 이유다. 반환은 **전역 인덱스**의 묶음이다: x 좌표는 계열
  * 전체에서의 위치로 정해야 구간이 갈려도 점이 제자리에 남는다.
  */
@@ -89,9 +95,36 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
   // ★ 분모 캡션은 **마지막으로 그린 점**의 회차 경쟁사를 쓴다. 최신 회차가
   //   n=0이라 차트에서 빠졌으면(`buildSovTrend`가 거른다) `latest.competitors`는
   //   화면의 어느 점도 쓰지 않은 분모다 — 차트와 캡션이 다른 말을 하게 된다.
-  //   (그릴 점이 하나도 없으면 위에서 이미 null을 반환했다 — `?? latest`는
-  //   Map 조회의 타입 좁히기일 뿐, 실제로는 항상 원본 회차가 잡힌다.)
   const denomRun = byRun.get(last.runId) ?? latest
+
+  // ── 브랜드별 계열 ────────────────────────────────────────────────────────
+  // 마지막으로 그린 회차의 순위(언급 수 내림차순)가 계열 목록이다. 색은
+  // 순위가 아니라 **등록 목록의 저장 순서**로 배정한다(engine-color.ts).
+  const denomRanking = denomRun.result.ranking
+  const multi = denomRanking.length > 1
+  const brandColorOf = (name: string, isSelf: boolean): string => {
+    if (isSelf) return 'var(--primary)'
+    const idx = denomRun.competitors.indexOf(name)
+    return competitorColor(idx < 0 ? 0 : idx)
+  }
+  // 계열 값: 각 그려진 회차에서 브랜드 몫(언급 수 / 전체 언급 수). 그 회차
+  // 순위에 없는 브랜드·전체 0인 회차는 null — 0%가 아니라 측정 없음이다.
+  const shareAt = (runId: string, name: string): number | null => {
+    const run = byRun.get(runId)
+    if (!run) return null
+    const total = run.result.ranking.reduce((s, r) => s + r.mentions, 0)
+    if (total === 0) return null
+    const entry = run.result.ranking.find((r) => r.name === name)
+    return entry ? entry.mentions / total : null
+  }
+  const brandSeries = multi
+    ? denomRanking.map((b) => ({
+        name: b.name,
+        isSelf: b.isSelf,
+        color: brandColorOf(b.name, b.isSelf),
+        values: sov.map((p) => shareAt(p.runId, b.name)),
+      }))
+    : []
 
   return (
     <div>
@@ -99,21 +132,14 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
         viewBox={`0 0 ${W} ${H}`}
         className="w-full"
         role="img"
-        aria-label={`언급 점유율 추이 — 최신 ${formatPercent(last.interval.point)} (${formatInterval(last.interval)})`}
+        aria-label={
+          multi
+            ? `브랜드별 언급 점유율 추이 — 최신 ${denomRanking
+                .map((b) => `${b.name}${b.isSelf ? '(우리)' : ''} ${formatPercent((shareAt(last.runId, b.name) ?? 0))}`)
+                .join(', ')}`
+            : `언급 점유율 추이 — 최신 ${formatPercent(last.interval.point)} (${formatInterval(last.interval)})`
+        }
       >
-        {/* 그라디언트 — 추이 차트와 같은 두 개(그쪽 defs 주석). 서버 컴포넌트라
-            useId가 없지만 이 컴포넌트는 페이지에 하나뿐이라 고정 id로 충분하다. */}
-        <defs>
-          <linearGradient id="sov-grad-line" gradientUnits="userSpaceOnUse" x1={PAD.left} x2={W - PAD.right} y1="0" y2="0">
-            <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.45} />
-            <stop offset="75%" stopColor="var(--primary)" stopOpacity={0.9} />
-            <stop offset="100%" stopColor="var(--primary)" stopOpacity={1} />
-          </linearGradient>
-          <linearGradient id="sov-grad-area" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1={PAD.top} y2={PAD.top + IH}>
-            <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.14} />
-            <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
-          </linearGradient>
-        </defs>
         {/* 눈금 — 추이 차트와 **같은 문법**(헤어라인 다섯, 25·75는 반 농도).
             같은 화면의 두 차트가 다른 문법을 쓰면 하나가 고장으로 읽힌다. */}
         {[0, 0.25, 0.5, 0.75, 1].map((tick) => (
@@ -134,76 +160,133 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
             )}
           </g>
         ))}
-        {/* ★ 계열 전체를 잇는 폴리라인 하나가 아니다. 조건이 바뀌었거나
-            (`comparableWithPrev === false`) 그 사이 회차가 빠진
-            (`runsSkippedBefore > 0`) 자리에서는 선분이 없다. */}
-        {segments.map((idx) => {
-          if (idx.length <= 1) return null
-          const linePts = idx.map((i) => `${x(i)},${y(sov[i]!.interval.point)}`).join(' L ')
-          const firstI = idx[0]!
-          const lastI = idx[idx.length - 1]!
-          return (
-            <g key={`line-${firstI}`}>
-              {/* 선 아래 면 — 추이 차트와 같은 규칙(값이 아니라 무게추). */}
-              <path
-                d={`M ${linePts} L ${x(lastI)},${y(0)} L ${x(firstI)},${y(0)} Z`}
-                fill="url(#sov-grad-area)"
-              />
-              <path
-                data-testid="sov-line"
-                // 드로우인은 추이 차트와 같은 CSS 클래스다 — 두 차트가 다른
-                // 속도로 그려지면 같은 화면에서 물리 법칙이 갈린다. 점·밴드는
-                // 첫 프레임부터 제자리이고 **연결선만** 그려진다 (§6).
-                // `pathLength={1}`이 길이를 정규화하므로 이 서버 컴포넌트에
-                // 'use client'를 열지 않아도 된다.
-                className="chart-draw"
-                pathLength={1}
-                d={`M ${linePts}`}
-                fill="none"
-                stroke="url(#sov-grad-line)"
-                strokeWidth={2}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              />
-            </g>
-          )
-        })}
+
+        {/* 우리 계열의 95% 신뢰구간 캡슐 — 멀티 모드에서도 우리 것만 두른다
+            (머리말). 점보다 먼저(아래에) 깔린다. */}
         {sov.map((p, i) => (
-          <g key={p.runId}>
-            {/* 구간 띠는 캡슐이다 — 모서리를 둥글려 "위아래로 뻗은 범위"로
-                읽히게 한다(직각이면 막대그래프 값으로 오독된다). */}
-            <rect data-testid="sov-band" x={x(i) - 4} y={y(p.interval.upper)} width={8} rx={4} height={Math.max(y(p.interval.lower) - y(p.interval.upper), 1)} fill="var(--primary)" opacity={isolated.has(i) ? 0.25 : 0.14} />
-            {/* 작은 점 + 최신 점 링 — 추이 차트 Marker와 같은 규격이다(그쪽
-                주석 참고). 앉는 순번(`.chart-pop`)도 같다 — 두 차트가 같은
-                화면에서 다른 물리로 등장하면 하나가 고장 난 것처럼 보인다. */}
-            {i === n - 1 && (
-              <circle
-                className="chart-pop"
-                style={{ animationDelay: `${Math.min(i * 32, 420)}ms` }}
-                cx={x(i)}
-                cy={y(p.interval.point)}
-                r={6}
-                fill="none"
-                stroke="var(--primary)"
-                strokeWidth={1.25}
-                opacity={0.5}
-              />
-            )}
-            <circle
-              data-testid="sov-point"
-              className="chart-pop"
-              style={{ animationDelay: `${Math.min(i * 32, 420)}ms` }}
-              cx={x(i)}
-              cy={y(p.interval.point)}
-              r={2.5}
-              fill="var(--primary)"
-              stroke="var(--background)"
-              strokeWidth={1.5}
-              paintOrder="stroke"
-            />
-            <title>{`${p.measuredAt.slice(5, 7)}.${p.measuredAt.slice(8, 10)} · ${formatPercent(p.interval.point)} (${formatInterval(p.interval)}) · ${p.interval.k}/${p.interval.n}`}</title>
-          </g>
+          <rect
+            key={`band-${p.runId}`}
+            data-testid="sov-band"
+            x={x(i) - 4}
+            y={y(p.interval.upper)}
+            width={8}
+            rx={4}
+            height={Math.max(y(p.interval.lower) - y(p.interval.upper), 1)}
+            fill="var(--primary)"
+            opacity={isolated.has(i) ? 0.25 : 0.14}
+          />
         ))}
+
+        {multi ? (
+          // ── 브랜드별 선 ─────────────────────────────────────────────────
+          // 세그먼트(조건 변화·빠진 회차)는 회차 속성이라 모든 선이 같은
+          // 자리에서 끊긴다. 값이 null인 회차는 그 선만 추가로 끊는다.
+          brandSeries.map((b) => (
+            <g key={b.name}>
+              {segments.map((idx) => {
+                // 세그먼트 안에서 null로 다시 자른다.
+                const runs: number[][] = []
+                for (const i of idx) {
+                  if (b.values[i] === null) {
+                    runs.push([])
+                    continue
+                  }
+                  if (runs.length === 0) runs.push([])
+                  runs[runs.length - 1]!.push(i)
+                }
+                return runs
+                  .filter((r) => r.length > 1)
+                  .map((r) => (
+                    <path
+                      key={`${b.name}-${r[0]}`}
+                      data-testid="sov-line"
+                      className="chart-draw"
+                      pathLength={1}
+                      d={`M ${r.map((i) => `${x(i)},${y(b.values[i] ?? 0)}`).join(' L ')}`}
+                      fill="none"
+                      stroke={b.color}
+                      strokeWidth={b.isSelf ? 2.5 : 1.75}
+                      strokeOpacity={b.isSelf ? 1 : 0.85}
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                    />
+                  ))
+              })}
+              {sov.map((p, i) => {
+                const v = b.values[i]
+                if (v === null || v === undefined) return null
+                return (
+                  <circle
+                    key={`${b.name}-pt-${p.runId}`}
+                    data-testid={b.isSelf ? 'sov-point' : 'sov-competitor-point'}
+                    className="chart-pop"
+                    style={{ animationDelay: `${Math.min(i * 32, 420)}ms` }}
+                    cx={x(i)}
+                    cy={y(v)}
+                    r={b.isSelf ? 2.5 : 2}
+                    fill={b.color}
+                    stroke="var(--card)"
+                    strokeWidth={1.5}
+                    paintOrder="stroke"
+                  />
+                )
+              })}
+            </g>
+          ))
+        ) : (
+          // ── 단일 계열(경쟁사 미등록) — 예전 그림 그대로 ──────────────────
+          <>
+            {segments.map((idx) => {
+              if (idx.length <= 1) return null
+              const linePts = idx.map((i) => `${x(i)},${y(sov[i]!.interval.point)}`).join(' L ')
+              return (
+                <path
+                  key={`line-${idx[0]}`}
+                  data-testid="sov-line"
+                  className="chart-draw"
+                  pathLength={1}
+                  d={`M ${linePts}`}
+                  fill="none"
+                  stroke="var(--primary)"
+                  strokeWidth={2}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+              )
+            })}
+            {sov.map((p, i) => (
+              <g key={p.runId}>
+                {i === n - 1 && (
+                  <circle
+                    className="chart-pop"
+                    style={{ animationDelay: `${Math.min(i * 32, 420)}ms` }}
+                    cx={x(i)}
+                    cy={y(p.interval.point)}
+                    r={6}
+                    fill="none"
+                    stroke="var(--primary)"
+                    strokeWidth={1.25}
+                    opacity={0.5}
+                  />
+                )}
+                <circle
+                  data-testid="sov-point"
+                  className="chart-pop"
+                  style={{ animationDelay: `${Math.min(i * 32, 420)}ms` }}
+                  cx={x(i)}
+                  cy={y(p.interval.point)}
+                  r={2.5}
+                  fill="var(--primary)"
+                  stroke="var(--card)"
+                  strokeWidth={1.5}
+                  paintOrder="stroke"
+                />
+                <title>{`${p.measuredAt.slice(5, 7)}.${p.measuredAt.slice(8, 10)} · ${formatPercent(p.interval.point)} (${formatInterval(p.interval)}) · ${p.interval.k}/${p.interval.n}`}</title>
+              </g>
+            ))}
+          </>
+        )}
+
         {/* X축 라벨 — 추이 차트와 같은 문법 (§4.1: 회차 날짜 MM.DD, mono).
             솎는 규칙도 같다 — 마지막 회차는 언제나 남긴다. */}
         {sov.map((p, i) =>
@@ -214,21 +297,58 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
           ) : null,
         )}
 
-        {/* 선 끝의 값 — 최신 하나뿐이고, 추이 차트와 같은 계열색 글자다
-            (알약 배지는 그림 위의 스티커처럼 겉돌아 접었다 — 그쪽 주석). */}
-        <text
-          data-testid="sov-end-label"
-          x={x(n - 1) + 11}
-          y={y(last.interval.point) + 4}
-          fill="var(--primary)"
-          className="font-mono font-semibold"
-          fontSize={12}
-        >
-          {formatPercent(last.interval.point)}
-        </text>
+        {/* 선 끝의 값 — 단일 계열에서만. 멀티 모드는 선 넷의 끝이 붙어 있어
+            숫자 넷이 겹친다 — 그쪽 값은 아래 범례가 말한다. */}
+        {!multi && (
+          <text
+            data-testid="sov-end-label"
+            x={x(n - 1) + 11}
+            y={y(last.interval.point) + 4}
+            fill="var(--primary)"
+            className="font-mono font-semibold"
+            fontSize={12}
+          >
+            {formatPercent(last.interval.point)}
+          </text>
+        )}
       </svg>
+
+      {/* 범례 — 계열이 둘 이상이면 색만으로 정체를 말하지 않는다(dataviz).
+          최신값을 같이 적어 선 끝 라벨을 포기한 자리를 대신 맡는다. */}
+      {multi && (
+        <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5" data-testid="sov-legend">
+          {denomRanking.map((b) => {
+            const v = shareAt(last.runId, b.name)
+            return (
+              <li key={b.name} className="flex items-baseline gap-2 text-sm">
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={{ background: brandColorOf(b.name, b.isSelf) }}
+                />
+                <span className={b.isSelf ? 'font-medium' : 'text-muted-foreground'}>
+                  {b.name}
+                  {b.isSelf && <span className="ml-1 text-xs font-normal text-muted-foreground">우리</span>}
+                </span>
+                <span className="font-mono font-medium tabular-nums">
+                  {v === null ? '—' : formatPercent(v)}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
       <p className="mt-3 max-w-prose text-xs text-muted-foreground">
-        분모: 등록 경쟁사({denomRun.competitors.join(', ') || '없음'}) 대비 언급 비중입니다.
+        {multi ? (
+          <>
+            각 선은 그 회차 전체 브랜드 언급 중 해당 브랜드의 몫입니다(분모: 우리 +{' '}
+            {denomRun.competitors.join(', ')}). 캡슐 띠는 우리 계열의 95% 신뢰구간입니다 —
+            경쟁사 선에는 구간을 그리지 않습니다.
+          </>
+        ) : (
+          <>분모: 등록 경쟁사({denomRun.competitors.join(', ') || '없음'}) 대비 언급 비중입니다.</>
+        )}
         {hasCompetitorBreak &&
           ' 경쟁사 설정이 바뀐 구간은 이전과 비교하지 않습니다 — 분모가 달라지면 점유율은 설정 변경만으로도 움직입니다.'}
         {hasOtherConditionBreak &&
