@@ -148,7 +148,10 @@ describe('SovTrend', () => {
         ]}
       />,
     )
-    const opacities = [...container.querySelectorAll('rect')].map((r) => r.getAttribute('opacity'))
+    // rect 전부가 아니라 **구간 띠만** 본다 — 플롯 패널·알약 배지도 rect다.
+    const opacities = [...container.querySelectorAll('[data-testid="sov-band"]')].map((r) =>
+      r.getAttribute('opacity'),
+    )
     expect(opacities).toEqual(['0.14', '0.14', '0.25'])
   })
 })

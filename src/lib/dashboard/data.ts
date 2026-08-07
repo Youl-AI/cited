@@ -165,7 +165,7 @@ function sameSet(a: readonly string[], b: readonly string[]): boolean {
  *   그래야 어느 화면이 무엇을 포기했는지가 코드에 남는다. 본문에
  *   `engineId !== 'all'` 같은 특수 케이스를 넣으면 그 결정이 사라진다.
  */
-function sameConditions(prev: RunPoint, curr: RunPoint): boolean {
+export function sameConditions(prev: RunPoint, curr: RunPoint): boolean {
   return (
     sameSet(prev.engines, curr.engines) &&
     sameSet(prev.queryIds, curr.queryIds) &&

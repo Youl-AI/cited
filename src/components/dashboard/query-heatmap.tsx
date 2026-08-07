@@ -75,7 +75,12 @@ export function QueryHeatmap({ points }: { points: RunPoint[] }) {
                   return (
                     <td
                       key={run.runId}
-                      className="px-2 py-2 text-center font-mono text-xs tabular-nums transition-[box-shadow] duration-[var(--motion-micro)] ease-instrument hover:ring-2 hover:ring-foreground/25 hover:ring-inset"
+                      // ★ 셀 사이를 **표면색 2px 틈**으로 가른다(dataviz: 맞닿은
+                      //   채움은 테두리가 아니라 틈으로 떼어 놓는다). 투명
+                      //   테두리 + `bg-clip-padding`이라 실제로 그려지는 것은
+                      //   없고 카드 바닥이 그만큼 비친다 — 명도가 한 단 차이인
+                      //   이웃 셀도 이 틈 덕에 서로 구분된다.
+                      className="rounded-md border-2 border-transparent bg-clip-padding px-2 py-1.5 text-center font-mono text-xs tabular-nums transition-[box-shadow] duration-[var(--motion-micro)] ease-instrument hover:ring-2 hover:ring-foreground/25 hover:ring-inset"
                       style={{
                         background: `color-mix(in oklab, var(--primary) ${p}%, transparent)`,
                         color: p >= 50 ? 'var(--primary-foreground)' : 'var(--foreground)',
