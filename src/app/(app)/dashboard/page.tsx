@@ -3,7 +3,14 @@ import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { BrandPicker } from '@/components/dashboard/brand-picker'
 import { HeadlineCard } from '@/components/dashboard/headline-card'
+import { KpiRow } from '@/components/dashboard/kpi-row'
 import { QueryHeatmap } from '@/components/dashboard/query-heatmap'
+import {
+  DEFAULT_RANGE,
+  RangePicker,
+  resolveRange,
+  sliceToRange,
+} from '@/components/dashboard/range-picker'
 import { RunListSection } from '@/components/dashboard/run-list'
 import { SourceChanges } from '@/components/dashboard/source-changes'
 import { SovTrend } from '@/components/dashboard/sov-trend'
@@ -32,6 +39,10 @@ const ENTER_DELAY = [
   '[--enter-delay:calc(var(--motion-stagger)*4)]',
   '[--enter-delay:calc(var(--motion-stagger)*5)]',
   '[--enter-delay:calc(var(--motion-stagger)*6)]',
+  // ★ 길이는 **실제로 쌓이는 블록 수 이상**이어야 한다. 배열이 짧으면
+  //   `?? ''`로 조용히 지연 0이 되어 마지막 블록만 다른 박자로 튀어나온다.
+  //   지금 최대: 머리글 + 헤드라인 + KPI 행 + 섹션 5 = 8.
+  '[--enter-delay:calc(var(--motion-stagger)*7)]',
 ] as const
 
 /**
@@ -73,7 +84,7 @@ function Section({
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ brand?: string }>
+  searchParams: Promise<{ brand?: string; range?: string }>
 }) {
   // requireUser는 loadOnboardingGate 안에서 호출된다 ((app) 규칙).
   const gate = await loadOnboardingGate()
@@ -120,35 +131,39 @@ export default async function DashboardPage({
     )
   }
 
-  const { brand } = await searchParams
+  const { brand, range } = await searchParams
   const data = await loadDashboard(gate.user.id, brand)
   if (!data.selected) redirect('/onboarding')
   const canAdd = gate.limits !== null && data.brands.length < gate.limits.maxBrands
+  // 보기 범위 — 그리는 점만 자른다. 회차 목록(`runList`)은 자르지 않는다:
+  // 그건 "무엇을 측정했는가"의 기록이지 추세 그림이 아니다.
+  const selectedRange = range ?? DEFAULT_RANGE
+  const points = sliceToRange(data.points, resolveRange(selectedRange))
   // 회차가 하나도 없으면 히트맵·SoV·출처는 그릴 것이 없다(각 컴포넌트도
   // 스스로 null을 내지만, 제목과 리드까지 남으면 빈 제목 셋이 늘어선다).
-  const hasPoints = data.points.length > 0
+  const hasPoints = points.length > 0
   const sections = [
     {
       title: '언급률 추이',
       lede: '회차별 언급률과 95% 신뢰구간입니다. 엔진을 골라 따로 볼 수 있습니다.',
-      body: <TrendChart points={data.points} />,
+      body: <TrendChart points={points} />,
     },
     ...(hasPoints
       ? [
           {
             title: '질문별 히트맵',
             lede: '어느 질문에서 비는가 — 여기가 가장 실행 가능한 정보입니다. 셀의 숫자는 언급된 답변 수 / 전체 답변 수입니다.',
-            body: <QueryHeatmap points={data.points} />,
+            body: <QueryHeatmap points={points} />,
           },
           {
             title: '언급 점유율 추이',
             lede: '등록한 경쟁사 대비 언급 비중입니다. 경쟁사를 더 등록하면 이 값은 달라집니다.',
-            body: <SovTrend points={data.points} />,
+            body: <SovTrend points={points} />,
           },
           {
             title: 'AI가 읽는 출처',
             lede: '최신 회차에서 인용된 도메인과 직전 회차 대비 변화입니다 — 여기가 콘텐츠를 실을 곳입니다.',
-            body: <SourceChanges points={data.points} />,
+            body: <SourceChanges points={points} />,
           },
         ]
       : []),
@@ -199,7 +214,16 @@ export default async function DashboardPage({
             {data.selected.name}
           </h1>
         </div>
-        <BrandPicker brands={data.brands} selectedId={data.selected.id} canAdd={canAdd} />
+        {/* 두 컨트롤은 같은 트레이 어휘다 — "무엇을 보는가"(브랜드)와
+            "얼마나 보는가"(범위)가 같은 줄에서 한 덩어리로 읽힌다. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <RangePicker
+            selected={selectedRange}
+            brandId={data.selected.id}
+            totalRuns={data.points.length}
+          />
+          <BrandPicker brands={data.brands} selectedId={data.selected.id} canAdd={canAdd} />
+        </div>
       </div>
 
       {/* 조건을 래퍼에 건다 — `HeadlineCard`는 회차가 없으면 스스로 null을
@@ -207,7 +231,16 @@ export default async function DashboardPage({
           만든다(아래 섹션들이 이미 같은 모양으로 조건을 걸고 있다). */}
       {hasPoints && (
         <div className={`instrument-enter ${ENTER_DELAY[1]}`}>
-          <HeadlineCard points={data.points} />
+          <HeadlineCard points={points} />
+        </div>
+      )}
+
+      {/* 보조 수치 셋. 헤드라인 아래 같은 덩어리로 붙는다 — 이 셋은 위 숫자를
+          읽는 맥락이지 별개의 챕터가 아니라서 `Section`(헤어라인 + 제목)을
+          쓰지 않는다. */}
+      {hasPoints && (
+        <div className={`instrument-enter ${ENTER_DELAY[2]}`}>
+          <KpiRow points={points} />
         </div>
       )}
 
@@ -221,8 +254,8 @@ export default async function DashboardPage({
           title={section.title}
           lede={section.lede}
           // 앞서 그려진 블록 수만큼 뒤에서 시작한다 — 머리글(0)은 항상 있고,
-          // 헤드라인 카드(1)는 회차가 있을 때만 있다.
-          index={(hasPoints ? 2 : 1) + i}
+          // 헤드라인 카드(1)와 KPI 행(2)은 회차가 있을 때만 있다.
+          index={(hasPoints ? 3 : 1) + i}
         >
           {section.body}
         </Section>
