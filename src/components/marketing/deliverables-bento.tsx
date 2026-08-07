@@ -63,7 +63,10 @@ export function DeliverablesBento() {
         // `bg-border`가 그 틈으로 보여서 선이 되고, 셀은 서로 붙어 있다.
         // 각(radius 0)이다 — 벤토 셀은 전부 실측 데이터라 문서 표면 계열이고,
         // 문서는 둥글지 않다(표면 역할 규칙: specimen-sheet.tsx 머리말).
-        'grid grid-flow-dense gap-px overflow-hidden border border-border bg-border shadow-elevation-3 sm:grid-cols-2'
+        // `surface-paper` — 리포트 견본은 문서라 종이(라이트)로 반전한다
+        // (specimen-sheet.tsx "종이 반전"). 셀 틴트는 전부 토큰 참조라
+        // 스코프를 따라 라이트 값으로 함께 넘어간다.
+        'surface-paper grid grid-flow-dense gap-px overflow-hidden border border-border bg-border text-foreground shadow-elevation-3 sm:grid-cols-2'
       }
     >
       {/* ── 1. 언급률과 신뢰구간 ─────────────────────────────

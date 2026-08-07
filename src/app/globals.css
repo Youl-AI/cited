@@ -8,7 +8,10 @@
    없었고, 이제 진짜 다크 표면에 이름이 생겼기 때문이다.
    래퍼 자신도 포함한다(`.surface-dark, .surface-dark *`) — 래퍼 요소에 붙은
    dark: 유틸리티가 조용히 죽지 않게. */
-@custom-variant dark (&:is(.surface-dark, .surface-dark *));
+@custom-variant dark (&:is(.surface-dark, .surface-dark *):not(.surface-paper, .surface-paper *));
+/* ★ `.surface-paper`(다크 무대 위 종이 문서)는 다크 서브트리 안에 있어도
+   dark: 유틸리티를 받지 않는다 — 종이 안은 라이트 문법이다. 스코프 정의는
+   .surface-dark 블록 뒤 .surface-paper 참고. */
 
 /* ---------------------------------------------------------------------------
    제품 고유 토큰
@@ -220,7 +223,8 @@
    종이는 크림색이 아니라 계측 장비의 흰색에 가깝고, 초록·빨강·호박색 지표가
    그 위에서 더 또렷하게 읽힌다.
 --------------------------------------------------------------------------- */
-:root {
+:root,
+.surface-paper {
   /* 문서 기본 표면은 라이트다. 선언하지 않으면 OS가 다크인 사용자에게
      브라우저가 어두운 스크롤바·자동완성 배경을 그려서, 밝은 페이지 위에
      검은 입력창이 얹힌다. 다크는 .surface-dark가 스코프로 뒤집는다. */
@@ -456,6 +460,39 @@
   --elev-1: inset 0 1px 0 oklch(1 0 0 / 0.06), 0 1px 2px oklch(0.05 0.01 258 / 0.5);
   --elev-2: inset 0 1px 0 oklch(1 0 0 / 0.07), 0 2px 6px -1px oklch(0.05 0.01 258 / 0.55), 0 10px 24px -6px oklch(0.05 0.01 258 / 0.6);
   --elev-3: inset 0 1px 0 oklch(1 0 0 / 0.09), 0 6px 12px -3px oklch(0.05 0.01 258 / 0.6), 0 24px 48px -12px oklch(0.05 0.01 258 / 0.7);
+}
+
+/* ---------------------------------------------------------------------------
+   종이 스코프 — 다크 무대 위의 라이트 문서.
+
+   마케팅 다크 페이지에서 **읽는 것**(실측 표본·비교 원장·신청서)은 흰 종이로
+   반전한다: 무대(다크) → 문서(종이) → 문서 위 강조(틴트)의 3단 위계가 명도
+   점프 하나로 생긴다. 2026-08-05 외부 피드백("다크 비중이 높아 머물 지점이
+   없다")의 처방이고, 테마 경계 규칙(다크=구경, 라이트=문서·도구)의 연장이다.
+
+   동작 방식: 앱 라이트 블록(:root)의 선언을 셀렉터 목록으로 그대로 나눠 받고
+   (중복 없음 — 값의 단일 출처는 여전히 :root 블록 하나다), 커스텀 프로퍼티는
+   "가까운 조상이 이긴다" 규칙으로 .surface-dark 안에서도 종이 쪽이 이긴다.
+   아래는 :root 블록에 **없는** 것들 — @theme static에 라이트 실값이 있고
+   .surface-dark가 뒤집는 토큰들만 여기서 복원한다. 값은 @theme 쪽 원본과
+   글자 그대로 같아야 한다(tests/design-tokens.test.ts가 실값을 검증한다).
+
+   ★ dark: 유틸리티도 이 서브트리를 비켜간다 — 파일 머리의 @custom-variant
+     참고. */
+.surface-paper {
+  --color-metric-up: oklch(0.55 0.12 155);
+  --color-metric-down: oklch(0.55 0.18 25);
+  --color-metric-flat: oklch(0.62 0.01 90);
+  --color-ci-band: oklch(0.92 0.02 250);
+  --color-incomplete: oklch(0.75 0.12 70);
+  --color-metric-up-fg: oklch(0.52 0.12 155);
+  --color-metric-down-fg: oklch(0.52 0.18 25);
+  --color-metric-flat-fg: oklch(0.52 0.01 90);
+  --color-incomplete-fg: oklch(0.52 0.1 70);
+  --color-engine-chatgpt: oklch(0.63 0.1 196);
+  --color-engine-gemini: oklch(0.47 0.21 298);
+  --color-engine-naver: oklch(0.6 0.18 345);
+  --color-engine-google: oklch(0.42 0.06 207);
 }
 
 @layer base {
