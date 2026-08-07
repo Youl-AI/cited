@@ -118,11 +118,13 @@
   --motion-enter: 220ms;
   --motion-state: 240ms;
   --motion-draw: 600ms;
-  --motion-reveal: 800ms;
-  /* 60ms → 90ms (2026-08-05 외부 피드백: "너무 빨리 등장해서 애니메이션이
-     체감이 안 된다"). 등장 지속시간(Reveal 0.85s·reveal 800ms)과 함께 스태거도
+  /* 800ms → 1100ms (2026-08-05 외부 피드백 후 사용자 재확인 "아직도 빠르다").
+     히어로 .enter-rise가 이 값으로 돈다 — 움직이는 건 opacity·transform뿐이라
+     LCP 텍스트는 처음부터 자리에 있다. */
+  --motion-reveal: 1100ms;
+  /* 60ms → 90ms → 120ms (같은 피드백 이력). 등장 지속시간과 함께 스태거도
      늘려야 순차 등장이 눈에 잡힌다. JS 짝은 reveal.tsx REVEAL_STAGGER_S. */
-  --motion-stagger: 90ms;
+  --motion-stagger: 120ms;
   --ease-instrument: cubic-bezier(0.2, 0, 0, 1);
   --ease-glide: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.4, 1);

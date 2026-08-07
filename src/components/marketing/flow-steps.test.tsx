@@ -5,9 +5,25 @@ import { AUDIT_FLOW } from '@/components/audit/flow'
 import { ClosingCta } from './closing-cta'
 import { FlowSteps } from './flow-steps'
 
-// jsdom에는 IntersectionObserver가 없고, `Reveal`이 쓰는 Motion의
-// `whileInView`는 폴백 없이 바로 `new IntersectionObserver(...)`를 부른다.
-// 스텁이 없으면 렌더 자체가 던진다(`reveal.test.tsx`와 같은 이유).
+// `gsap.registerPlugin(ScrollTrigger)`가 모듈 평가 시점에 matchMedia를 부른다 —
+// FlowSteps가 PinScene(GSAP)을 쓰므로 필요하다. 근거는 pin-scene.test.tsx 머리말.
+vi.hoisted(() => {
+  vi.stubGlobal('matchMedia', (media: string) => ({
+    media,
+    matches: false,
+    onchange: null,
+    addListener() {},
+    removeListener() {},
+    addEventListener() {},
+    removeEventListener() {},
+    dispatchEvent: () => false,
+  }))
+  vi.stubGlobal('scrollTo', () => {})
+})
+
+// jsdom에는 IntersectionObserver가 없고, `Reveal`(ClosingCta 쪽 트리)이 쓰는
+// Motion의 `whileInView`는 폴백 없이 바로 `new IntersectionObserver(...)`를
+// 부른다. 스텁이 없으면 렌더 자체가 던진다(`reveal.test.tsx`와 같은 이유).
 class InertIntersectionObserver {
   readonly root = null
   readonly rootMargin = ''

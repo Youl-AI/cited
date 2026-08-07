@@ -31,7 +31,7 @@ import { PLANS, engineLabels } from '@/lib/plans'
  * |---|---|---|
  * | Attention | 히어로 | 비대칭 에디토리얼 분할 |
  * | Interest | 리포트에 들어가는 것 | gapless 벤토 |
- * | Interest | 신청하면 3단계 | 계측 레일 |
+ * | Interest | 신청하면 3단계 | 자막 핀 스크럽 |
  * | Interest | 무엇을 묻는지 공개합니다 | 전폭 단일 열 + 계측 패널 |
  * | **Desire** | 실측 재현 | 핀 스크럽 스크롤텔링 |
  * | Desire | 알 수 없는 것 | 헤어라인 정의 원장 |
@@ -73,17 +73,12 @@ export default function HomePage() {
         </Reveal>
       </Section>
 
-      {/* ── 순서 — 계측 레일 ─────────────────────────────────
-          큰 스크롤 연출은 아래 "실측 재현" 한 곳에만 쓴다. 여기는 노드와
-          헤어라인으로 순서만 조용히 말한다(`FlowSteps` 머리말 참고). */}
-      <Section>
-        <Reveal index={0}>
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">신청하면</h2>
-        </Reveal>
-        <div className="mt-12">
-          <FlowSteps />
-        </div>
-      </Section>
+      {/* ── 순서 — 자막 핀 스크럽 ────────────────────────────
+          한 번에 한 단계만 보이고 스크롤이 자막을 넘긴다(1 → 사라짐 → 2 →
+          사라짐 → 3). 재현 장면과 같은 PinScene 골격이라 페이지의 스크롤
+          물리는 여전히 하나다. 제목까지 함께 핀돼야 하므로 자기 몫의 수직
+          여백을 스스로 갖는다 — `Section`을 쓰지 않는다(`FlowSteps` 머리말). */}
+      <FlowSteps />
 
       {/* ── 검증 — 질의 프로토콜 ──────────────────────────────
           "직접 물어서 확인하실 수 있습니다"라는 약속을 실행 가능하게 만드는
@@ -104,9 +99,12 @@ export default function HomePage() {
 
         {/* 계측 카드는 시트 안쪽 알맹이가 된다 — 테두리·반경·그림자를
             시트에 넘기고 자기 껍데기를 벗는다(히어로의 표본과 같은 처리).
-            질의는 실측 문서라 유리가 아니라 계측 시트다(specimen-sheet.tsx). */}
+            ★ tone="stage" — 이건 실측 문서가 아니라 **도구**(업종 탭·복사
+              버튼이 달린 콘솔)다. 문서만 종이로 반전한다는 경계
+              (specimen-sheet.tsx "종이 반전"). 종이 판이 벤토·재현 사이에
+              하나 더 끼면 흰 블록이 연속돼 대비가 도로 사라진다. */}
         <Reveal index={1} className="mt-10 max-w-4xl">
-          <SpecimenSheet>
+          <SpecimenSheet tone="stage">
             <QueryProtocol
               specimenQuery={SPECIMEN.query}
               className="rounded-none border-0 bg-transparent shadow-none"

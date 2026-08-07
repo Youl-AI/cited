@@ -41,7 +41,7 @@ import { formatInterval, formatPercent } from '@/lib/stats/wilson'
  *
  * 첫 화면 요소에 Motion `whileInView`를 걸면 하이드레이션 전까지 투명해서
  * LCP가 JS 뒤로 밀린다. 여기만 CSS 키프레임이고, 스크롤해서 만나는 아래
- * 섹션은 `Reveal`이다. 지연은 `--motion-stagger`(90ms) 배수 — 위계 순서가
+ * 섹션은 `Reveal`이다. 지연은 `--motion-stagger`(120ms) 배수 — 위계 순서가
  * 곧 등장 순서다(제목 → 값 → 보조).
  *
  * ## 폼은 이 페이지에 없다

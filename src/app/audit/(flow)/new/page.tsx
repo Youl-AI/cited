@@ -24,7 +24,7 @@ import { PLANS, engineLabels } from '@/lib/plans'
  * 화면에 걸면 LCP가 JS 뒤로 밀리고, 청크 하나가 실패하면 신청 폼이 통째로
  * 빈 화면이 된다. 이 페이지의 유일한 목적이 그 폼이므로 그 위험을 지지
  * 않는다. CSS 키프레임은 스타일시트가 오는 즉시 시작한다(globals.css 주석).
- * 스태거 값은 랜딩 히어로와 같은 `--motion-stagger`(90ms)의 배수다.
+ * 스태거 값은 랜딩 히어로와 같은 `--motion-stagger`(120ms)의 배수다.
  */
 
 export const metadata = {
