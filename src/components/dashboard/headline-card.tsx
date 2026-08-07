@@ -102,14 +102,14 @@ export function HeadlineCard({ points, compact = false }: { points: RunPoint[]; 
               첫 항목이 정확히 그것이다. */}
           <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="font-mono text-5xl leading-none font-semibold tracking-tighter tabular-nums sm:text-6xl">
-              {formatPercent(ci.point)}
+              {formatPercent(latest.result.citedRate.point)}
             </span>
             <span className="font-mono text-sm tabular-nums text-muted-foreground">
-              {formatInterval(ci)}
+              {formatInterval(latest.result.citedRate)}
             </span>
           </div>
           <div className="mt-5">
-            <IntervalBar interval={ci} />
+            <IntervalBar interval={latest.result.citedRate} />
           </div>
           <p className="mt-3 max-w-prose text-sm leading-relaxed text-muted-foreground">
             {prev === null

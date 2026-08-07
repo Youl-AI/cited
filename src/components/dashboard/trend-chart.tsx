@@ -271,22 +271,6 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
                 )
               )}
               {modeLabel(id)}
-              {/* 비교 모드에서는 엔진 조각이 범례를 겸한다 — 색점 + 이름에
-                  **최신값**을 붙인다. 차트 아래 별도 범례를 두면 모드 토글마다
-                  카드 높이가 흔들린다(레이아웃 시프트). 이 값은 계열의 마지막
-                  점과 같은 숫자다 — 새 정보가 아니라 자리 이동이다. */}
-              {comparing && id !== 'all' && id !== 'compare' && (
-                <span
-                  data-testid="tray-latest"
-                  className="ml-1.5 font-mono text-[0.6875rem] font-medium tabular-nums text-foreground"
-                >
-                  {(() => {
-                    const s = engineSeries.find((e) => e.id === id)?.series
-                    const last = s?.[s.length - 1]
-                    return last ? formatPercent(last.interval.point) : '—'
-                  })()}
-                </span>
-              )}
             </button>
           )
         })}
