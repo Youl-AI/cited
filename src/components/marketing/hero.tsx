@@ -41,7 +41,7 @@ import { formatInterval, formatPercent } from '@/lib/stats/wilson'
  *
  * 첫 화면 요소에 Motion `whileInView`를 걸면 하이드레이션 전까지 투명해서
  * LCP가 JS 뒤로 밀린다. 여기만 CSS 키프레임이고, 스크롤해서 만나는 아래
- * 섹션은 `Reveal`이다. 지연은 `--motion-stagger`(60ms) 배수 — 위계 순서가
+ * 섹션은 `Reveal`이다. 지연은 `--motion-stagger`(120ms) 배수 — 위계 순서가
  * 곧 등장 순서다(제목 → 값 → 보조).
  *
  * ## 폼은 이 페이지에 없다
@@ -63,18 +63,18 @@ export function Hero() {
             한국어 GEO 모니터링
           </p>
 
-          <h1 className="hero-display enter-rise mt-5 max-w-[20em] text-balance [animation-delay:60ms]">
+          <h1 className="hero-display enter-rise mt-5 max-w-[20em] text-balance [animation-delay:calc(var(--motion-stagger)*1)]">
             고객이 AI에게 물었을 때, 우리 브랜드가 불리고 있나
           </h1>
 
-          <p className="enter-rise mt-6 max-w-[34em] text-lg leading-relaxed text-muted-foreground [animation-delay:120ms]">
+          <p className="enter-rise mt-6 max-w-[34em] text-lg leading-relaxed text-muted-foreground [animation-delay:calc(var(--motion-stagger)*2)]">
             검색 순위는 우리가 올릴 수 있습니다. AI 답변은 그렇지 않습니다. Cited는 ChatGPT와
             Gemini에 직접 물어보고, 답변에 브랜드가 나왔는지 세어 기록합니다.
           </p>
 
           {/* 하나의 의도에 하나의 라벨. `무료 진단 받기`는 머리글과 히어로가
               같은 문구를 쓴다(tasteskill §4.5 중복 CTA 금지). */}
-          <div className="enter-rise mt-10 flex flex-wrap items-center gap-3 [animation-delay:180ms]">
+          <div className="enter-rise mt-10 flex flex-wrap items-center gap-3 [animation-delay:calc(var(--motion-stagger)*3)]">
             <CtaLink href="/audit/new">무료 진단 받기</CtaLink>
             <CtaLink href="/pricing" tone="ghost" icon={false}>
               요금제 보기
@@ -83,7 +83,7 @@ export function Hero() {
         </div>
 
         {/* ── 증거물 ───────────────────────────────────────── */}
-        <div className="enter-rise [animation-delay:240ms] xl:mt-8">
+        <div className="enter-rise [animation-delay:calc(var(--motion-stagger)*4)] xl:mt-8">
           {/* 증거물은 유리 카드가 아니라 계측 시트다 — 표면 역할 규칙은
               specimen-sheet.tsx 머리말 참고. */}
           <SpecimenSheet>

@@ -51,9 +51,15 @@ const themeBlock = blockBody(/@theme\s+static\s*\{/)
 // 값이 아니라 **다른 변수를 가리키는** 별칭들. 여기 있는 이름은 유틸리티가
 // `var(...)`를 그대로 뱉으므로 스코프(=다크 표면)를 탄다.
 const inlineBlock = blockBody(/@theme\s+inline\s*\{/)
-const rootBlock = blockBody(/:root\s*\{/)
+// 라이트 실값 블록. 셀렉터가 `:root, .surface-paper` 목록이다 — 종이 스코프
+// (다크 무대 위 라이트 문서)가 같은 블록을 나눠 받는다. 값의 단일 출처 유지.
+const rootBlock = blockBody(/:root\s*(?:,\s*\.surface-paper\s*)?\{/)
 // 마케팅 표면(랜딩·요금제·무료진단 신청)이 감싸는 다크 토큰 스코프.
 const darkBlock = blockBody(/\.surface-dark\s*\{/)
+// 종이 보충 블록 — @theme static의 라이트 실값 중 .surface-dark가 뒤집는
+// 토큰들을 복원한다. `}` 뒤에 오는(=단독 셀렉터) 쪽만 잡는다 — `:root,` 목록의
+// .surface-paper와 구분하기 위해서다.
+const paperBlock = blockBody(/\}\s*\.surface-paper\s*\{/)
 
 /** `--이름: 값;` 선언에서 값을 꺼낸다. 없으면 null. */
 function readToken(name: string, scope: string = css): string | null {
@@ -632,5 +638,38 @@ describe('모션 토큰 — 값이 컴포넌트에 흩어지면 안 된다', () 
     for (const name of ['ease-instrument', 'ease-glide', 'ease-spring']) {
       expect(readToken(name, themeBlock)).toMatch(/^cubic-bezier\(/)
     }
+  })
+})
+
+describe('종이 스코프(.surface-paper) — 다크 무대 위의 라이트 문서', () => {
+  // 종이 보충 블록은 "@theme static의 라이트 실값 중 .surface-dark가 뒤집는
+  // 토큰"을 복원한다(globals.css 해당 블록 머리말). 값이 @theme 원본과
+  // 갈라지면 종이 위의 지표색·엔진색이 라이트 앱과 다른 색이 된다 —
+  // 같은 리포트 컴포넌트가 표면에 따라 다른 색을 내는 사고다.
+  it('보충 블록의 모든 토큰이 @theme static의 라이트 실값과 글자 그대로 같다', () => {
+    const names = [...paperBlock.matchAll(/--([\w-]+)\s*:/g)].map((m) => m[1]!)
+    expect(names.length).toBeGreaterThan(0)
+    for (const name of names) {
+      expect(readToken(name, paperBlock), name).toBe(readToken(name, themeBlock))
+    }
+  })
+
+  // .surface-dark가 뒤집는 @theme 토큰이 보충 블록에 빠져 있으면, 종이 안에서
+  // 그 토큰만 다크 값이 샌다(커스텀 프로퍼티는 가까운 조상이 이기므로 :root
+  // 복원이 닿지 않는다). 다크가 뒤집는 --color-* 전부가 종이에도 있어야 한다.
+  it('다크가 뒤집는 @theme 색 토큰은 종이 보충 블록이 전부 복원한다', () => {
+    const darkColorNames = [...darkBlock.matchAll(/--(color-[\w-]+)\s*:/g)].map((m) => m[1]!)
+    expect(darkColorNames.length).toBeGreaterThan(0)
+    for (const name of darkColorNames) {
+      expect(readToken(name, paperBlock), name).not.toBeNull()
+    }
+  })
+
+  // dark: 유틸리티가 종이 서브트리에 새면 입력·버튼이 흰 종이 위에서 다크
+  // 스타일(흰 36% 테두리 등)을 입는다. 변형 정의가 종이를 제외해야 한다.
+  it('dark 변형은 종이 서브트리를 제외한다', () => {
+    expect(css).toMatch(
+      /@custom-variant dark \(&:is\(\.surface-dark, \.surface-dark \*\):not\(\.surface-paper, \.surface-paper \*\)\);/,
+    )
   })
 })

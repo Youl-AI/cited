@@ -25,13 +25,34 @@ import { cn } from '@/lib/utils'
  * 말한다 — 페이지에서 허용한 단 하나의 장식적 리스크이고, 근거는 위 문장이다
  * (frontend-design: 대담함은 한 곳에, 근거와 함께). 순수 장식 헤어라인 금지
  * (§9.F)와의 경계는 이 근거 유무다.
+ *
+ * ## 종이 반전 (2026-08-05, tone으로 갈라짐)
+ *
+ * 기본값 `tone="paper"`는 시트를 흰 종이로 반전한다(`.surface-paper` —
+ * globals.css). 다크 무대 위에서 문서만 라이트로 반전해, 무대(다크) →
+ * 문서(종이) → 문서 위 강조(틴트)의 3단 명도 위계를 만든다. 외부 피드백
+ * ("다크 비중이 높아 머물 지점이 없다")의 처방이며, "읽는 것은 시트" 규칙의
+ * 완성형이다 — 계측 기록지는 실물에서도 흰 종이다.
+ *
+ * `tone="stage"`는 무대(다크) 어휘 그대로 남는다. 경계는 **문서 대 도구**다:
+ * 실측 기록(표본·원장·신청서·리포트 견본)은 종이, 조작하는 콘솔(질의 공개의
+ * 탭·복사 버튼)은 무대다. 처음에 전부 종이로 뒤집었다가 "억지로 다 흰색"
+ * 이라는 피드백(2026-08-05)을 받고 이 경계를 세웠다 — 흰 판이 연속으로
+ * 쌓이면 대비가 다시 사라진다. 대담함은 문서에만 쓴다.
+ *
+ * ★ `text-foreground`를 직접 명시한다. 색 자체는 상속 프로퍼티라, 안 적으면
+ *   다크 무대에서 계산된 흰 글자가 종이 위로 그대로 흘러들어온다.
+ * ★ 백플레이트는 스코프 **밖**이다 — 무대의 어휘(다크 헤어라인)로 남아
+ *   "종이가 무대 위에 놓여 있다"를 말한다.
  */
 export function SpecimenSheet({
   children,
   className,
+  tone = 'paper',
 }: {
   children: React.ReactNode
   className?: string
+  tone?: 'paper' | 'stage'
 }) {
   return (
     <div className={cn('relative', className)}>
@@ -42,7 +63,12 @@ export function SpecimenSheet({
       {/* `overflow-hidden`을 걸지 않는다 — 각(radius 0)이라 클립할 모서리가
           없다. 안쪽에서 클립이 필요한 요소(재현 장면의 타이핑 가리개)는 자기
           컨테이너가 직접 클립한다. */}
-      <div className="relative border border-border bg-card shadow-elevation-2">
+      <div
+        className={cn(
+          'relative border border-border bg-card shadow-elevation-2',
+          tone === 'paper' && 'surface-paper text-foreground',
+        )}
+      >
         {children}
       </div>
     </div>

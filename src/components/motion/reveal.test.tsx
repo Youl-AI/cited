@@ -39,10 +39,10 @@ describe('Reveal — Motion whileInView 리빌', () => {
     render(<Reveal index={2}>내용</Reveal>)
     expect(screen.getByText('내용')).toBeTruthy()
   })
-  it('index 스태거 지연이 60ms 단위다 (계약: delay = index * 0.06s)', async () => {
+  it('index 스태거 지연이 120ms 단위다 (계약: delay = index * 0.12s = --motion-stagger)', async () => {
     // 컴포넌트가 export하는 REVEAL_STAGGER_S 상수로 단언 (매직넘버 방지)
     const { REVEAL_STAGGER_S } = await import('./reveal')
-    expect(REVEAL_STAGGER_S).toBeCloseTo(0.06)
+    expect(REVEAL_STAGGER_S).toBeCloseTo(0.12)
   })
 
   it('모션이 켜져 있으면 초기 상태(투명)를 인라인으로 건다', () => {
