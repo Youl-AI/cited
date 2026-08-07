@@ -39,13 +39,17 @@ export function DashboardNav({
   active,
   brandId,
   range,
+  engine,
   hrefBase = '/dashboard',
 }: {
   active: DashboardView
   brandId: string
   range: string
+  /** 현재 엔진 필터(`?engine=`) — 탭을 갈아타도 필터가 유지된다. */
+  engine?: string
   hrefBase?: string
 }) {
+  const engineQuery = engine ? `&engine=${engine}` : ''
   return (
     // lg 미만: 가로 칩 줄(스크롤 가능). lg 이상: 세로 레일, 스크롤해도
     // 따라오는 sticky — 탭이 화면 밖으로 나가면 전환 수단이 사라진다.
@@ -61,7 +65,7 @@ export function DashboardNav({
           return (
             <Link
               key={view.value}
-              href={`${hrefBase}?brand=${brandId}&range=${range}&view=${view.value}`}
+              href={`${hrefBase}?brand=${brandId}&range=${range}&view=${view.value}${engineQuery}`}
               aria-current={isActive ? 'page' : undefined}
               // 활성 표시는 배경 + **왼쪽 세로 바**(계열색 2px)다. 배경만으로는
               // 호버와 급이 같아 "지금 여기"가 약하다. 바는 세로 레일에서만 —
