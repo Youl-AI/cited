@@ -44,7 +44,11 @@ export function KpiRow({
       {kpis.map((kpi) => (
         <Card key={kpi.id}>
           <CardContent className="flex h-full flex-col">
-            <p className="text-sm text-muted-foreground">{kpi.label}</p>
+            {/* 라벨은 패널 제목과 같은 모노 아이브로우 — 화면의 모든 블록
+                이름표가 한 어휘를 쓴다(page.tsx Panel 주석). */}
+            <p className="font-mono text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+              {kpi.label}
+            </p>
 
             {/* 값 줄과 델타 줄을 **구조로 가른다.** 예전에는 한 flex-wrap 줄에
                 값·구간·델타를 다 넣었는데, 타일 폭에 따라 델타가 첫 줄에 남기도

@@ -37,7 +37,7 @@ export function HeadlineCard({ points, compact = false }: { points: RunPoint[]; 
     return (
       <Card className="[--card-spacing:--spacing(5)]">
         <CardContent>
-          <p className="text-sm text-muted-foreground">AI 답변에 인용된 비율 — 최신 회차</p>
+          <p className="font-mono text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">AI 답변에 인용된 비율 — 최신 회차</p>
           <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
             <span className="font-mono text-4xl leading-none font-semibold tracking-tighter tabular-nums">
               {formatPercent(ci.point)}
@@ -96,7 +96,7 @@ export function HeadlineCard({ points, compact = false }: { points: RunPoint[]; 
         }
       >
         <div>
-          <p className="text-sm text-muted-foreground">AI 답변에 인용된 비율 — 최신 회차</p>
+          <p className="font-mono text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">AI 답변에 인용된 비율 — 최신 회차</p>
           {/* 수치와 구간은 **같은 베이스라인**에 앉는다. 점추정만 크게 띄우고
               구간을 아래로 내리면 "큰 숫자 하나"가 먼저 읽힌다 — §8 체크리스트의
               첫 항목이 정확히 그것이다. */}
@@ -120,7 +120,7 @@ export function HeadlineCard({ points, compact = false }: { points: RunPoint[]; 
 
         {showEngines && (
           <div className="lg:border-l lg:border-foreground/[0.07] lg:pl-10">
-            <p className="text-sm text-muted-foreground">엔진별 — 같은 회차</p>
+            <p className="font-mono text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">엔진별 — 같은 회차</p>
             <ul className="mt-3 space-y-3.5" data-testid="headline-engines">
               {byEngine.map(({ id, interval }) => (
                 <li key={id}>

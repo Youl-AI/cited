@@ -202,17 +202,18 @@ describe('TrendChart — 엔진 비교', () => {
   })
 
   // 계열이 둘 이상이면 정체를 색만으로 말하지 않는다(dataviz 접근성 규칙).
-  // 비교 모드는 선 끝 라벨을 포기했으므로 최신값도 범례가 맡는다.
-  test('비교 모드에는 범례가 있고 엔진별 최신값을 적는다', () => {
+  // 범례는 별도 블록이 아니라 **트레이의 엔진 조각**이 겸한다 — 조각에 최신값이
+  // 붙는다. 별도 범례 블록은 모드 토글마다 카드 높이를 흔들어 접었다.
+  test('비교 모드에는 트레이 엔진 조각이 범례를 겸한다 — 최신값이 붙는다', () => {
     const { container } = render(<TrendChart points={[point('r1', 20), point('r2', 25)]} />)
-    expect(container.querySelector('[data-testid="trend-legend"]')).toBeNull()
+    expect(container.querySelector('[data-testid="tray-latest"]')).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: /엔진 비교/ }))
-    const legend = container.querySelector('[data-testid="trend-legend"]')
-    expect(legend).not.toBeNull()
-    expect(legend!.querySelectorAll('li')).toHaveLength(2)
-    expect(legend!.textContent).toContain('ChatGPT')
-    expect(legend!.textContent).toContain('Gemini')
+    const values = container.querySelectorAll('[data-testid="tray-latest"]')
+    expect(values).toHaveLength(2)
+    for (const v of values) expect(v.textContent).toMatch(/%|—/)
+    // 조각(버튼)이 색점 + 이름 + 값을 같이 든다.
+    expect(screen.getByRole('button', { name: /ChatGPT/ }).textContent).toMatch(/%/)
     // 끝 라벨은 겹치므로 이 모드에선 붙이지 않는다.
     expect(container.querySelector('[data-testid="trend-end-label"]')).toBeNull()
   })

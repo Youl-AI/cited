@@ -47,29 +47,36 @@ export function DashboardNav({
   hrefBase?: string
 }) {
   return (
-    <nav
-      aria-label="대시보드 보기"
-      // lg 미만: 가로 칩 줄(스크롤 가능). lg 이상: 세로 레일, 스크롤해도
-      // 따라오는 sticky — 탭이 화면 밖으로 나가면 전환 수단이 사라진다.
-      className="flex gap-1 overflow-x-auto lg:sticky lg:top-24 lg:w-36 lg:shrink-0 lg:flex-col lg:overflow-visible"
-    >
-      {DASHBOARD_VIEWS.map((view) => {
-        const isActive = view.value === active
-        return (
-          <Link
-            key={view.value}
-            href={`${hrefBase}?brand=${brandId}&range=${range}&view=${view.value}`}
-            aria-current={isActive ? 'page' : undefined}
-            className={`shrink-0 rounded-lg px-3 py-1.5 text-sm transition-colors duration-[var(--motion-micro)] ease-instrument ${
-              isActive
-                ? 'bg-foreground/[0.06] font-medium text-foreground'
-                : 'text-muted-foreground hover:bg-foreground/[0.03] hover:text-foreground'
-            }`}
-          >
-            {view.label}
-          </Link>
-        )
-      })}
-    </nav>
+    // lg 미만: 가로 칩 줄(스크롤 가능). lg 이상: 세로 레일, 스크롤해도
+    // 따라오는 sticky — 탭이 화면 밖으로 나가면 전환 수단이 사라진다.
+    <div className="lg:sticky lg:top-24 lg:w-36 lg:shrink-0 lg:self-start">
+      {/* 레일의 이름표 — 패널 제목과 같은 모노 아이브로우. 좁은 화면의 가로
+          칩 줄에는 붙이지 않는다(칩 자체가 이름표 역할을 한다). */}
+      <p className="mb-2 hidden font-mono text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase lg:block">
+        보기
+      </p>
+      <nav aria-label="대시보드 보기" className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+        {DASHBOARD_VIEWS.map((view) => {
+          const isActive = view.value === active
+          return (
+            <Link
+              key={view.value}
+              href={`${hrefBase}?brand=${brandId}&range=${range}&view=${view.value}`}
+              aria-current={isActive ? 'page' : undefined}
+              // 활성 표시는 배경 + **왼쪽 세로 바**(계열색 2px)다. 배경만으로는
+              // 호버와 급이 같아 "지금 여기"가 약하다. 바는 세로 레일에서만 —
+              // 가로 칩 줄에서 왼쪽 바는 구분선으로 오독된다.
+              className={`relative shrink-0 rounded-lg px-3 py-1.5 text-sm transition-colors duration-[var(--motion-micro)] ease-instrument ${
+                isActive
+                  ? 'bg-foreground/[0.06] font-medium text-foreground lg:before:absolute lg:before:top-1/2 lg:before:left-0 lg:before:h-4 lg:before:w-0.5 lg:before:-translate-y-1/2 lg:before:rounded-full lg:before:bg-primary'
+                  : 'text-muted-foreground hover:bg-foreground/[0.03] hover:text-foreground'
+              }`}
+            >
+              {view.label}
+            </Link>
+          )
+        })}
+      </nav>
+    </div>
   )
 }

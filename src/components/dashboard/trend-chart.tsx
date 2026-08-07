@@ -271,6 +271,22 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
                 )
               )}
               {modeLabel(id)}
+              {/* 비교 모드에서는 엔진 조각이 범례를 겸한다 — 색점 + 이름에
+                  **최신값**을 붙인다. 차트 아래 별도 범례를 두면 모드 토글마다
+                  카드 높이가 흔들린다(레이아웃 시프트). 이 값은 계열의 마지막
+                  점과 같은 숫자다 — 새 정보가 아니라 자리 이동이다. */}
+              {comparing && id !== 'all' && id !== 'compare' && (
+                <span
+                  data-testid="tray-latest"
+                  className="ml-1.5 font-mono text-[0.6875rem] font-medium tabular-nums text-foreground"
+                >
+                  {(() => {
+                    const s = engineSeries.find((e) => e.id === id)?.series
+                    const last = s?.[s.length - 1]
+                    return last ? formatPercent(last.interval.point) : '—'
+                  })()}
+                </span>
+              )}
             </button>
           )
         })}
@@ -635,39 +651,13 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
         )}
       </div>
 
-      {/* ★ 아래 두 슬롯은 **높이가 고정**이다. 범례는 비교 모드에만 내용이
-          생기고 캡션은 모드마다 문장 길이가 다른데, 그때마다 카드가 자라고
-          줄어들면 토글이 화면 전체를 밀어낸다 — 값이 아닌 것이 움직이는
-          레이아웃 시프트다(사용자 피드백: "의미 없는 반응형 크기 조절").
-          min-h가 두 모드의 최대치를 미리 잡아 어느 모드에서든 같은 자리다. */}
-      <div className="mt-3 min-h-6">
-        {/* 범례 — 비교 모드 전용. 계열이 둘 이상이면 색만으로 정체를 말하지
-            않는다(dataviz 접근성 규칙). 최신값을 같이 붙여, 선 끝 라벨을
-            포기한 자리를 여기가 대신 맡는다. */}
-        {comparing && (
-          <ul className="flex flex-wrap gap-x-5 gap-y-1.5" data-testid="trend-legend">
-            {engineSeries.map((e) => {
-              const last = e.series[e.series.length - 1]
-              return (
-                <li key={e.id} className="flex items-baseline gap-2 text-sm">
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-2 w-2 rounded-full"
-                    style={{ background: engineColor(e.id) }}
-                  />
-                  <span className="text-muted-foreground">{engineLabel(e.id)}</span>
-                  <span className="font-mono font-medium tabular-nums">
-                    {last ? formatPercent(last.interval.point) : '—'}
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </div>
-
-      {/* min-h-10 = 비교 모드 캡션 두 줄(실측 38px)의 자리. */}
-      <p className="mt-2 min-h-10 max-w-prose text-xs text-muted-foreground">
+      {/* ★ 캡션은 **높이가 고정**이다. 모드마다 문장 길이가 다른데, 그때마다
+          카드가 자라고 줄어들면 토글이 화면 전체를 밀어낸다 — 값이 아닌 것이
+          움직이는 레이아웃 시프트다(사용자 피드백). min-h-10 = 비교 모드 캡션
+          두 줄(실측 38px)의 자리. 별도 범례는 없다 — 비교 모드의 계열
+          정체·최신값은 위 트레이 조각이 든다(같은 이유: 슬롯이 늘고 줄면
+          카드가 움직인다). */}
+      <p className="mt-3 min-h-10 max-w-prose text-xs text-muted-foreground">
         {comparing ? (
           <>
             엔진별 언급률입니다. 이 모드에는 신뢰구간을 그리지 않습니다 — 반투명 띠 둘이

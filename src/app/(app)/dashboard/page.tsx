@@ -77,8 +77,14 @@ function Panel({
   return (
     <Card className={`instrument-enter ${fill ? 'h-full' : ''} ${ENTER_DELAY[index] ?? ''}`}>
       <CardContent className="flex h-full flex-col">
-        <h2 className="font-heading text-base font-semibold tracking-tight">{title}</h2>
-        {lede && <p className="mt-1 max-w-prose text-xs leading-relaxed text-muted-foreground">{lede}</p>}
+        {/* 제목은 모노 아이브로우다 — 머리글의 "정기 측정"과 같은 어휘.
+            일반 헤딩체면 잘 정리된 제네릭 SaaS로 읽히고, 이 제품의 계기판
+            정체성은 이 조판이 만든다. 위계는 크기가 아니라 카드 안의 자리
+            (맨 위 한 줄)가 만든다. */}
+        <h2 className="font-mono text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+          {title}
+        </h2>
+        {lede && <p className="mt-1.5 max-w-prose text-xs leading-relaxed text-muted-foreground/80">{lede}</p>}
         <div className="mt-4 flex-1">{children}</div>
       </CardContent>
     </Card>
