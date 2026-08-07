@@ -98,11 +98,11 @@ export default async function AuditRequestedPage({
         )}
       </p>
 
-      <h1 className="enter-rise mt-4 text-4xl font-semibold tracking-tight text-balance sm:text-5xl [animation-delay:60ms]">
+      <h1 className="enter-rise mt-4 text-4xl font-semibold tracking-tight text-balance sm:text-5xl [animation-delay:calc(var(--motion-stagger)*1)]">
         {view.title}
       </h1>
 
-      <p className="enter-rise mt-6 text-lg leading-relaxed text-muted-foreground [animation-delay:120ms]">
+      <p className="enter-rise mt-6 text-lg leading-relaxed text-muted-foreground [animation-delay:calc(var(--motion-stagger)*2)]">
         {view.body}
       </p>
 
@@ -111,7 +111,7 @@ export default async function AuditRequestedPage({
           붙는 유일한 조건이 실제 상태라는 뜻이다. */}
       <p
         className={[
-          'enter-rise mt-8 border-l-2 pl-5 text-sm leading-relaxed text-muted-foreground [animation-delay:180ms]',
+          'enter-rise mt-8 border-l-2 pl-5 text-sm leading-relaxed text-muted-foreground [animation-delay:calc(var(--motion-stagger)*3)]',
           isError ? 'border-destructive' : 'border-border',
         ].join(' ')}
       >
@@ -120,12 +120,12 @@ export default async function AuditRequestedPage({
 
       {/* ★ 계정이 없다는 사실을 모든 상태에서 말한다. 머리글에 로그인 버튼이
           있으므로, 안 밝히면 "로그인해야 결과를 보나?"가 남는다. */}
-      <p className="enter-rise mt-8 text-sm text-muted-foreground [animation-delay:240ms]">
+      <p className="enter-rise mt-8 text-sm text-muted-foreground [animation-delay:calc(var(--motion-stagger)*4)]">
         {NO_ACCOUNT_NOTE}
       </p>
 
       {view.action && (
-        <div className="enter-rise mt-10 [animation-delay:300ms]">
+        <div className="enter-rise mt-10 [animation-delay:calc(var(--motion-stagger)*5)]">
           {/* 마케팅 표면의 컨트롤은 전부 각이다(cta-link.tsx 모서리 규칙).
               보조 행동이므로 ghost다 — 이 화면의 주된 일은 기다리는 것이다. */}
           <CtaLink href={view.action.href} tone="ghost">

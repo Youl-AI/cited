@@ -119,7 +119,10 @@
   --motion-state: 240ms;
   --motion-draw: 600ms;
   --motion-reveal: 800ms;
-  --motion-stagger: 60ms;
+  /* 60ms → 90ms (2026-08-05 외부 피드백: "너무 빨리 등장해서 애니메이션이
+     체감이 안 된다"). 등장 지속시간(Reveal 0.85s·reveal 800ms)과 함께 스태거도
+     늘려야 순차 등장이 눈에 잡힌다. JS 짝은 reveal.tsx REVEAL_STAGGER_S. */
+  --motion-stagger: 90ms;
   --ease-instrument: cubic-bezier(0.2, 0, 0, 1);
   --ease-glide: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.4, 1);

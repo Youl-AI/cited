@@ -77,12 +77,16 @@ export function DeliverablesBento() {
           몇 번 물어서 몇 번 나왔는지, 그리고 그 숫자를 얼마나 믿어도 되는지 범위로 함께
           드립니다.
         </p>
+        {/* ★ 숫자를 히어로(4xl)보다 한참 작게(xl) 조판한다. 같은 83%가 히어로·
+            재현 장면에 이미 큰 활자로 서 있다 — 세 번째까지 크면 반복이 서사가
+            아니라 복붙으로 읽힌다(2026-08-05 외부 피드백). 이 셀의 주인공은
+            숫자가 아니라 신뢰구간 띠(구성요소 견본)다. */}
         <div className="mt-auto pt-4">
-          <div className="flex flex-wrap items-baseline gap-x-3">
-            <span className="font-mono text-3xl font-medium tracking-tighter tabular-nums">
+          <div className="flex flex-wrap items-baseline gap-x-2.5">
+            <span className="font-mono text-xl font-medium tracking-tight tabular-nums">
               {formatPercent(MEASURED.cited.point)}
             </span>
-            <span className="font-mono text-sm text-muted-foreground">
+            <span className="font-mono text-xs text-muted-foreground">
               {formatInterval(MEASURED.cited)}
             </span>
           </div>

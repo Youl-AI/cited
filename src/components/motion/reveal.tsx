@@ -17,14 +17,18 @@ import { motion, useReducedMotion } from 'motion/react'
  */
 
 /**
- * 스태거 단위(초). `--motion-stagger: 60ms`(globals.css)와 같은 값이다.
+ * 스태거 단위(초). `--motion-stagger: 90ms`(globals.css)와 같은 값이다.
  * Motion의 `transition.delay`는 CSS 변수를 읽지 못하므로 JS 상수로 이중화하고,
  * 테스트가 이 상수를 단언한다 — 매직넘버를 컴포넌트 본문에 박지 않기 위해서다.
  */
-export const REVEAL_STAGGER_S = 0.06
+export const REVEAL_STAGGER_S = 0.09
 
-/** 리빌 지속시간(초). tasteskill §5.C 규격값. */
-export const REVEAL_DURATION_S = 0.6
+/**
+ * 리빌 지속시간(초). 0.6에서 올렸다(2026-08-05 외부 피드백: "너무 빨리
+ * 등장해서 애니메이션이 체감이 안 된다") — 마케팅의 시네마틱 스케일
+ * (`--motion-reveal` 800ms)과 같은 급이다. 앱(계기판)은 여전히 짧다.
+ */
+export const REVEAL_DURATION_S = 0.85
 
 /**
  * expo-out 계열 이징. 빠르게 출발해 길게 눕는다 — 도착이 "멈춤"이 아니라
@@ -49,7 +53,7 @@ export function Reveal({
       //   여기서도 reduced-motion이면 `initial={false}`로 **첫 프레임부터 최종
       //   상태**다. `initial`을 그대로 두고 duration만 0으로 만들면 여전히 한
       //   프레임 투명하게 지나가고, 인쇄 매체에서는 아예 안 보일 수 있다.
-      initial={reduce ? false : { opacity: 0, y: 24 }}
+      initial={reduce ? false : { opacity: 0, y: 28 }}
       whileInView={{ opacity: 1, y: 0 }}
       // `once: false` — 양방향이다. 내려가며 만나도, 올라오며 다시 만나도
       // 같은 등장을 한다(사용자 결정: 위로 스크롤할 때도 페이지가 살아 있어야
