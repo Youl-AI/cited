@@ -63,7 +63,7 @@ export function KpiRow({ points }: { points: RunPoint[] }) {
                 값을 못 내는 타일에는 그리지 않는다: 그릴 계열 자체가 없다. */}
             {!kpi.unavailable && (
               <div className="mt-3">
-                <Sparkline series={kpi.spark} max={kpi.sparkMax} />
+                <Sparkline id={kpi.id} series={kpi.spark} max={kpi.sparkMax} />
               </div>
             )}
 

@@ -10,11 +10,23 @@ import Link from 'next/link'
  * 없다. "최근 30일"이라 써 놓고 점이 두 개만 찍히면 그건 우리 화면이 기간을
  * 약속하고 못 지킨 것이다. 회차로 세면 라벨과 화면이 어긋날 수 없다.
  *
- * ## 최소 4회차인 이유
+ * ## 선택지를 **없애지 않는다** (이 파일이 한 번 틀렸던 자리)
  *
- * 이보다 짧게 자르면 변화 판정에 쓸 직전 회차까지 잘려 나가고, 추이 차트가
- * 선이 아니라 점 몇 개가 된다. 자를 수 있는 최솟값이 "그래도 추세가 보이는"
- * 길이여야 한다.
+ * 관습적인 기간 선택기(GA·Plausible·Vercel·PostHog)의 공통점은 선택지 집합이
+ * **고정**이라는 것이다. 데이터가 모자란 선택지는 *비활성*으로 남지 사라지지
+ * 않는다. 이유가 둘이다:
+ *
+ * 1. **되돌아올 길이 항상 있어야 한다.** 예전 구현은 "자를 것이 없으면
+ *    컨트롤을 만들지 않는다"였는데, `?range=4`인 상태에서 회차가 4개뿐이면
+ *    컨트롤이 통째로 사라져 **전체로 돌아갈 버튼이 없었다**. 화면을 좁힌 것은
+ *    사용자인데 넓힐 방법을 우리가 치운 것이다.
+ * 2. **비활성 선택지가 정보다.** "최근 12회"가 흐릿하게 있으면 회차가 쌓이면
+ *    열린다는 사실이 보인다. 없애 버리면 그 선택지가 존재한다는 것조차 모른다.
+ *
+ * 그래서 규칙은: **선택지는 언제나 셋 다 그린다.** 자를 회차가 모자란 선택지는
+ * 링크가 아니라 `aria-disabled`인 조각이고, 사유를 `title`로 단다. 컨트롤
+ * 자체를 숨기는 경우는 하나뿐 — 고를 수 있는 것이 '전체'뿐이고 지금 보고
+ * 있는 것도 '전체'일 때. 그때는 컨트롤이 아무 일도 못 하고, 갇힐 사람도 없다.
  *
  * ★ 상태를 URL(`?range=`)에 둔다 — 브랜드 전환(`?brand=`)과 같은 방식이고,
  *   서버 컴포넌트가 그대로 잘라서 그리므로 클라이언트 번들이 늘지 않는다.
@@ -43,19 +55,32 @@ export function sliceToRange<T>(points: readonly T[], runs: number | null): T[] 
   return runs === null ? [...points] : points.slice(-runs)
 }
 
+/**
+ * 이 선택지가 지금 쓸모가 있는가 — 가진 회차보다 넓게 자르는 선택지는
+ * '전체'와 같은 화면을 낸다. 지금 그 값이 선택돼 있으면(URL을 손으로 고쳤거나
+ * 회차가 줄었거나) **활성으로 남긴다** — 현재 상태를 비활성으로 그리면
+ * "지금 여기 있는데 여기 못 온다"가 된다.
+ */
+export function isRangeUsable(runs: number | null, totalRuns: number): boolean {
+  return runs === null || runs < totalRuns
+}
+
 export function RangePicker({
   selected,
   brandId,
   totalRuns,
+  hrefBase = '/dashboard',
 }: {
   selected: string
   brandId: string
   totalRuns: number
+  /** 링크가 걸리는 경로. 기본은 대시보드 — 디자인 프리뷰만 다르게 준다. */
+  hrefBase?: string
 }) {
-  // 자를 것이 없으면 컨트롤을 만들지 않는다 — 회차가 4개뿐인데 "최근 4회 /
-  // 전체"가 나란히 있으면 두 버튼이 같은 화면을 낸다.
-  const usable = RANGE_OPTIONS.filter((o) => o.runs === null || o.runs < totalRuns)
-  if (usable.length <= 1) return null
+  // 유일하게 숨기는 경우: 고를 수 있는 것이 '전체'뿐이고 지금도 '전체'다.
+  // (좁혀 놓은 상태라면 되돌아갈 길이 필요하므로 무조건 그린다.)
+  const anyUsable = RANGE_OPTIONS.some((o) => o.runs !== null && isRangeUsable(o.runs, totalRuns))
+  if (!anyUsable && selected === DEFAULT_RANGE) return null
 
   const item =
     'rounded-[calc(var(--radius)*1.4-4px)] border px-3 py-1.5 text-sm transition-colors duration-[var(--motion-micro)] ease-instrument'
@@ -66,12 +91,25 @@ export function RangePicker({
       aria-label="보기 범위"
       className="flex gap-1 rounded-[calc(var(--radius)*1.4)] border border-border bg-muted/40 p-1"
     >
-      {usable.map((option) => {
+      {RANGE_OPTIONS.map((option) => {
         const active = option.value === selected
+        if (!active && !isRangeUsable(option.runs, totalRuns)) {
+          return (
+            <span
+              key={option.value}
+              aria-disabled="true"
+              // 사유를 적는다 — 흐릿한 조각만 있으면 고장으로 읽힌다.
+              title={`회차가 ${option.runs}개 이상 쌓이면 열립니다 (현재 ${totalRuns}개)`}
+              className={`${item} cursor-not-allowed border-transparent text-muted-foreground/45`}
+            >
+              {option.label}
+            </span>
+          )
+        }
         return (
           <Link
             key={option.value}
-            href={`/dashboard?brand=${brandId}&range=${option.value}`}
+            href={`${hrefBase}?brand=${brandId}&range=${option.value}`}
             aria-current={active ? 'page' : undefined}
             className={
               active

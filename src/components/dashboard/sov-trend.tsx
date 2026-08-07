@@ -101,12 +101,17 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
         role="img"
         aria-label={`언급 점유율 추이 — 최신 ${formatPercent(last.interval.point)} (${formatInterval(last.interval)})`}
       >
-        {[0, 0.5, 1].map((tick) => (
+        {/* 눈금은 추이 차트와 같은 다섯 — 라벨은 0·50·100만 달고 25·75는 선만
+            남긴다(그쪽 주석). 같은 화면에 선 두 개가 다른 눈금을 쓰면 눈이
+            높이를 옮겨 재지 못한다. */}
+        {[0, 0.25, 0.5, 0.75, 1].map((tick) => (
           <g key={tick}>
-            <line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} stroke="var(--border)" strokeWidth={1} />
-            <text x={PAD.left - 8} y={y(tick) + 4} textAnchor="end" className="fill-muted-foreground font-mono" fontSize={11}>
-              {Math.round(tick * 100)}%
-            </text>
+            <line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} stroke="var(--border)" strokeWidth={1} opacity={tick === 0.25 || tick === 0.75 ? 0.55 : 1} />
+            {tick !== 0.25 && tick !== 0.75 && (
+              <text x={PAD.left - 8} y={y(tick) + 4} textAnchor="end" className="fill-muted-foreground font-mono" fontSize={11}>
+                {Math.round(tick * 100)}%
+              </text>
+            )}
           </g>
         ))}
         {/* ★ 계열 전체를 잇는 폴리라인 하나가 아니다. 조건이 바뀌었거나
@@ -136,9 +141,13 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
         {sov.map((p, i) => (
           <g key={p.runId}>
             <rect x={x(i) - 4} y={y(p.interval.upper)} width={8} height={Math.max(y(p.interval.lower) - y(p.interval.upper), 1)} fill="var(--primary)" opacity={isolated.has(i) ? 0.25 : 0.14} />
-            {/* 표면 링 — 추이 차트 Marker와 같은 규격이다(그쪽 주석 참고). */}
+            {/* 표면 링 — 추이 차트 Marker와 같은 규격이다(그쪽 주석 참고).
+                앉는 순번(`.chart-pop`)도 같다 — 두 차트가 같은 화면에서 다른
+                물리로 등장하면 하나가 고장 난 것처럼 보인다. */}
             <circle
               data-testid="sov-point"
+              className="chart-pop"
+              style={{ animationDelay: `${Math.min(i * 32, 420)}ms` }}
               cx={x(i)}
               cy={y(p.interval.point)}
               r={4.5}

@@ -20,9 +20,16 @@
  *   폴리라인을 읽어 줘야 할 것이 없다).
  */
 export function Sparkline({
+  id,
   series,
   max,
 }: {
+  /**
+   * 그라디언트 정의의 이름표. 한 페이지에 스파크라인이 셋이라 `<defs>` id가
+   * 겹치면 **나중 것이 앞 것을 덮어쓴다** — 서버 컴포넌트라 `useId`를 쓸 수
+   * 없으므로 호출부가 이미 유일한 값(`kpi.id`)을 넘긴다.
+   */
+  id: string
   /** 오래된 → 최신 순. 2개 미만이면 그리지 않는다(선이 될 수 없다). */
   series: readonly number[]
   /** y축 상한 — 계열 최댓값(`kpi.ts`가 정한다). 바닥은 언제나 0이다. */
@@ -50,19 +57,39 @@ export function Sparkline({
       aria-hidden="true"
     >
       {/* 채움은 선 아래를 아주 옅게 — 면적이 아니라 선의 무게추다.
-          (dataviz: area fill은 계열 색의 ~10% wash) */}
-      <path d={`M ${d} L ${lastX},${H} L ${PAD},${H} Z`} fill="var(--primary)" opacity={0.08} />
+          (dataviz: area fill은 계열 색의 ~10% wash)
+          ★ 위(선)에서 아래로 **사라지는** 그라디언트다. 반대로 아래가 진하면
+            면적이 값을 주장하는 그림이 되는데, 이 그림은 값을 말하지 않는다. */}
+      <defs>
+        <linearGradient id={`spark-${id}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.22} />
+          <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <path d={`M ${d} L ${lastX},${H} L ${PAD},${H} Z`} fill={`url(#spark-${id})`} />
+      {/* 드로우인은 큰 차트와 같은 클래스다 — 같은 화면의 선들이 같은 속도로
+          그려져야 한다(§6). `pathLength={1}`이라 서버 컴포넌트에서도 CSS만으로 돈다. */}
       <path
+        className="chart-draw"
+        pathLength={1}
         d={`M ${d}`}
         fill="none"
         stroke="var(--primary)"
-        strokeOpacity={0.55}
+        strokeOpacity={0.65}
         strokeWidth={1.5}
         strokeLinejoin="round"
         strokeLinecap="round"
         vectorEffect="non-scaling-stroke"
       />
-      <circle cx={lastX} cy={lastY} r={2.5} fill="var(--primary)" vectorEffect="non-scaling-stroke" />
+      <circle
+        className="chart-pop"
+        style={{ animationDelay: 'var(--motion-draw)' }}
+        cx={lastX}
+        cy={lastY}
+        r={2.5}
+        fill="var(--primary)"
+        vectorEffect="non-scaling-stroke"
+      />
     </svg>
   )
 }

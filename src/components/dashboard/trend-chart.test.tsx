@@ -169,3 +169,63 @@ describe('TrendChart', () => {
     }
   })
 })
+
+/**
+ * 엔진 비교 — 엔진별 선을 한 축에 겹쳐 그린다.
+ *
+ * ★ 이 모드가 지켜야 하는 것은 **밴드를 그리지 않는 것**이다. 반투명 신뢰구간
+ *   띠 둘이 겹치면 겹친 자리의 농도가 세 번째 값처럼 읽힌다 — 없는 값이다.
+ *   구간이 필요하면 엔진 하나를 고르는 경로가 그대로 남아 있다.
+ */
+describe('TrendChart — 엔진 비교', () => {
+  test('엔진이 둘 이상이면 비교 조각이 생긴다', () => {
+    render(<TrendChart points={[point('r1', 20), point('r2', 25)]} />)
+    expect(screen.getByRole('button', { name: /엔진 비교/ })).toBeInTheDocument()
+  })
+
+  test('엔진이 하나뿐이면 비교 조각을 만들지 않는다 — 전체와 같은 화면이다', () => {
+    const single = point('r1', 20)
+    single.result.byEngine = { chatgpt: single.result.byEngine.chatgpt! }
+    render(<TrendChart points={[single]} />)
+    expect(screen.queryByRole('button', { name: /엔진 비교/ })).toBeNull()
+  })
+
+  test('비교 모드는 밴드를 그리지 않는다 — 겹친 반투명은 없는 값을 만든다', () => {
+    const { container } = render(<TrendChart points={[point('r1', 20), point('r2', 25)]} />)
+    expect(container.querySelector('[data-testid="trend-band"]')).not.toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /엔진 비교/ }))
+    expect(container.querySelector('[data-testid="trend-band"]')).toBeNull()
+    // 대신 계열마다 선이 하나씩 — 엔진 2개니까 선도 2개다.
+    expect(container.querySelectorAll('[data-testid="trend-line"]')).toHaveLength(2)
+    expect(screen.getByText(/신뢰구간을 그리지 않습니다/)).toBeInTheDocument()
+  })
+
+  // 계열이 둘 이상이면 정체를 색만으로 말하지 않는다(dataviz 접근성 규칙).
+  // 비교 모드는 선 끝 라벨을 포기했으므로 최신값도 범례가 맡는다.
+  test('비교 모드에는 범례가 있고 엔진별 최신값을 적는다', () => {
+    const { container } = render(<TrendChart points={[point('r1', 20), point('r2', 25)]} />)
+    expect(container.querySelector('[data-testid="trend-legend"]')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /엔진 비교/ }))
+    const legend = container.querySelector('[data-testid="trend-legend"]')
+    expect(legend).not.toBeNull()
+    expect(legend!.querySelectorAll('li')).toHaveLength(2)
+    expect(legend!.textContent).toContain('ChatGPT')
+    expect(legend!.textContent).toContain('Gemini')
+    // 끝 라벨은 겹치므로 이 모드에선 붙이지 않는다.
+    expect(container.querySelector('[data-testid="trend-end-label"]')).toBeNull()
+  })
+
+  test('짚은 회차의 엔진별 값을 한 툴팁에 모은다', () => {
+    const { container } = render(<TrendChart points={[point('r1', 20), point('r2', 25)]} />)
+    fireEvent.click(screen.getByRole('button', { name: /엔진 비교/ }))
+    fireEvent.mouseOver(container.querySelectorAll('[data-testid="trend-hit"]')[1]!)
+
+    const tip = container.querySelector('[data-testid="trend-tooltip"]')
+    expect(tip).not.toBeNull()
+    expect(tip!.textContent).toContain('ChatGPT')
+    expect(tip!.textContent).toContain('Gemini')
+    expect(tip).toHaveAttribute('aria-hidden', 'true')
+  })
+})

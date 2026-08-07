@@ -668,6 +668,37 @@
     }
   }
 
+  /* 계측점이 자리에 앉는다 — 왼→오 스태거.
+     ★ **방향이 규칙이다.** 밴드는 첫 프레임부터 제자리이고(위 `.chart-draw`
+       주석 = §6), 점은 그 위에 뒤따라 앉는다. 반대 순서(점 먼저 → 밴드 나중)는
+       "확정값처럼 보였다가 흐려지는" 인상이라 금지돼 있다. 여기서 움직이는
+       것은 점의 **불투명도와 크기**뿐이고 좌표는 처음부터 최종 위치다 —
+       점이 이동하면 값이 움직인 것처럼 보인다.
+     ★ `transform-box: fill-box`가 없으면 SVG의 transform 원점이 뷰포트
+       (0,0)이라 점이 화면 왼쪽 위에서 날아온다. 원점을 자기 상자로 옮겨야
+       제자리에서 커진다.
+     ★ 순번은 호출부가 인라인 `animationDelay`로 준다 — 회차 수에서 나오는
+       값이라 Tailwind 임의값 클래스로는 못 쓴다(평문 스캐너가 조립된 클래스를
+       못 본다). 인라인 longhand는 여기 shorthand를 덮는다.
+     ★ reduced-motion은 base 레이어 킬 스위치가 처리한다(`both`가 마지막
+       프레임을 붙잡아 제 크기·불투명도로 시작한다). */
+  .chart-pop {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: chart-pop var(--motion-state) var(--ease-instrument) both;
+  }
+
+  @keyframes chart-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   /* 온보딩 단계 진행 — **방금 얻은 칸 하나만** 자란다.
      ★ 무엇에 걸지 않는가가 핵심이다: 이미 지나온 단계의 칸은 **정지 상태로**
        그려진다. 매 화면에서 세 칸이 전부 다시 자라면 "1단계를 또 통과했다"고
@@ -712,6 +743,12 @@
     .chart-draw {
       animation: none;
       stroke-dasharray: none;
+    }
+
+    /* `both`가 시작 전 `opacity:0`을 붙잡으므로, 가드가 없으면 종이에서
+       계측점이 통째로 사라진다 — 선만 있고 점이 없는 차트가 인쇄된다. */
+    .chart-pop {
+      animation: none;
     }
 
     /* `both`가 시작 전 `scaleX(0)`을 붙잡으므로, 가드가 없으면 종이에서 칸이
