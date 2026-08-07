@@ -125,10 +125,10 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
               y2={y(tick)}
               stroke="var(--border)"
               strokeWidth={1}
-              opacity={tick === 0 || tick === 0.5 || tick === 1 ? 0.9 : 0.4}
+              opacity={tick === 0 || tick === 0.5 || tick === 1 ? 0.7 : 0.25}
             />
             {tick !== 0.25 && tick !== 0.75 && (
-              <text x={PAD.left - 8} y={y(tick) + 3} textAnchor="end" className="fill-muted-foreground font-mono" fontSize={10}>
+              <text x={PAD.left - 8} y={y(tick) + 3} textAnchor="end" className="fill-muted-foreground font-mono" fontSize={10} opacity={0.8}>
                 {Math.round(tick * 100)}%
               </text>
             )}
@@ -195,7 +195,7 @@ export function SovTrend({ points }: { points: RunPoint[] }) {
               style={{ animationDelay: `${Math.min(i * 32, 420)}ms` }}
               cx={x(i)}
               cy={y(p.interval.point)}
-              r={3}
+              r={2.5}
               fill="var(--primary)"
               stroke="var(--background)"
               strokeWidth={1.5}

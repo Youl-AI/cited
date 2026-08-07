@@ -90,13 +90,13 @@ function Marker({
   } as const
   switch (engine) {
     case 'gemini':
-      return <rect {...common} x={cx - 3} y={cy - 3} width={6} height={6} rx={1} />
+      return <rect {...common} x={cx - 2.5} y={cy - 2.5} width={5} height={5} rx={1} />
     case 'naver':
-      return <rect {...common} x={cx - 3.5} y={cy - 3.5} width={7} height={7} rx={1} transform={`rotate(45 ${cx} ${cy})`} />
+      return <rect {...common} x={cx - 3} y={cy - 3} width={6} height={6} rx={1} transform={`rotate(45 ${cx} ${cy})`} />
     case 'google_aio':
-      return <polygon {...common} strokeLinejoin="round" points={`${cx},${cy - 4} ${cx + 4},${cy + 3.5} ${cx - 4},${cy + 3.5}`} />
+      return <polygon {...common} strokeLinejoin="round" points={`${cx},${cy - 3.5} ${cx + 3.5},${cy + 3} ${cx - 3.5},${cy + 3}`} />
     default:
-      return <circle {...common} cx={cx} cy={cy} r={3} />
+      return <circle {...common} cx={cx} cy={cy} r={2.5} />
   }
 }
 
@@ -350,12 +350,12 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
                 y2={y(tick)}
                 stroke="var(--border)"
                 strokeWidth={1}
-                opacity={tick === 0 || tick === 0.5 || tick === 1 ? 0.9 : 0.4}
+                opacity={tick === 0 || tick === 0.5 || tick === 1 ? 0.7 : 0.25}
               />
               {/* 라벨은 0·50·100만 — 다섯 개면 축이 시끄럽다. 사이 눈금은
                   선만 남아 높이를 재는 자로 쓰인다. */}
               {(tick === 0 || tick === 0.5 || tick === 1) && (
-                <text x={PAD.left - 8} y={y(tick) + 3} textAnchor="end" className="fill-muted-foreground font-mono" fontSize={10}>
+                <text x={PAD.left - 8} y={y(tick) + 3} textAnchor="end" className="fill-muted-foreground font-mono" fontSize={10} opacity={0.8}>
                   {Math.round(tick * 100)}%
                 </text>
               )}
@@ -416,10 +416,12 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
                     const pos = posOfRun.get(p.runId) ?? 0
                     return (
                       <g key={`${e.id}-pt-${p.runId}`}>
-                        {hoverIndex === pos && (
-                          <circle cx={x(pos)} cy={y(p.interval.point)} r={8} fill="none" stroke={c} strokeWidth={1} opacity={0.45} />
-                        )}
                         <Marker engine={e.id} cx={x(pos)} cy={y(p.interval.point)} color={c} delay={Math.min(pos * POP_STEP, POP_MAX)} />
+                        {/* 짚은 회차의 점은 흰 속 링으로 커진다 — 계열색 테두리 +
+                            표면색 속. 다른 점을 흐리지 않고 그 점만 세운다. */}
+                        {hoverIndex === pos && (
+                          <circle cx={x(pos)} cy={y(p.interval.point)} r={4.5} fill="var(--background)" stroke={c} strokeWidth={2} />
+                        )}
                         <title>{`${engineLabel(e.id)} · ${mmdd(p.measuredAt)} · ${formatPercent(p.interval.point)} (${formatInterval(p.interval)}) · ${p.interval.k}/${p.interval.n}`}</title>
                       </g>
                     )
@@ -493,11 +495,6 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
 
               {series.map((p, i) => (
                 <g key={p.runId}>
-                  {/* 짚은 점만 후광으로 집어낸다 — 나머지 점을 흐리지 않는다.
-                      값을 강조하려고 다른 값을 지우는 것은 조작이다. */}
-                  {hoverIndex === i && (
-                    <circle cx={x(i)} cy={y(p.interval.point)} r={8} fill="none" stroke={color} strokeWidth={1} opacity={0.45} />
-                  )}
                   {/* 최신 점만 가는 링 하나 — "현재 회차"는 액센트를 가질 수
                       있는 유일한 점이다(dataviz: current period in the accent).
                       점이 앉는 것과 같은 박자로 나타난다. */}
@@ -515,6 +512,11 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
                     />
                   )}
                   <Marker engine={mode === 'all' ? 'all' : mode} cx={x(i)} cy={y(p.interval.point)} color={color} delay={Math.min(i * POP_STEP, POP_MAX)} />
+                  {/* 짚은 점만 흰 속 링으로 커진다 — 나머지 점을 흐리지 않는다.
+                      값을 강조하려고 다른 값을 지우는 것은 조작이다. */}
+                  {hoverIndex === i && (
+                    <circle cx={x(i)} cy={y(p.interval.point)} r={4.5} fill="var(--background)" stroke={color} strokeWidth={2} />
+                  )}
                   <title>{`${mmdd(p.measuredAt)} · ${formatPercent(p.interval.point)} (${formatInterval(p.interval)}) · ${p.interval.k}/${p.interval.n}`}</title>
                 </g>
               ))}
@@ -580,32 +582,37 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
           //   보조기기에 두 번 읽히면 회차 수만큼 중복이 쌓인다.
           // ★ `pointer-events-none` — 툴팁이 커서 아래로 들어오면 자기 히트
           //   영역을 가려 깜빡인다.
+          // ★ 툴팁은 **반전 카드**다(--foreground 바탕에 --background 글자).
+          //   차트에서 잉크를 걷어낸 만큼(눈금·점 축소) 값을 읽는 자리는 이
+          //   카드 하나로 모인다 — 페이지에서 가장 진한 표면이라 커서를 따라
+          //   다니는 읽기 초점이 된다. 같은 카테고리 제품들(Peec·Otterly)의
+          //   차트 문법에서 가져온 관습이기도 하다.
           <div
             aria-hidden="true"
             data-testid="trend-tooltip"
-            className="pointer-events-none absolute z-10 w-max rounded-lg bg-popover px-3 py-2 shadow-elevation-2 ring-1 ring-foreground/10"
+            className="pointer-events-none absolute z-10 w-max rounded-xl bg-foreground px-3.5 py-2.5 text-background shadow-elevation-2"
             style={{
               left: `${tipFx * 100}%`,
               top: `${tipFy * 100}%`,
               transform: `translate(${tipShiftX}, ${tipShiftY})`,
             }}
           >
-            <p className="font-mono text-[0.6875rem] tracking-[0.08em] text-muted-foreground uppercase">
+            <p className="font-mono text-[0.6875rem] tracking-[0.08em] uppercase opacity-60">
               {mmdd(hoveredRun.measuredAt)}
             </p>
             {comparing ? (
-              <div className="mt-1 space-y-1">
+              <div className="mt-1.5 space-y-1.5">
                 {hoveredRows.map((row) => (
                   <div key={row.id} className="flex items-baseline gap-2">
                     <span
-                      className="inline-block h-2 w-2 shrink-0 rounded-full"
+                      className="inline-block h-2 w-2 shrink-0 rounded-[3px]"
                       style={{ background: engineColor(row.id) }}
                     />
-                    <span className="text-xs text-muted-foreground">{engineLabel(row.id)}</span>
-                    <span className="ml-auto font-mono text-sm font-medium tabular-nums">
+                    <span className="text-xs opacity-75">{engineLabel(row.id)}</span>
+                    <span className="ml-auto pl-3 font-mono text-sm font-semibold tabular-nums">
                       {formatPercent(row.p.interval.point)}
                     </span>
-                    <span className="font-mono text-[0.6875rem] tabular-nums text-muted-foreground">
+                    <span className="font-mono text-[0.6875rem] tabular-nums opacity-60">
                       {row.p.interval.k}/{row.p.interval.n}
                     </span>
                   </div>
@@ -614,13 +621,13 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
             ) : (
               hovered && (
                 <>
-                  <p className="mt-0.5 font-mono text-sm font-medium tabular-nums">
+                  <p className="mt-0.5 font-mono text-sm font-semibold tabular-nums">
                     {formatPercent(hovered.interval.point)}{' '}
-                    <span className="font-normal text-muted-foreground">
+                    <span className="font-normal opacity-70">
                       ({formatInterval(hovered.interval)})
                     </span>
                   </p>
-                  <p className="font-mono text-xs tabular-nums text-muted-foreground">
+                  <p className="font-mono text-xs tabular-nums opacity-60">
                     {hovered.interval.k}/{hovered.interval.n}
                   </p>
                 </>
