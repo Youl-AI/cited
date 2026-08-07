@@ -31,7 +31,9 @@ const ENGINE_COLOR: Record<string, string> = {
 }
 
 const W = 640
-const H = 220
+// 220 → 280. 회차가 쌓이면 선의 오르내림이 세로로 눌려 평평해 보인다 —
+// 데이터가 늘수록 세로 여유가 더 필요하다.
+const H = 280
 // ★ `right`는 여백 취향이 아니라 **끝 라벨의 자리**다. 12px일 때 마지막 회차의
 //   X축 라벨(`08.03`)이 실제로 잘렸다(실측). 선 끝의 값 라벨도 여기 앉는다.
 const PAD = { top: 14, right: 52, bottom: 26, left: 44 }
@@ -190,12 +192,19 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
           }
           onMouseLeave={() => setHover(null)}
         >
-          {[0, 0.5, 1].map((tick) => (
+          {/* 눈금 넷 — 0/50/100 셋만으로는 점이 어느 대역에 있는지 눈으로 재기
+              어려웠다. 25% 간격이면 선의 높이를 눈금 사이에서 읽을 수 있다.
+              선은 여전히 헤어라인 실선이고 배경보다 한 단만 진하다. */}
+          {[0, 0.25, 0.5, 0.75, 1].map((tick) => (
             <g key={tick}>
-              <line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} stroke="var(--border)" strokeWidth={1} />
-              <text x={PAD.left - 8} y={y(tick) + 4} textAnchor="end" className="fill-muted-foreground font-mono" fontSize={11}>
-                {Math.round(tick * 100)}%
-              </text>
+              <line x1={PAD.left} x2={W - PAD.right} y1={y(tick)} y2={y(tick)} stroke="var(--border)" strokeWidth={1} opacity={tick === 0 || tick === 0.5 || tick === 1 ? 1 : 0.55} />
+              {/* 라벨은 0·50·100만 — 다섯 개면 축이 시끄럽다. 사이 눈금은
+                  선만 남아 높이를 재는 자로 쓰인다. */}
+              {(tick === 0 || tick === 0.5 || tick === 1) && (
+                <text x={PAD.left - 8} y={y(tick) + 4} textAnchor="end" className="fill-muted-foreground font-mono" fontSize={11}>
+                  {Math.round(tick * 100)}%
+                </text>
+              )}
             </g>
           ))}
 

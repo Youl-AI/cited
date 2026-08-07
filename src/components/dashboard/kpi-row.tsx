@@ -1,4 +1,5 @@
 import { DeltaBadge } from '@/components/dashboard/delta-badge'
+import { Sparkline } from '@/components/dashboard/sparkline'
 import { Card, CardContent } from '@/components/ui/card'
 import type { RunPoint } from '@/lib/dashboard/data'
 import { buildKpis } from '@/lib/dashboard/kpi'
@@ -57,6 +58,14 @@ export function KpiRow({ points }: { points: RunPoint[] }) {
                 <DeltaBadge delta={kpi.delta} unit={kpi.interval ? '%p' : '개'} />
               )}
             </div>
+
+            {/* 추세 조각 — 값이 아니라 **모양**만 말한다(sparkline.tsx).
+                값을 못 내는 타일에는 그리지 않는다: 그릴 계열 자체가 없다. */}
+            {!kpi.unavailable && (
+              <div className="mt-3">
+                <Sparkline series={kpi.spark} max={kpi.sparkMax} />
+              </div>
+            )}
 
             {/* 아래 한 줄은 "이 숫자가 무엇을 센 것인가"다. 없으면 점유율이
                 무엇 대비인지, 도메인이 어디서 나온 것인지 물어봐야 한다.

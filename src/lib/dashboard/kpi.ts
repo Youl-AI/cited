@@ -52,6 +52,27 @@ export interface Kpi {
   delta: KpiDelta | null
   /** 값 아래 한 줄. 무엇을 센 숫자인지 밝힌다. */
   note: string
+  /**
+   * 스파크라인 계열 — 보고 있는 범위의 회차별 값(오래된 → 최신).
+   *
+   * ★ **조건이 갈린 자리를 잇는다.** 추이 차트는 조건이 바뀐 구간에서 선을
+   *   끊지만(§4.1), 40px짜리 스파크라인에서 끊긴 선은 그냥 결함으로 보인다.
+   *   대신 이 그림은 **값을 읽는 용도가 아니다** — 값은 타일의 큰 숫자와 델타
+   *   배지가 말하고, 그 델타는 조건이 다르면 '비교 불가'로 끊긴다. 즉 판정의
+   *   책임은 배지가 지고 이 선은 모양만 말한다.
+   */
+  spark: number[]
+  /**
+   * 스파크라인 y축 상한 — **계열의 최댓값**이다(비율이라고 1로 고정하지 않는다).
+   *
+   * 바닥은 0에 고정하고 천장만 데이터에 맞춘다. 이유가 둘이다:
+   * - 천장을 1(=100%)로 두면 34%→54% 같은 실제 변화가 32px 그림 안에서
+   *   납작한 선이 된다 — 정직하지만 아무것도 말하지 않는다.
+   * - 바닥까지 데이터에 맞추면(min~max 스케일) 45%와 47% 사이의 잡음이
+   *   화면을 가로지르는 급등락으로 보인다 — 이쪽이 진짜 거짓말이다.
+   * 바닥이 0이면 비율 관계가 보존된다: 두 배가 된 값은 두 배로 보인다.
+   */
+  sparkMax: number
 }
 
 /** 퍼센트포인트 차이. 표시 반올림과 같은 기준(정수 %)으로 계산한다 —
@@ -100,6 +121,11 @@ export function buildKpis(points: readonly RunPoint[]): Kpi[] {
   const prev = points[points.length - 2] ?? null
   const r = curr.result
 
+  // 스파크라인 계열 — 값을 낼 수 없는 회차(n=0·도메인 미등록)는 빼고 잇는다.
+  const sovSpark = points.filter((p) => p.result.shareOfVoice.n > 0).map((p) => p.result.shareOfVoice.point)
+  const domainSpark = points.map((p) => p.result.sourceSummary.distinctDomains)
+  const selfSpark = points.map(selfCited).filter((i): i is Interval => i !== null).map((i) => i.point)
+
   const sovDelta = judgedDelta(prev, curr, (p) => p.result.shareOfVoice)
   const currSelf = selfCited(curr)
   const prevSelf = prev ? selfCited(prev) : null
@@ -116,6 +142,8 @@ export function buildKpis(points: readonly RunPoint[]): Kpi[] {
       unavailable: r.shareOfVoice.n > 0 ? null : '경쟁사를 등록하면 계산됩니다',
       delta: r.shareOfVoice.n > 0 ? sovDelta : null,
       note: `등록 브랜드 ${r.competitors.length + 1}개 중 우리 몫`,
+      spark: sovSpark,
+      sparkMax: Math.max(...sovSpark, 0.01),
     },
     {
       id: 'domains',
@@ -129,6 +157,8 @@ export function buildKpis(points: readonly RunPoint[]): Kpi[] {
           ? null
           : { amount: domainsNow - domainsPrev, verdict: null, kind: 'none' },
       note: `답변 ${r.totalAnswers}개에서 나온 서로 다른 도메인`,
+      spark: domainSpark,
+      sparkMax: Math.max(...domainSpark, 1),
     },
     {
       id: 'self-cited',
@@ -140,6 +170,8 @@ export function buildKpis(points: readonly RunPoint[]): Kpi[] {
       note: currSelf
         ? `답변 ${r.sourceSummary.totalAnswers}개 중 ${r.sourceSummary.selfAnswers}개가 우리 사이트 인용`
         : '어느 도메인이 우리 것인지 알아야 셀 수 있습니다',
+      spark: selfSpark,
+      sparkMax: Math.max(...selfSpark, 0.01),
     },
   ]
 }

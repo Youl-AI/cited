@@ -24,7 +24,9 @@ import { formatInterval, formatPercent } from '@/lib/stats/wilson'
  * 추이 차트처럼 밴드를 구간별로 자를 필요가 없다.
  */
 const W = 640
-const H = 150
+// 추이 차트와 같은 이유로 키운다(그쪽 H 주석). 이 차트는 계열이 하나뿐이라
+// 추이 차트만큼은 필요 없다.
+const H = 190
 // 오른쪽은 끝 라벨의 자리다 — 추이 차트와 같은 이유(그쪽 PAD 주석).
 const PAD = { top: 12, right: 52, bottom: 24, left: 44 }
 const IW = W - PAD.left - PAD.right
