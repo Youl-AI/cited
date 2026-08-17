@@ -85,7 +85,9 @@ export default function HomePage() {
           섹션이다. 질의는 고정 템플릿이라 공개해도 잃을 것이 없고, 방문자가
           30초 안에 본인 손으로 검증하는 것이 어떤 문구보다 강하다.
           여기 질의는 측정 파이프라인과 **같은 함수**가 만든다. 어긋날 수 없다. */}
-      <Section>
+      {/* id="queries" — 히어로 계측 조건 스트립의 "질의 전문 공개" 앵커가
+          여기로 내린다(hero.tsx). 스트립의 약속과 이 섹션이 같은 사실이다. */}
+      <Section id="queries">
         <Reveal index={0}>
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             무엇을 묻는지 공개합니다
