@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useRef, useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -81,6 +81,21 @@ export function QueryEditor({
   const [actionError, setActionError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [pending, startTransition] = useTransition()
+
+  /**
+   * 등장 연출 기준선 — 이 인덱스 **이상**의 줄만 `.instrument-enter`(220ms)로
+   * 앉는다. 처음부터 있던 줄은 연출 없이 그려진다(페이지가 이미 스태거로
+   * 들어온다 — 줄까지 또 뜨면 이중 등장).
+   *
+   * ★ 삭제로 길이가 줄면 기준선을 따라 내린다 — 안 내리면 "몇 줄 지운 뒤
+   *   추가"한 새 줄의 인덱스가 기준선 아래라 연출 없이 나타난다.
+   * ★ 줄 key가 인덱스이므로 기존 줄은 어떤 갱신에도 remount되지 않는다 —
+   *   CSS 애니메이션은 mount에 한 번만 돌아, 클래스가 남아 있어도 재생되지
+   *   않는다. [줄 추가]·템플릿 복원·AI 생성으로 끝에 붙는 줄만 새 mount다.
+   * ★ 렌더 중 ref 대입은 멱등이라 안전하다(같은 길이면 값이 안 변한다).
+   */
+  const freshFrom = useRef(queries.length)
+  if (queries.length < freshFrom.current) freshFrom.current = queries.length
 
   const templateKeys = useMemo(
     () => new Set(templates.map((t) => normalizeQueryKey(t))),
@@ -329,7 +344,11 @@ export function QueryEditor({
           const locked = isTemplateRow(value, i)
           const filling = rowIsFilling(i)
           return (
-            <li key={i} className="flex items-start gap-2" aria-busy={filling || undefined}>
+            <li
+              key={i}
+              className={cn('flex items-start gap-2', i >= freshFrom.current && 'instrument-enter')}
+              aria-busy={filling || undefined}
+            >
               <span className="mt-2 w-7 shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
                 q{i + 1}
               </span>

@@ -39,11 +39,21 @@ export function WeakQueriesCard({
         ))}
       </ol>
       <p className="mt-auto pt-3">
+        {/* 화살표 니지는 run-list.tsx 행 화살표와 같은 값이다(translate 0.5 ·
+            --motion-micro · instrument) — 대시보드에서 "→가 살짝 밀리면
+            이동 링크"라는 어휘를 한 곳만 다르게 두지 않는다. hover: 변형은
+            Tailwind v4 기본이 (hover:hover) 게이트라 터치 기기에선 안 돈다. */}
         <Link
           href={queriesHref}
-          className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          className="group/wq text-xs font-medium text-muted-foreground transition-colors duration-[var(--motion-micro)] ease-instrument underline-offset-4 hover:text-foreground hover:underline"
         >
-          질문별 전체 보기 →
+          질문별 전체 보기{' '}
+          <span
+            aria-hidden="true"
+            className="inline-block transition-[translate] duration-[var(--motion-micro)] ease-instrument group-hover/wq:translate-x-0.5"
+          >
+            →
+          </span>
         </Link>
       </p>
     </div>
