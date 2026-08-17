@@ -371,6 +371,38 @@ export default function PricingPage() {
         </p>
       </Reveal>
 
+      {/* ── 결제 전에 자주 묻는 것 ───────────────────────────
+          결정 직전에 걸리는 질문 셋만 — 접이식이 아니다(세 개뿐인 것을 접으면
+          클릭만 늘어난다, §4.9). 답은 전부 제품이 이미 하는 행동이다:
+          해지 정책은 대시보드 해지 배너와 같은 사실, 질의 동결은 온보딩
+          2단계의 실제 규칙, 측정 요일은 실제 스케줄(next-measurement.ts)이다.
+          여기서 지어낸 정책 문구는 없다. */}
+      <Reveal index={0} className="mt-20 max-w-2xl">
+        <h2 className="text-2xl font-semibold tracking-tight">결제 전에 자주 묻는 것</h2>
+        <dl className="mt-6 space-y-6">
+          <div>
+            <dt className="font-medium">언제든 해지할 수 있나요</dt>
+            <dd className="mt-1.5 text-base leading-relaxed text-muted-foreground">
+              네. 해지해도 결제하신 기간이 끝날 때까지 측정이 돌고, 쌓인 이력은 그 뒤에도
+              계정에서 그대로 볼 수 있습니다.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium">질의를 나중에 바꿀 수 있나요</dt>
+            <dd className="mt-1.5 text-base leading-relaxed text-muted-foreground">
+              측정을 시작하면 질의가 동결됩니다 — 같은 질문을 같은 조건으로 반복해야 변화를
+              판정할 수 있기 때문입니다. 조건이 바뀌면 이전 회차와 비교하지 않고 새로 셉니다.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-medium">측정은 언제 도나요</dt>
+            <dd className="mt-1.5 text-base leading-relaxed text-muted-foreground">
+              월·수·금 새벽에 돕니다. 다음 측정 예정 시각은 대시보드 상단에 항상 표시됩니다.
+            </dd>
+          </div>
+        </dl>
+      </Reveal>
+
       {/* ── 정직 블록 + 유일한 행동 ──────────────────────────
           마감은 랜딩과 같은 어휘다: 상자 없이 위아래 헤어라인 사이에 문장과
           버튼 하나(landing closing-cta.tsx). 색면을 반전시키지 않는다 — 다크
