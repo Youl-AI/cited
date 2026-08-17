@@ -1,5 +1,6 @@
 'use client'
 
+import { motion, useReducedMotion } from 'motion/react'
 import { useId, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { buildTrend, engineIdsIn, type RunPoint, type TrendPoint } from '@/lib/dashboard/data'
@@ -133,6 +134,7 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
   // 커서가 짚은 회차. 모드를 갈아타면 축 길이가 달라지므로 같이 비운다.
   const [hover, setHover] = useState<number | null>(null)
   const gradientId = useId()
+  const reduceMotion = useReducedMotion()
 
   if (points.length === 0) {
     return (
@@ -243,34 +245,58 @@ export function TrendChart({ points }: { points: RunPoint[] }) {
                 setMode(id)
                 setHover(null)
               }}
-              className={`motion-press rounded-[calc(var(--radius)*1.4-0.25rem)] px-2.5 py-1 text-xs active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+              className={`motion-press relative rounded-[calc(var(--radius)*1.4-0.25rem)] px-2.5 py-1 text-xs transition-colors duration-[var(--motion-micro)] ease-instrument active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
                 active
-                  ? 'bg-card font-medium text-foreground shadow-elevation-1'
+                  ? 'font-medium text-foreground'
                   : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
               }`}
             >
-              {id === 'compare' ? (
-                // 비교 조각의 표식은 색 점 하나가 아니라 **엔진 색을 이은 띠**다 —
-                // "여러 계열이 한 축에 온다"가 조각 안에서 미리 보인다.
-                <span
+              {/* 활성 조각의 흰 판 — 색이 바뀌는 게 아니라 **판이 미끄러져
+                  옮겨간다**(상태의 이동 방향까지 보인다). layoutId 하나로
+                  Motion이 이전 활성 버튼 위치→현재 위치를 보간한다 —
+                  좁은 화면에서 조각이 두 줄로 꺾여도 x·y를 같이 따라간다
+                  (CSS만으로 이걸 하려면 줄바꿈 좌표 계산이 필요하다 — 이
+                  한 줄이 사다리에서 motion이 "레이아웃 애니메이션" 행을
+                  가진 이유다). 값은 기존 토큰 그대로: --motion-state(240ms) ·
+                  --ease-instrument. reduced-motion이면 즉시 이동 —
+                  Motion은 전역 CSS 킬 스위치 밖이라 여기서 직접 끈다. */}
+              {active && (
+                <motion.span
+                  layoutId={`${gradientId}-mode-thumb`}
                   aria-hidden="true"
-                  className="mr-1.5 inline-block h-2 w-4 rounded-full align-middle"
-                  style={{
-                    background: `linear-gradient(90deg, ${engines
-                      .map((e) => engineColor(e))
-                      .join(', ')})`,
-                  }}
+                  className="absolute inset-0 rounded-[calc(var(--radius)*1.4-0.25rem)] bg-card shadow-elevation-1"
+                  transition={
+                    reduceMotion ? { duration: 0 } : { duration: 0.24, ease: [0.2, 0, 0, 1] }
+                  }
+                  data-testid="mode-thumb"
                 />
-              ) : (
-                id !== 'all' && (
+              )}
+              {/* 라벨·표식은 판 위에 서야 한다 — 판이 absolute inset-0이라
+                  z 없이 두면 미끄러져 오는 판이 글자를 덮는다. */}
+              <span className="relative z-[1]">
+                {id === 'compare' ? (
+                  // 비교 조각의 표식은 색 점 하나가 아니라 **엔진 색을 이은 띠**다 —
+                  // "여러 계열이 한 축에 온다"가 조각 안에서 미리 보인다.
                   <span
                     aria-hidden="true"
-                    className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
-                    style={{ background: engineColor(id) }}
+                    className="mr-1.5 inline-block h-2 w-4 rounded-full align-middle"
+                    style={{
+                      background: `linear-gradient(90deg, ${engines
+                        .map((e) => engineColor(e))
+                        .join(', ')})`,
+                    }}
                   />
-                )
-              )}
-              {modeLabel(id)}
+                ) : (
+                  id !== 'all' && (
+                    <span
+                      aria-hidden="true"
+                      className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
+                      style={{ background: engineColor(id) }}
+                    />
+                  )
+                )}
+                {modeLabel(id)}
+              </span>
             </button>
           )
         })}

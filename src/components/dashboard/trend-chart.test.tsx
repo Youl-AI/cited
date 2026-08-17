@@ -212,6 +212,23 @@ describe('TrendChart — 엔진 비교', () => {
     expect(container.querySelector('[data-testid="trend-end-label"]')).toBeNull()
   })
 
+  // 활성 조각의 흰 판은 색 전환이 아니라 layoutId로 미끄러지는 별도 요소다 —
+  // 판이 항상 정확히 하나(활성 조각 안)여야 한다. 둘이면 미끄러질 목적지가
+  // 모호해지고, 영이면 활성 표시가 사라진다.
+  test('활성 조각에만 슬라이드 판이 있다', () => {
+    const { container } = render(<TrendChart points={[point('r1', 20), point('r2', 25)]} />)
+    const thumbIn = (name: RegExp) =>
+      screen.getByRole('button', { name }).querySelector('[data-testid="mode-thumb"]')
+
+    expect(container.querySelectorAll('[data-testid="mode-thumb"]')).toHaveLength(1)
+    expect(thumbIn(/전체/)).not.toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /엔진 비교/ }))
+    expect(container.querySelectorAll('[data-testid="mode-thumb"]')).toHaveLength(1)
+    expect(thumbIn(/엔진 비교/)).not.toBeNull()
+    expect(thumbIn(/전체/)).toBeNull()
+  })
+
   test('짚은 회차의 엔진별 값을 한 툴팁에 모은다', () => {
     const { container } = render(<TrendChart points={[point('r1', 20), point('r2', 25)]} />)
     fireEvent.click(screen.getByRole('button', { name: /엔진 비교/ }))
