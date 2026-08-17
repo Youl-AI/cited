@@ -390,7 +390,7 @@ export default function PricingPage() {
           <div>
             <dt className="font-medium">질의를 나중에 바꿀 수 있나요</dt>
             <dd className="mt-1.5 text-base leading-relaxed text-muted-foreground">
-              측정을 시작하면 질의가 동결됩니다 — 같은 질문을 같은 조건으로 반복해야 변화를
+              측정을 시작하면 질의가 동결됩니다. 같은 질문을 같은 조건으로 반복해야 변화를
               판정할 수 있기 때문입니다. 조건이 바뀌면 이전 회차와 비교하지 않고 새로 셉니다.
             </dd>
           </div>
