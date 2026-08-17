@@ -31,13 +31,31 @@ export default async function OnboardingDonePage() {
   return (
     <div className="mx-auto max-w-2xl">
       <StepRail step={3} />
-      <h1 className="instrument-enter mt-6 font-heading text-2xl font-semibold tracking-tight [--enter-delay:calc(var(--motion-stagger)*1)]">
+      {/* 성공 마크 — 온보딩 전체에서 유일하게 delight 예산을 쓰는 지점(계정당
+          1회 화면). 기법은 차트와 같은 `.chart-draw`(pathLength 정규화 +
+          dashoffset 드로우, 600ms instrument)다 — 새 커브를 만들지 않고 이
+          제품의 "선이 그어진다" 어휘를 재사용한다. 축하 연출이 아니라 체크
+          하나가 그어지는 **상태 확정**이므로, 링은 정지시키고 체크만 긋는다.
+          ★ 인쇄·reduced-motion은 chart-draw의 기존 가드가 그대로 처리한다. */}
+      <svg viewBox="0 0 52 52" aria-hidden="true" className="mt-6 size-12">
+        <circle cx="26" cy="26" r="24" fill="none" strokeWidth="2" className="stroke-foreground/15" />
+        <path
+          pathLength="1"
+          d="M15 27 l8 8 l15 -17"
+          fill="none"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="chart-draw stroke-primary"
+        />
+      </svg>
+      <h1 className="instrument-enter mt-4 font-heading text-2xl font-semibold tracking-tight [--enter-delay:calc(var(--motion-stagger)*2)]">
         측정 예약이 끝났습니다
       </h1>
       {/* ★ 이 카드가 이 화면의 유일한 물건이다. 아래 문단은 기대치를 맞추는 말이고,
           여기 담긴 것은 **예약된 사실**이다(언제 무엇이 도는가) — 둘을 같은 회색
           문단으로 쌓으면 화면을 닫은 뒤 남는 것이 없다. 문구는 그대로다. */}
-      <Card className="instrument-enter mt-5 [--card-spacing:--spacing(5)] [--enter-delay:calc(var(--motion-stagger)*2)]">
+      <Card className="instrument-enter mt-5 [--card-spacing:--spacing(5)] [--enter-delay:calc(var(--motion-stagger)*3)]">
         <CardContent>
           <p className="text-sm leading-relaxed text-muted-foreground">
             질의가 동결됐습니다. 다음 측정은{' '}
@@ -46,11 +64,11 @@ export default async function OnboardingDonePage() {
           </p>
         </CardContent>
       </Card>
-      <p className="instrument-enter mt-5 text-sm leading-relaxed text-muted-foreground [--enter-delay:calc(var(--motion-stagger)*3)]">
+      <p className="instrument-enter mt-5 text-sm leading-relaxed text-muted-foreground [--enter-delay:calc(var(--motion-stagger)*4)]">
         첫 회차가 끝나면 대시보드에 점이 하나 찍힙니다. 점 하나로는 변화를 말할 수 없습니다 —
         회차가 쌓일수록 구간이 좁아지고, 그때부터 변화가 실제인지 측정 오차인지 판정합니다.
       </p>
-      <div className="instrument-enter mt-8 [--enter-delay:calc(var(--motion-stagger)*4)]">
+      <div className="instrument-enter mt-8 [--enter-delay:calc(var(--motion-stagger)*5)]">
         <Button asChild size="lg">
           <Link href="/dashboard">대시보드로</Link>
         </Button>
