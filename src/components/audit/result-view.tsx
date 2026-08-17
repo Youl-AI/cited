@@ -137,9 +137,12 @@ export function ResultView({
       </header>
 
       {/* ── 대표 지표 ────────────────────────────────────────── */}
+      {/* ★ 모든 섹션에 `report-rise` — 스크롤에 맞춰 6px만 앉는 CSS 전용 등장
+          (globals.css). 첫 화면에 이미 보이는 섹션은 정지 상태로 그려지고,
+          인쇄·reduced-motion·미지원 브라우저는 애니메이션 자체가 없다. */}
       <section
         data-testid="headline"
-        className={cn(PLATE, 'mb-10 p-6 sm:p-7 print:break-inside-avoid')}
+        className={cn(PLATE, 'report-rise mb-10 p-6 sm:p-7 print:break-inside-avoid')}
       >
         <p className="text-sm text-muted-foreground">AI 답변에 인용된 비율</p>
         <div className="mt-1 flex flex-wrap items-baseline gap-x-3">
@@ -170,7 +173,7 @@ export function ResultView({
       )}
 
       {/* ── 이 숫자를 어떻게 읽어야 하는가 ───────────────────── */}
-      <section className="mb-10 border-l-2 border-border pl-5 print:break-inside-avoid">
+      <section className="report-rise mb-10 border-l-2 border-border pl-5 print:break-inside-avoid">
         {/* 회차 상세는 유료 문구 쪽 — 질의 수·답변 수 기반이라 그대로 맞는 말이다. */}
         {!isRun && tier === 'free' ? (
           <p className="text-sm leading-relaxed text-muted-foreground">
@@ -193,7 +196,7 @@ export function ResultView({
            "우리만 등록했으니 점유율 100%"는 거짓말이고, 없는 것을 설명하려 들면
            혼란만 준다. 경쟁사 목록을 항상 옆에 붙이는 것도 같은 이유다:
            경쟁사를 적게 등록하면 이 값이 높아지므로 분모를 감추면 오해가 된다. */
-        <section className="mb-10 print:break-inside-avoid">
+        <section className="report-rise mb-10 print:break-inside-avoid">
           <SectionHeading>언급 점유율</SectionHeading>
           <SectionNote>
             등록한 경쟁사({result.competitors.join(', ')}) 대비 언급 비중입니다. 경쟁사를 더
@@ -217,7 +220,7 @@ export function ResultView({
       )}
 
       {/* ── 브랜드별 언급 ────────────────────────────────────── */}
-      <section className="mb-10 print:break-inside-avoid">
+      <section className="report-rise mb-10 print:break-inside-avoid">
         <SectionHeading>브랜드별 언급 횟수</SectionHeading>
         <SectionNote>같은 답변 안에서 어떤 브랜드가 몇 번 등장했는지입니다.</SectionNote>
         <ul className={cn(PLATE, 'divide-y divide-border overflow-hidden')}>
@@ -252,7 +255,7 @@ export function ResultView({
           10개라 섹션이 한 장 가까이 되고, 통째로 다음 장에 밀면 앞 장의
           반이 빈다(실측 — 리본요가 PDF에서 3~4쪽 하단 30~45%가 비었다).
           행 단위 avoid + 제목의 break-after-avoid로 충분하다. */}
-      <section className="mb-10">
+      <section className="report-rise mb-10">
         <SectionHeading>질문별 결과</SectionHeading>
         {/* metrics가 이미 언급률 낮은 순으로 준다. 여기서 다시 정렬하지 않는다 —
             "이 질문에서 안 나온다"가 위로 와야 행동으로 이어진다. */}
@@ -281,7 +284,7 @@ export function ResultView({
       {/* ── 증거 ─────────────────────────────────────────────── */}
       {/* 섹션 avoid 없음 — 질의별과 같은 이유(표본 6개면 여러 장이다).
           표본 하나하나가 아래에서 avoid를 건다. */}
-      <section className="mb-10">
+      <section className="report-rise mb-10">
         <SectionHeading>실제 AI 답변</SectionHeading>
         <SectionNote>
           같은 질문을 직접 물어보시면 비슷한 답을 확인하실 수 있습니다. 밑줄은 우리가 센
@@ -316,7 +319,7 @@ export function ResultView({
       {result.sources.length > 0 && (
         /* 섹션 avoid 없음 — 도메인 8행 + 요약이면 장 하단에서 시작해도
            행 단위로 자연스럽게 넘어간다. 통째로 밀면 앞 장이 빈다. */
-        <section className="mb-10">
+        <section className="report-rise mb-10">
           <SectionHeading>AI가 읽는 출처</SectionHeading>
           <SectionNote>
             답변 <Metric>{result.sourceSummary.totalAnswers}</Metric>개 중{' '}
@@ -366,7 +369,7 @@ export function ResultView({
       {guide && (
         /* 섹션 avoid 없음 — 가이드는 한 장을 넘는 것이 보통이다. 대신 아래
            컨테이너가 마크다운 요소 단위로 끊김을 제어한다. */
-        <section className="mb-10">
+        <section className="report-rise mb-10">
           <SectionHeading>개선 가이드</SectionHeading>
           <SectionNote>
             여기부터는 계측이 아니라 해설입니다 — 위 측정 결과를 근거로 운영자가 직접
@@ -385,7 +388,7 @@ export function ResultView({
       )}
 
       {/* ── 측정 조건 ────────────────────────────────────────── */}
-      <section className="mb-10 rounded-xl bg-muted/40 px-5 py-4 print:break-inside-avoid">
+      <section className="report-rise mb-10 rounded-xl bg-muted/40 px-5 py-4 print:break-inside-avoid">
         <p className="text-xs text-muted-foreground">
           측정 표기{' '}
           <span className="font-mono text-foreground">
@@ -404,7 +407,7 @@ export function ResultView({
           ★ 회차 상세(variant='run')에서는 아예 없다 — 이미 구독 중인 고객에게
             "요금제 보기" 업셀은 틀린 말이다. */}
       {!isRun && (
-      <section className={cn(PLATE, 'p-6 sm:p-7 print:hidden')}>
+      <section className={cn(PLATE, 'report-rise p-6 sm:p-7 print:hidden')}>
         <h2 className="text-lg font-semibold tracking-tight">
           이 리포트는 <Metric>1</Metric>회 측정입니다
         </h2>
@@ -455,7 +458,7 @@ function CompareSection({
     currEngines: result.engines,
   })
   return (
-    <section className={cn(PLATE, 'mb-10 p-6 sm:p-7 print:break-inside-avoid')}>
+    <section className={cn(PLATE, 'report-rise mb-10 p-6 sm:p-7 print:break-inside-avoid')}>
       <SectionHeading>전후 비교</SectionHeading>
       <SectionNote>
         <Metric>{beforeDate}</Metric> 측정과 같은 질의 <Metric>{result.byQuery.length}</Metric>
