@@ -63,8 +63,11 @@ function span(p: number, from: number, to: number): number {
 const FADE_IN_END = 0.35
 const FADE_OUT_START = 0.75
 
-/** 장면이 먹는 스크롤 거리(px). 단계당 ~450px — 재현 장면(1500)보다 짧다. */
-const FLOW_SCENE_LENGTH = 1350
+/** 장면이 먹는 스크롤 거리(px). 단계당 ~333px — 재현 장면(1500)보다 짧다.
+ *  1350 → 1000 (2026-08-18 UI 점검): 자막 하나에 450px는 무대(레일 + 자막
+ *  한 덩이)의 정보량 대비 길어서, 핀 중반부터 "스크롤이 안 나간다"는 감각만
+ *  남았다. 전환 창(FADE_IN_END/FADE_OUT_START)은 비율이라 그대로 탄다. */
+const FLOW_SCENE_LENGTH = 1000
 
 export function FlowSteps() {
   const reduce = useReducedMotion()

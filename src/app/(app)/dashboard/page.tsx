@@ -168,10 +168,22 @@ export default async function DashboardPage({
       {gate.state === 'no-plan' && (
         // 해지 계정 안내 — 새 측정이 왜 안 도는지 정직하게 말한다. 이력을
         // 감추지 않는 것과 짝이다 (`load.ts` 해지 정책 주석). 경고 색이 아니라
-        // 중립 톤을 쓴다 — 잘못된 상태가 아니라 계약이 끝난 상태다.
-        <p className="max-w-prose rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
-          구독이 해지되어 새 측정은 돌지 않지만, 결제하신 기간의 측정 이력은 그대로 볼 수
-          있습니다.
+        // 중립 톤을 쓴다 — 잘못된 상태가 아니라 계약이 끝난 상태다. 그래서
+        // 상태 점도 회색이다(호박·빨강은 판정 어휘 — 여기는 판정이 아니다).
+        // 문구는 상태 서술("측정이 멈춰 있습니다")로 시작한다 — 2026-08-18
+        // UI 점검: 원인("구독이 해지되어")부터 말하면 시스템 상태 줄이 아니라
+        // 사과문처럼 읽혔다. 재시작 동선(요금제)은 이 줄의 소관이므로 여기 둔다.
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-muted/50 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+          <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-foreground/30" />
+          <span className="min-w-0 flex-1">
+            측정이 멈춰 있습니다 — 결제하신 기간의 측정 이력은 그대로 볼 수 있습니다.
+          </span>
+          <Link
+            href="/pricing"
+            className="shrink-0 font-medium text-foreground underline underline-offset-4 transition-colors duration-[var(--motion-micro)] ease-instrument hover:text-primary"
+          >
+            다시 시작하기
+          </Link>
         </p>
       )}
       {entry.pendingBrandId && (
@@ -251,13 +263,20 @@ export default async function DashboardPage({
                   <div className={`instrument-enter ${ENTER_DELAY[5]}`}>
                     <KpiRow points={points} />
                   </div>
-                  <Panel
-                    title="기간 비교"
-                    lede="최근 회차 묶음과 그 직전 묶음을 합쳐 비교합니다 — 회차 하나의 출렁임을 줄입니다."
-                    index={6}
-                  >
-                    <PeriodCompareCard points={points} />
-                  </Panel>
+                  {/* 왼쪽 기둥의 마지막 카드도 남는 높이를 채운다 — 오른쪽
+                      실행 카드(fill)와 대칭. 어느 쪽이 길어지든 짧은 쪽 마지막
+                      카드가 늘어나 두 기둥의 바닥이 항상 같은 줄에 선다
+                      (한쪽만 삐져나오는 바닥 — 실측 피드백 2026-08-18). */}
+                  <div className="min-h-0 flex-1">
+                    <Panel
+                      title="기간 비교"
+                      lede="최근 회차 묶음과 그 직전 묶음을 합쳐 비교합니다 — 회차 하나의 출렁임을 줄입니다."
+                      index={6}
+                      fill
+                    >
+                      <PeriodCompareCard points={points} />
+                    </Panel>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-4 xl:col-span-4">
                   <div className={`instrument-enter ${ENTER_DELAY[3]}`}>

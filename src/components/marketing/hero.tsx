@@ -25,8 +25,10 @@ import { formatInterval, formatPercent } from '@/lib/stats/wilson'
  * ## 히어로 텍스트 스택은 넷이다 (tasteskill §4.7)
  *
  * 아이브로 · H1 · 서브텍스트 · CTA 두 개. 그 아래 계측 시트는 **자산**이고,
- * 시트 안의 계측 레일과 시트 밑 한 줄은 그 자산의 판독 눈금이다. 신뢰
- * 마이크로스트립·가격 티저·기능 목록은 히어로에 없다.
+ * 시트 안의 계측 레일과 시트 밑 한 줄은 그 자산의 판독 눈금이다. 가격
+ * 티저·기능 목록·로고 벽은 히어로에 없다. CTA 아래 **계측 조건 스트립**
+ * (엔진·주기·질의 공개)은 2026-08-18 사용자 결정으로 추가 — 남의 보증이
+ * 아니라 이 제품이 재는 조건이므로 신뢰 마이크로스트립 금지의 예외다.
  *
  * ## H1 두 줄 계약
  *
@@ -79,6 +81,42 @@ export function Hero() {
             <CtaLink href="/pricing" tone="ghost" icon={false}>
               요금제 보기
             </CtaLink>
+          </div>
+
+          {/* ── 계측 조건 스트립 ──────────────────────────────
+              머리말의 "신뢰 마이크로스트립은 히어로에 없다"(§4.7)를 2026-08-18
+              사용자 결정으로 대체한다 — 단, 로고 벽·수상 배지 같은 **남의 말**이
+              아니라 이 제품이 스스로 재는 **조건 세 가지**다(엔진·주기·질의 공개).
+              CTA 아래 왼쪽 열이 오른쪽 증거물보다 먼저 끝나며 남던 공백을 이
+              눈금이 채운다. mono는 계측값, sans는 말 — 기존 규칙 그대로.
+              세 번째 칸은 아래 질의 공개 섹션(#queries)으로 내려간다 — 스트립의
+              약속과 실제 공개물이 같은 페이지에 있음을 링크로 못박는다. */}
+          <div className="enter-rise mt-14 grid max-w-[34em] grid-cols-3 gap-6 border-t border-border pt-6 [animation-delay:calc(var(--motion-stagger)*4)]">
+            <div>
+              <p className="font-mono text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                엔진
+              </p>
+              <p className="mt-1.5 text-sm">ChatGPT · Gemini</p>
+            </div>
+            <div>
+              <p className="font-mono text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                정기 측정
+              </p>
+              <p className="mt-1.5 text-sm">주 3회 · 같은 질의</p>
+            </div>
+            <div>
+              <p className="font-mono text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                질의
+              </p>
+              <p className="mt-1.5 text-sm">
+                <a
+                  href="#queries"
+                  className="underline decoration-border underline-offset-4 transition-colors duration-[var(--motion-micro)] ease-instrument hover:text-foreground hover:decoration-foreground/40"
+                >
+                  전문 공개 ↓
+                </a>
+              </p>
+            </div>
           </div>
         </div>
 

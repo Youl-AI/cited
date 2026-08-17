@@ -70,16 +70,23 @@ describe('랜딩 히어로', () => {
     expect(secondary.getAttribute('href')).toBe('/pricing')
   })
 
-  it('히어로의 텍스트 스택은 넷을 넘지 않는다 (tasteskill §4.7)', () => {
+  it('히어로 왼쪽 열 = 텍스트 스택 넷 + 계측 조건 스트립 (2026-08-18 계약)', () => {
     const { container } = render(<Hero />)
-    // 아이브로 · H1 · 서브텍스트 · CTA 두 개. 신뢰 마이크로스트립·가격 티저·
-    // 기능 목록이 하나라도 끼면 히어로가 첫 화면 밖으로 밀린다.
+    // 아이브로 · H1 · 서브텍스트 · CTA 두 개 — 여기까지가 §4.7의 스택이고,
+    // 계측 조건 스트립(엔진·주기·질의 공개)은 사용자 결정으로 추가된 유일한
+    // 예외다(hero.tsx 머리말). 가격 티저·기능 목록·로고 벽은 여전히 금지 —
+    // 링크 수를 못박아 두면 뭔가 더 끼어들 때 이 테스트가 먼저 깨진다.
     const claim = container.querySelector('section > div > div')
     expect(claim).not.toBeNull()
     const stack = within(claim as HTMLElement)
     expect(stack.getByText('한국어 GEO 모니터링')).toBeTruthy()
-    expect(stack.getAllByRole('link')).toHaveLength(2)
-    // 아이브로 + H1 + 서브텍스트 = p 두 개와 h1 하나. 그 이상은 없다.
-    expect((claim as HTMLElement).querySelectorAll('p')).toHaveLength(2)
+    // CTA 둘 + 스트립의 질의 공개 앵커 하나. 그 이상은 없다.
+    const links = stack.getAllByRole('link')
+    expect(links).toHaveLength(3)
+    expect(links[2]?.getAttribute('href')).toBe('#queries')
+    // 스트립 세 칸 — 라벨은 실측 조건이다.
+    expect(stack.getByText('엔진')).toBeTruthy()
+    expect(stack.getByText('ChatGPT · Gemini')).toBeTruthy()
+    expect(stack.getByText('전문 공개 ↓')).toBeTruthy()
   })
 })

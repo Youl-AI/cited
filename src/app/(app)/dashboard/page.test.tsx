@@ -112,6 +112,6 @@ describe('DashboardPage — 해지 계정의 이력 (load.ts 정책의 페이지
     await renderPage()
 
     expect(screen.getByRole('heading', { name: '바디텍' })).toBeInTheDocument()
-    expect(screen.queryByText(/구독이 해지되어/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/측정이 멈춰 있습니다/)).not.toBeInTheDocument()
   })
 })

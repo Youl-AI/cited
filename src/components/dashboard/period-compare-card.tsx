@@ -24,11 +24,33 @@ export function PeriodCompareCard({
 }) {
   const cmp = buildPeriodComparison(points, { engine })
   if (!cmp) {
+    // 비교가 열리는 최소 회차 — period-compare.ts의 조건(len>=4)과 같은 수다.
+    const NEEDED = 4
+    const have = Math.min(points.length, NEEDED)
     return (
-      <p className="text-sm leading-relaxed text-muted-foreground">
-        회차가 4개 이상 쌓이면 묶음 비교가 열립니다 — 회차 하나의 출렁임을 줄여 변화를
-        판정합니다.
-      </p>
+      // 카드가 fill로 늘어나므로(개요 왼쪽 기둥 마지막 카드) 안내문 하나가
+      // 좌상단에 뜨면 아래가 빈 창고처럼 보인다(실측 피드백). 수직 중앙 +
+      // 회차 진행 눈금 — "언제 열리는가"를 문장이 아니라 눈금이 먼저 말한다.
+      // 눈금은 실측 개수다: 색·판정 없음(개수에는 방향이 없다 — delta-badge 규칙).
+      <div className="flex h-full flex-col justify-center gap-5">
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          회차가 <span className="font-mono tabular-nums">{NEEDED}</span>개 이상 쌓이면 묶음
+          비교가 열립니다 — 회차 하나의 출렁임을 줄여 변화를 판정합니다.
+        </p>
+        <div>
+          <div aria-hidden="true" className="flex gap-1.5">
+            {Array.from({ length: NEEDED }, (_, i) => (
+              <span
+                key={i}
+                className={`h-1.5 flex-1 rounded-full ${i < have ? 'bg-foreground/40' : 'bg-muted'}`}
+              />
+            ))}
+          </div>
+          <p className="mt-2 font-mono text-xs tracking-[0.08em] text-muted-foreground tabular-nums">
+            회차 {have}/{NEEDED}
+          </p>
+        </div>
+      </div>
     )
   }
   const mmdd = (iso: string) => `${iso.slice(5, 7)}.${iso.slice(8, 10)}`
@@ -37,7 +59,9 @@ export function PeriodCompareCard({
     { label: `최근 ${cmp.window}회`, range: `${mmdd(cmp.curr.from)}~${mmdd(cmp.curr.to)}`, w: cmp.curr },
   ]
   return (
-    <div data-testid="period-compare">
+    // 실데이터 상태도 카드 높이를 따라간다 — 남는 높이는 두 행과 판정 줄
+    // 사이가 아니라 위아래로 나눠(justify-center) 조판 밀도를 지킨다.
+    <div data-testid="period-compare" className="flex h-full flex-col justify-center">
       <div className="space-y-3">
         {rows.map((row) => (
           <div key={row.label}>
