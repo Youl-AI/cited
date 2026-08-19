@@ -119,6 +119,7 @@ flowchart LR
 
 | 문서 | 내용 |
 | --- | --- |
+| [골드 라벨 데이터셋](docs/golden-labels.md) | 정답지 구성·라벨링 기준·실측 recall/precision |
 | [설계](docs/superpowers/specs/2026-07-28-cited-design.md) | 제품·데이터 모델·판정 로직의 근거 |
 | [로드맵](docs/superpowers/plans/2026-07-28-cited-roadmap.md) | 1~6단계 전체 |
 | [착수 전 확인](docs/superpowers/notes/2026-07-28-preflight.md) | 확정 버전·도메인 결정 |
