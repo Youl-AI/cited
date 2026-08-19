@@ -47,7 +47,7 @@ flowchart LR
 | --- | --- | --- |
 | 골드 라벨 | **248건** (긍정 108 · 부정 140) | `tests/golden/labels.json`, 실제 수집 답변에서 수작업 라벨링 — [데이터셋 문서](docs/golden-labels.md) |
 | 실측 정확도 | **recall 99.1% · precision 100.0%** (2026-08-20) | 게이트 기준 recall ≥ 95% · precision ≥ 90% (`tests/golden/regression.test.ts`) |
-| 판정 모델 | `claude-haiku-4-5` | 같은 골드셋에서 sonnet 대비 정확도 동일 · 원가 1/3 · 지연 1/2 — [모델 비교](docs/judge-model-comparison.md) |
+| 판정 모델 | `claude-haiku-4-5` | sonnet·gpt-5-mini와 **전 건 동일 판정** — 최저 지연 + 측정 대상 엔진과 제공사 분리로 선택 ([모델 비교](docs/judge-model-comparison.md)) |
 | 표본 수 | 무료 1회 · 유료 3회 (LLM 엔진당) | 비결정 출력이므로 표본 n이 구간 폭을 결정 — 아래 "측정 예산 정책" |
 | 보고 형식 | Wilson 95% 신뢰구간 | 점추정 단독 노출 금지 — 3회 측정 1건 언급의 구간은 2%~87%다 |
 

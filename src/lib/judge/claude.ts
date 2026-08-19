@@ -28,8 +28,12 @@ export const ANSWER_MAX_CHARS = 4000
  *
  * 바꾸려면 골드 라벨 회귀 테스트를 먼저 통과시켜라. 지난 측정치와의
  * 비교 가능성이 깨진다.
+ *
+ * export인 이유: 판정 모델 비교(scripts/judge-compare.mts)가 타사 판정기에도
+ * **같은 프롬프트**를 써야 모델 외의 변인이 없다. 스크립트에 복사해 두면
+ * 여기를 고칠 때 그쪽이 조용히 낡는다.
  */
-const SYSTEM_PROMPT = `너는 AI 답변에서 특정 브랜드가 실제로 언급되었는지 판정하는 분석기다.
+export const SYSTEM_PROMPT = `너는 AI 답변에서 특정 브랜드가 실제로 언급되었는지 판정하는 분석기다.
 
 각 항목에 대해 다음을 판정한다:
 - isBrandReference: 매칭된 문자열이 진짜 그 브랜드를 가리키는가. 동음이의어(일반명사, 다른 회사, 지명 등)면 false.

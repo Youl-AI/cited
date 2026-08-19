@@ -17,21 +17,54 @@
  */
 import { readFileSync } from 'node:fs'
 import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
+import { zodResponseFormat } from 'openai/helpers/zod'
+import { z } from 'zod'
 import { detectMentions } from '@/lib/detection'
 import { score } from '@/lib/detection/evaluate'
 import type { BrandProfile } from '@/lib/detection/types'
-import { createClaudeJudge } from '@/lib/judge/claude'
+import { ANSWER_MAX_CHARS, SYSTEM_PROMPT, createClaudeJudge } from '@/lib/judge/claude'
 import type { JudgeFn } from '@/lib/judge/types'
 
 const LABELS_PATH = 'tests/golden/labels.json'
 
-/** USD/1M 토큰 단가. 공식 가격표 (2026-08 확인). */
-const CANDIDATES: { model: string; inUsd: number; outUsd: number; note: string }[] = [
-  { model: 'claude-3-5-haiku-20241022', inUsd: 0.8, outUsd: 4, note: '한 단계 아래(구세대)' },
-  { model: 'claude-haiku-4-5', inUsd: 1, outUsd: 5, note: '현재 기본값' },
-  { model: 'claude-sonnet-4-6', inUsd: 3, outUsd: 15, note: '한 단계 위' },
+/**
+ * USD/1M 토큰 단가. 공식 가격표 (2026-08 확인).
+ * gpt-5-mini는 engines/pricing.ts와 같은 값($0.25/$2)이다.
+ *
+ * 실행 예:
+ *   pnpm tsx --conditions=react-server --env-file=.env.local scripts/judge-compare.mts
+ *   ... --only gpt        # 모델명 부분 일치 필터 (이미 잰 모델 재과금 방지)
+ */
+const CANDIDATES: {
+  model: string
+  provider: 'anthropic' | 'openai'
+  inUsd: number
+  outUsd: number
+  note: string
+}[] = [
+  {
+    model: 'claude-3-5-haiku-20241022',
+    provider: 'anthropic',
+    inUsd: 0.8,
+    outUsd: 4,
+    note: '한 단계 아래(구세대)',
+  },
+  { model: 'claude-haiku-4-5', provider: 'anthropic', inUsd: 1, outUsd: 5, note: '현재 기본값' },
+  { model: 'claude-sonnet-4-6', provider: 'anthropic', inUsd: 3, outUsd: 15, note: '한 단계 위' },
+  {
+    model: 'gpt-5-mini',
+    provider: 'openai',
+    inUsd: 0.25,
+    outUsd: 2,
+    note: '타사 교차 검증',
+  },
 ]
 const USD_TO_KRW = 1400
+const only = (() => {
+  const i = process.argv.indexOf('--only')
+  return i >= 0 ? process.argv[i + 1] : undefined
+})()
 
 interface LabelRow {
   id: string
@@ -64,18 +97,80 @@ function clientWithModel(model: string): Anthropic {
   })
 }
 
+/**
+ * GPT 판정기 — claude.ts와 **같은 프롬프트·같은 스키마·같은 후처리**.
+ * 다른 것은 SDK와 구조화 출력 헬퍼(zodResponseFormat)뿐이다.
+ */
+function createGptJudge(model: string, onUsage: (u: { in: number; out: number }) => void): JudgeFn {
+  const schema = z.object({
+    results: z.array(
+      z.object({
+        id: z.string(),
+        isBrandReference: z.boolean(),
+        position: z.number().int().nullable(),
+        sentiment: z.enum(['recommended', 'neutral', 'negative']),
+        context: z.string(),
+      }),
+    ),
+  })
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  return async (batch) => {
+    if (batch.length === 0) return []
+    const payload = batch.map((b) => ({
+      id: b.id,
+      brand: b.brand.canonical,
+      matched: b.matchedAlias,
+      answer: b.answerText.slice(0, ANSWER_MAX_CHARS),
+    }))
+    const res = await client.chat.completions.parse({
+      model,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: JSON.stringify(payload, null, 2) },
+      ],
+      response_format: zodResponseFormat(schema, 'results'),
+      max_completion_tokens: 8192,
+    })
+    onUsage({ in: res.usage?.prompt_tokens ?? 0, out: res.usage?.completion_tokens ?? 0 })
+    const choice = res.choices[0]
+    if (!choice) throw new Error('응답에 choice가 없습니다')
+    if (choice.finish_reason === 'length') {
+      throw new Error(`판정 응답이 길이 제한에서 잘렸습니다 (배치 ${batch.length}건)`)
+    }
+    const parsed = choice.message.parsed
+    if (!parsed) throw new Error('판정 응답을 스키마로 파싱하지 못했습니다')
+    return parsed.results.map((r) => ({
+      id: r.id,
+      verdict: {
+        isBrandReference: r.isBrandReference,
+        // claude.ts와 같은 정합성 보정 — 미언급이면 순위도 없다.
+        position: r.isBrandReference ? r.position : null,
+        sentiment: r.sentiment,
+        context: r.context,
+      },
+    }))
+  }
+}
+
 for (const c of CANDIDATES) {
+  if (only && !c.model.includes(only)) continue
   let tokensIn = 0
   let tokensOut = 0
   const batchMs: number[] = []
 
-  const base = createClaudeJudge({
-    client: clientWithModel(c.model),
-    onUsage: (u) => {
-      tokensIn += u.tokensIn
-      tokensOut += u.tokensOut
-    },
-  })
+  const base: JudgeFn =
+    c.provider === 'openai'
+      ? createGptJudge(c.model, (u) => {
+          tokensIn += u.in
+          tokensOut += u.out
+        })
+      : createClaudeJudge({
+          client: clientWithModel(c.model),
+          onUsage: (u) => {
+            tokensIn += u.tokensIn
+            tokensOut += u.tokensOut
+          },
+        })
   const timed: JudgeFn = async (batch) => {
     const t0 = performance.now()
     const out = await base(batch)
