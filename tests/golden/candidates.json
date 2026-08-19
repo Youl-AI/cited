@@ -1963,7 +1963,7 @@
           "position": null
         },
         "카카오뱅크": {
-          "mentioned": true,
+          "mentioned": false,
           "position": null
         },
         "케이뱅크": {
@@ -2469,7 +2469,7 @@
           "position": null
         },
         "이니스프리": {
-          "mentioned": false,
+          "mentioned": true,
           "position": null
         }
       },
@@ -2949,7 +2949,7 @@
       ],
       "labels": {
         "리본요가": {
-          "mentioned": false,
+          "mentioned": true,
           "position": null
         },
         "클로바필라테스": {
@@ -3093,7 +3093,7 @@
           "position": null
         },
         "카카오페이": {
-          "mentioned": false,
+          "mentioned": true,
           "position": null
         },
         "뱅크샐러드": {
@@ -3219,7 +3219,7 @@
           "position": null
         },
         "더센터오브필라테스": {
-          "mentioned": false,
+          "mentioned": true,
           "position": null
         }
       },
