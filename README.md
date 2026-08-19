@@ -45,9 +45,9 @@ flowchart LR
 
 | 항목 | 값 | 근거 |
 | --- | --- | --- |
-| 골드 라벨 | **248건** (긍정 105 · 부정 143) | `tests/golden/labels.json`, 실제 수집 답변에서 수작업 라벨링 |
-| 회귀 게이트 | **recall ≥ 95% · precision ≥ 90%** | `tests/golden/regression.test.ts` — 실제 판정기로 실행 |
-| 판정 모델 | `claude-haiku-4-5` | "저렴한 것부터, 게이트를 통과하는 한" — 모델·프롬프트를 바꾸려면 이 게이트를 먼저 통과해야 한다 |
+| 골드 라벨 | **248건** (긍정 105 · 부정 143) | `tests/golden/labels.json`, 실제 수집 답변에서 수작업 라벨링 — [데이터셋 문서](docs/golden-labels.md) |
+| 실측 정확도 | **recall 98.1% · precision 96.3%** (2026-08-20) | 게이트 기준 recall ≥ 95% · precision ≥ 90% (`tests/golden/regression.test.ts`) |
+| 판정 모델 | `claude-haiku-4-5` | 같은 골드셋에서 sonnet 대비 정확도 동일 · 원가 1/3 · 지연 1/2 — [모델 비교](docs/judge-model-comparison.md) |
 | 표본 수 | 무료 1회 · 유료 3회 (LLM 엔진당) | 비결정 출력이므로 표본 n이 구간 폭을 결정 — 아래 "측정 예산 정책" |
 | 보고 형식 | Wilson 95% 신뢰구간 | 점추정 단독 노출 금지 — 3회 측정 1건 언급의 구간은 2%~87%다 |
 
@@ -120,6 +120,7 @@ flowchart LR
 | 문서 | 내용 |
 | --- | --- |
 | [골드 라벨 데이터셋](docs/golden-labels.md) | 정답지 구성·라벨링 기준·실측 recall/precision |
+| [판정 모델 비교](docs/judge-model-comparison.md) | 같은 골드셋에서 모델별 정확도·원가·지연 |
 | [설계](docs/superpowers/specs/2026-07-28-cited-design.md) | 제품·데이터 모델·판정 로직의 근거 |
 | [로드맵](docs/superpowers/plans/2026-07-28-cited-roadmap.md) | 1~6단계 전체 |
 | [착수 전 확인](docs/superpowers/notes/2026-07-28-preflight.md) | 확정 버전·도메인 결정 |
